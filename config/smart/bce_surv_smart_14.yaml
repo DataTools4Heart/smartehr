@@ -1,0 +1,17 @@
+model_params:
+  model_name: bce_surv
+  num_nodes:
+  - 32
+  - 32
+  - 32
+  batch_norm: true
+  dropout: 0.2
+  output_bias: true
+train_params:
+  batch_size: 256
+  epochs: 500
+  patience: 10
+  device: cpu
+dataset_params:
+  dataset_name: smart_14
+  root_path: data/smart

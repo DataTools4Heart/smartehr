@@ -1,0 +1,18 @@
+model_params:
+  model_name: cox_cc
+  num_nodes:
+  - 256
+  - 256
+  - 256
+  - 256
+  batch_norm: true
+  dropout: 0.2
+  output_bias: true
+train_params:
+  batch_size: 256
+  epochs: 500
+  patience: 10
+  device: cpu
+dataset_params:
+  dataset_name: smart_full
+  root_path: data/smart
