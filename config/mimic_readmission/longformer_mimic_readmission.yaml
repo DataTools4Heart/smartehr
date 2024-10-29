@@ -1,0 +1,14 @@
+model_params:
+  model_name: clinical_longformer
+  freeze_last_n_layers: 0
+  freeze_embeddings: false
+train_params:
+    lr: 2e-5
+    epochs: 100
+    batch_size: 4
+    num_workers: 4
+    devices: [1]
+    patience: 10
+dataset_params:
+  dataset_name: mimic_readmission
+  root_path: data/mimic_readmission

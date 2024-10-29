@@ -2,71 +2,23 @@ import init
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 import os
-import numpy as np
 import torch
-from transformers import AutoTokenizer
-from dataset_utils.mimic import MIMICReadmission, MIMICNotesModel, collate_fn_longformer
 from lightning_utils.utils import SurvivalAnalysisModule
-from pycox.preprocessing import label_transforms
 import lightning.pytorch as L
 from torch.utils.data import DataLoader
-from functools import partial
-from pathlib import Path
+import argparse
+from omegaconf import OmegaConf
+from lightning_utils.utils import prepare_data_for_training
+from lightning_utils.utils import load_lightning_model, MimicReadmissionParams
 
 
-from dataclasses import dataclass
-from typing import Optional, Union
-from pycox_utils.utils import load_pycox_model
-
-
-@dataclass
-class ModelParams:
-    model_name: str = "clinical_longformer"
-    freeze_last_n_layers: int = 6
-    freeze_embeddings: bool = True
-
-
-@dataclass
-class TrainingParams:
-    lr: float = 2e-5
-    epochs: int = 100
-    batch_size: int = 4
-    num_workers: int = min(batch_size, os.cpu_count())
-    devices: Union[list[int], str] = "cpu"
-    patience: int = 10
-
-
-@dataclass
-class MimicReadmissionParams:
-    model_params: ModelParams
-    train_params: TrainingParams
-
-
-from pycox.preprocessing.discretization import DiscretizeUnknownC, Duration2Idx
-
-
-def load_lightning_model(model_params: ModelParams, time_intervals: int):
-    assert model_params.model_name in ["clinical_longformer"]
-    if model_params.model_name == "clinical_longformer":
-        lab_trans = label_transforms.LabTransDiscreteTime(cuts=np.array([i for i in range(time_intervals + 1)], dtype=float))
-        model = MIMICNotesModel(
-            time_intervals=time_intervals + 1,
-            freeze_last_n_layers=model_params.freeze_last_n_layers,
-            freeze_embeddings=model_params.freeze_embeddings,
-        )
-        tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
-        collate_fn = partial(collate_fn_longformer, tokenizer=tokenizer)
-    return model, lab_trans, collate_fn
-
-
-def train_lightning_model(root_path: Path, params: MimicReadmissionParams):
+def train_lightning_model(params: MimicReadmissionParams):
     time_intervals = 365
     model_params = params.model_params
     train_params = params.train_params
+    dataset_params = params.dataset_params
     model, lab_trans, collate_fn = load_lightning_model(model_params, time_intervals=time_intervals)
-    train = MIMICReadmission(root_path, lab_trans, split="train")
-    val = MIMICReadmission(root_path, lab_trans, split="val")
-    test = MIMICReadmission(root_path, lab_trans, split="test")
+    train, val, test = prepare_data_for_training(dataset_params, lab_trans)
 
     model = SurvivalAnalysisModule(model, lr=train_params.lr)
 
@@ -78,8 +30,9 @@ def train_lightning_model(root_path: Path, params: MimicReadmissionParams):
     )
     test_dl = DataLoader(test, batch_size=1, shuffle=False, collate_fn=collate_fn, num_workers=1)
 
-    os.environ["TOKENIZERS_PARALLELISM"] = "false"
-    torch.set_float32_matmul_precision("medium")
+    if torch.cuda.is_available():
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        torch.set_float32_matmul_precision("medium")
     devices = train_params.devices
     callbacks = [
         EarlyStopping(monitor="val_loss", mode="min", patience=train_params.patience),
@@ -97,5 +50,15 @@ def train_lightning_model(root_path: Path, params: MimicReadmissionParams):
     trainer.test(dataloaders=test_dl)
 
 
-def train_readmission_model(root_path: str):
-    root_path = Path(root_path) / "readmission.csv"
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train a Lightning model for MIMIC readmission prediction.")
+    parser.add_argument("--cfg-path", type=str, required=True, help="Path to the configuration file.")
+    args = parser.parse_args()
+
+    # Load configuration from the provided path
+    with open(args.cfg_path, "r") as f:
+        yaml_conf = OmegaConf.to_container(OmegaConf.load(f), resolve=True)
+    params = MimicReadmissionParams(**yaml_conf)
+
+    # Train the model
+    train_lightning_model(params)

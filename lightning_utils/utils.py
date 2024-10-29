@@ -5,6 +5,46 @@ from torchmetrics import Metric
 from lifelines.utils import concordance_index
 from utils import time_dependent_roc_auc_score
 from pycox.models.loss import nll_pmf
+from dataset_utils.utils import DatasetParams, load_mimic_readmission
+from dataset_utils.mimic import MIMICReadmission
+from pycox.preprocessing import label_transforms
+from pathlib import Path
+import numpy as np
+from transformers import AutoTokenizer
+from functools import partial
+from dataclasses import dataclass
+from typing import Union
+from models.models import MIMICNotesModel
+from dataset_utils.mimic import collate_fn_longformer
+
+
+@dataclass
+class ModelParams:
+    model_name: str = "clinical_longformer"
+    freeze_last_n_layers: int = 6
+    freeze_embeddings: bool = True
+
+
+@dataclass
+class TrainingParams:
+    lr: float = 2e-5
+    epochs: int = 100
+    batch_size: int = 4
+    num_workers: int = 0
+    devices: Union[list[int], str] = "cpu"
+    patience: int = 10
+
+
+@dataclass
+class MimicReadmissionParams:
+    dataset_params: DatasetParams
+    model_params: ModelParams
+    train_params: TrainingParams
+
+    def __post_init__(self):
+        self.model_params = ModelParams(**self.model_params)
+        self.train_params = TrainingParams(**self.train_params)
+        self.dataset_params = DatasetParams(**self.dataset_params)
 
 
 class SurvMetrics(Metric):
@@ -77,3 +117,26 @@ class SurvivalAnalysisModule(L.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
+
+
+def prepare_data_for_training(dataset_params: DatasetParams, lab_trans: label_transforms.LabTransDiscreteTime):
+    if dataset_params.dataset_name == "mimic_readmission":
+        train, val, test = load_mimic_readmission(Path(dataset_params.root_path))
+        train, val, test = MIMICReadmission(train, lab_trans), MIMICReadmission(val, lab_trans), MIMICReadmission(test, lab_trans)
+    else:
+        raise NotImplementedError(f"Unknown dataset: {dataset_params.dataset_name}")
+    return train, val, test
+
+
+def load_lightning_model(model_params: ModelParams, time_intervals: int):
+    assert model_params.model_name in ["clinical_longformer"]
+    if model_params.model_name == "clinical_longformer":
+        lab_trans = label_transforms.LabTransDiscreteTime(cuts=np.array([i for i in range(time_intervals + 1)], dtype=float))
+        model = MIMICNotesModel(
+            time_intervals=time_intervals + 1,
+            freeze_last_n_layers=model_params.freeze_last_n_layers,
+            freeze_embeddings=model_params.freeze_embeddings,
+        )
+        tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
+        collate_fn = partial(collate_fn_longformer, tokenizer=tokenizer)
+    return model, lab_trans, collate_fn
