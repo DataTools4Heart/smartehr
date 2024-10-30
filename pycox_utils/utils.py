@@ -122,9 +122,9 @@ def encode_categorical_features(train, val, test):
 
 
 def prepare_data_for_training(dataset_params: DatasetParams):
-    if "smart" in dataset_params.dataset_name:
-        train, val, test = load_smart(Path(dataset_params.root_path))
-        if dataset_params.dataset_name == "smart_14":
+    if dataset_params.dataset_name == "smart":
+        train, val, test = load_smart(Path(dataset_params.params.root_path))
+        if not dataset_params.params.use_full_feature_set:
             train, val, test = preprocess_smart(train), preprocess_smart(val), preprocess_smart(test)
         num_intervals = 24
         evaluation_times = [i * 365 for i in range(1, 11)]
@@ -132,7 +132,7 @@ def prepare_data_for_training(dataset_params: DatasetParams):
         x_names = [k for k in train.columns if k not in y_names and k != "SmrtRisk"]
 
     elif dataset_params.dataset_name == "mimic_readmission":
-        train, val, test = load_mimic_readmission(Path(dataset_params.root_path))
+        train, val, test = load_mimic_readmission(Path(dataset_params.params.root_path))
         num_intervals = 366
         evaluation_times = [i * 30 for i in range(1, 11)]
         y_names = ["days_next_admit", "event"]
@@ -189,7 +189,6 @@ def eval_pycox(model, x_test: pd.DataFrame, y_test: tuple, is_discrete: bool, ev
     surv = surv.reindex(sorted(surv.columns), axis=1)
     surv = surv.interpolate(axis=1)
     event_times = y_test[0]
-    print(event_times.max())
     event_observed = y_test[1]
     roc = time_dependent_roc_auc_score(event_observed, surv.loc[:, evaluation_times].to_numpy(), event_times, evaluation_times)
     ci = {}

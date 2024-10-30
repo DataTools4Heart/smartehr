@@ -1,17 +1,19 @@
+dataset_params:
+  dataset_name: smart
+  params:
+    root_path: data/smart
+    use_full_feature_set: false
 model_params:
+  batch_norm: true
+  dropout: 0.2
   model_name: cox_time
   num_nodes:
   - 32
   - 32
   - 32
-  batch_norm: true
-  dropout: 0.2
   output_bias: true
 train_params:
   batch_size: 256
+  device: cpu
   epochs: 500
   patience: 10
-  device: cpu
-dataset_params:
-  dataset_name: smart_14
-  root_path: data/smart

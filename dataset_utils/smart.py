@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
-from lifelines import CoxPHFitter
-from lifelines.utils import concordance_index
-from utils import time_dependent_roc_auc_score
+from torch.utils.data import Dataset
+import pandas as pd
+from pycox.preprocessing import label_transforms
+import random
+import torch
 
 smart_features_map = {
     "age": "leeftijd",
@@ -42,25 +44,6 @@ numeric_feature_ranges = {
     "total_cholesterol": [2.5, 8.0],
     "egfr": [30.0, 120.0],
     "high_sens_crp": [0.1, 15.0],
-}
-
-smart_weights = {
-    "age": -0.0850,
-    "age2": 0.00105,
-    "gender": 0.156,
-    "smoker": 0.262,
-    "systolic_blood_pressure": 0.00429,
-    "diabetes": 0.223,
-    "cad": 0.14,
-    "cvd": 0.406,
-    "aaa": 0.558,
-    "pad": 0.283,
-    "time_since_first_cd": 0.0229,
-    "hdl_cholesterol": -0.426,
-    "total_cholesterol": 0.0959,
-    "egfr": -0.0532,
-    "egfr2": 0.000306,
-    "log_high_sens_crp": 0.139,
 }
 
 
@@ -110,59 +93,48 @@ def preprocess_smart(smart: pd.DataFrame):
     return smart
 
 
-def original_smart_risk_score(weights: dict, data: pd.DataFrame):
-    b, c = 0.81066, 2.099
-    cov = []
-    for k in weights.keys():
-        x = data[k]
-        cov.append(weights[k] * x)
-    A = np.sum(np.array(cov), axis=0)
-    return [(1 - b ** (np.exp(a + c))) for a in A]
+class SMARTPoC(Dataset):
+    def __init__(
+        self,
+        smart_string: pd.DataFrame,
+        name_map: dict[str, str],
+        labtrans: label_transforms.LabTransDiscreteTime,
+    ) -> None:
+        self.labtrans = labtrans
+        self.durations, self.events = smart_string["cd_time"].values, smart_string["cd_event"].values
+        if self.labtrans is not None:
+            self.durations, self.events = self.labtrans.transform(self.durations, self.events)
+        self.smart_string = smart_string.drop(["cd_time", "cd_event"], axis=1)
+        self.name_map = name_map
 
+    def __len__(self):
+        return len(self.smart_string)
 
-def smart_survival_times(weights, data: pd.DataFrame):
-    b, c = 0.81066, 2.099
-    cov = []
-    for k in weights.keys():
-        x = data[k]
-        cov.append(weights[k] * x)
-    A = np.sum(np.array(cov), axis=0)
-    return pd.Series([b ** np.exp(a + c) for a in A], index=data.index)
-
-
-def eval_smart(cpf: CoxPHFitter, test: pd.DataFrame, test_smart_risk_score: pd.Series, use_full_feature_set: bool):
-    evaluation_times = np.array([i * 365 for i in range(2, 15)])
-    event_times = test.cd_time
-    event_observed = test.cd_event
-    surv = cpf.predict_survival_function(test, times=evaluation_times).T
-
-    ci = concordance_index(event_times=event_times, predicted_scores=surv.loc[:, 3650].to_numpy(), event_observed=event_observed)
-    roc = time_dependent_roc_auc_score(event_observed.to_numpy(), surv.to_numpy(), event_times, surv.columns)
-    nna_mask = ~test_smart_risk_score.isna()
-    results = {}
-    abs_err_ours_gt = (test_smart_risk_score[nna_mask] - (1 - surv.loc[nna_mask, 3650])).abs().to_numpy()
-    results["mae_ours_gt"] = abs_err_ours_gt.mean()
-    results["mae_std_ours_gt"] = abs_err_ours_gt.std()
-
-    if not use_full_feature_set:
-        smart_surv = smart_survival_times(smart_weights, test).to_numpy()[..., None]
-        evaluation_times = [3650.0]
-        ci_smart = concordance_index(event_times=event_times, predicted_scores=smart_surv, event_observed=event_observed)
-        roc_smart = time_dependent_roc_auc_score(event_observed.to_numpy(), smart_surv, event_times, evaluation_times)
-        abs_err_ours_smart = (
-            (original_smart_risk_score(smart_weights, test[nna_mask]) - (1 - surv.loc[nna_mask, 3650])).abs().to_numpy()
+    def __getitem__(self, idx: int):
+        features = {}
+        for col in self.smart_string:
+            features[col] = self.name_map[col] + self.smart_string[col].iloc[idx]
+        return (
+            features,
+            self.durations[idx],
+            self.events[idx],
         )
-        abs_err_smart_gt = (
-            (test_smart_risk_score[nna_mask] - original_smart_risk_score(smart_weights, test[nna_mask])).abs().to_numpy()
-        )
-        results["ci_smart"] = ci_smart
-        results["roc_smart"] = roc_smart
-        results["mae_ours_smart"] = abs_err_ours_smart.mean()
-        results["mae_std_ours_smart"] = abs_err_ours_smart.std()
-        results["mae_smart_gt"] = abs_err_smart_gt.mean()
-        results["mae_std_smart_gt"] = abs_err_smart_gt.std()
 
-    results["roc"] = roc
-    results["ci"] = ci
 
-    return results
+def collate_fn_smart_poc(batch, tokenizer):
+    features, durations, events = [b[0] for b in batch], [b[1] for b in batch], [b[2] for b in batch]
+    features = [[v for v in f.values()] for f in features]
+
+    for i in range(len(features)):
+        random.shuffle(features[i])
+        features[i] = "<sep>".join(features[i])
+
+    encodings = tokenizer.encode_batch(features)
+    ids = torch.stack([torch.tensor(e.ids) for e in encodings])
+    masks = ~torch.stack([torch.tensor(e.attention_mask, dtype=torch.bool) for e in encodings])
+
+    return (
+        {"input_ids": ids, "padding_mask": masks},
+        torch.tensor(durations),
+        torch.tensor(events),
+    )

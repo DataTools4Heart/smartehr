@@ -1,12 +1,18 @@
 import init
-from dataset_utils.smart import load_smart, eval_smart, preprocess_smart
+from dataset_utils.smart import preprocess_smart
+from dataset_utils.utils import load_smart
+from utils import eval_smart
 from pathlib import Path
 from lifelines import CoxPHFitter
 import argparse
+from omegaconf import OmegaConf
 
 
-def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool):
-    train, _, test = load_smart(root_path)
+def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool, same_size_as_original: bool):
+    train, val, test = load_smart(root_path)
+    if not same_size_as_original:
+        train = train.sample(3489, random_state=42)
+        test = test.sample(2299, random_state=42)
     test_smart_risk_score = test["SmrtRisk"]
     train = train.drop("SmrtRisk", axis=1)
     test = test.drop("SmrtRisk", axis=1)
@@ -39,6 +45,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--use-full-feature-set", action="store_true", help="Use the full feature set for training.", default=False
     )
+    parser.add_argument(
+        "--same-size-as-original",
+        action="store_true",
+        help="Use the same number of samples used in original SMART paper.",
+        default=False,
+    )
     args = parser.parse_args()
-
-    train_and_evaluate_smart(args.root_path, args.use_full_feature_set)
+    train_and_evaluate_smart(args.root_path, args.use_full_feature_set, args.same_size_as_original)

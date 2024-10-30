@@ -1,18 +1,19 @@
+dataset_params:
+  dataset_name: mimic_readmission
+  params:
+    root_path: data/mimic_readmission
 model_params:
+  batch_norm: true
+  dropout: 0.2
   model_name: deep_surv
   num_nodes:
   - 256
   - 256
   - 256
   - 256
-  batch_norm: true
-  dropout: 0.2
   output_bias: true
 train_params:
   batch_size: 256
+  device: cuda
   epochs: 100
   patience: 30
-  device: gpu
-dataset_params:
-  dataset_name: mimic_readmission
-  root_path: data/mimic_readmission

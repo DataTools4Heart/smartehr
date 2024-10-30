@@ -1,0 +1,18 @@
+model_params:
+  model_name: transformer_encoder
+  h_params:
+    tokenizer_path: data/smart_poc_tokenizer
+train_params:
+    lr: 2e-5
+    epochs: 100
+    batch_size: 4
+    num_workers: 4
+    devices: [1]
+    patience: 10
+dataset_params:
+  dataset_name: smart_poc
+  params:
+    root_path: data/smart
+    value_dict_path: data/SmartEPjan22dd12072023.xls
+    data_dict_path: data/dd.csv
+time_intervals: 24
