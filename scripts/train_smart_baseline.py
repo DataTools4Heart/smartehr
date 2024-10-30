@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 
 def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool, same_size_as_original: bool):
     train, val, test = load_smart(root_path)
-    if not same_size_as_original:
+    if same_size_as_original:
         train = train.sample(3489, random_state=42)
         test = test.sample(2299, random_state=42)
     test_smart_risk_score = test["SmrtRisk"]
