@@ -5,7 +5,6 @@ from utils import eval_smart
 from pathlib import Path
 from lifelines import CoxPHFitter
 import argparse
-from omegaconf import OmegaConf
 
 
 def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool, same_size_as_original: bool):

@@ -42,7 +42,8 @@ def train_lightning_model(params: LightningParams):
         devices=devices,
         max_epochs=train_params.epochs,
         strategy=strategy,
-        precision="16-mixed" if isinstance(devices, list) or devices == "cuda" else "auto",
+        accumulate_grad_batches=train_params.accumulate_grad_batches,
+        precision="16-true" if isinstance(devices, list) or devices == "cuda" else "auto",
     )
     trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
     trainer.test(dataloaders=test_dl)

@@ -1,0 +1,15 @@
+model_params:
+  model_name: mistral
+  h_params:
+train_params:
+    lr: 2e-5
+    epochs: 100
+    batch_size: 2
+    num_workers: 2
+    devices: [6]
+    patience: 10
+dataset_params:
+  dataset_name: mimic_readmission
+  params:
+    root_path: data/mimic_readmission
+time_intervals: 365

@@ -6,7 +6,7 @@ from lifelines.utils import concordance_index
 from utils import time_dependent_roc_auc_score
 from pycox.models.loss import nll_pmf
 from dataset_utils.utils import DatasetParams, load_mimic_readmission, load_smart_poc
-from dataset_utils.mimic import MIMICReadmission, collate_fn_longformer
+from dataset_utils.mimic import MIMICReadmission, collate_fn_longformer, collate_fn_mistral, collate_fn_temporal_recurrent_mistral
 from dataset_utils.smart import SMARTPoC, collate_fn_smart_poc
 from pycox.preprocessing import label_transforms
 from pathlib import Path
@@ -15,7 +15,7 @@ from transformers import AutoTokenizer
 from functools import partial
 from dataclasses import dataclass
 from typing import Union
-from models.models import MIMICNotesModel, TransformerEncoderForClassification
+from models.models import MIMICNotesModel, TransformerEncoderForClassification, MistralForRegression, TemporalRecurrentMistral
 import pickle as pkl
 from tokenizers import ByteLevelBPETokenizer
 import torch.nn.functional as F
@@ -38,6 +38,16 @@ class TransformerEncoderParams:
 
 
 @dataclass
+class MistralParams:
+    pass
+
+
+@dataclass
+class TemporalRecurrentMistralParams:
+    pass
+
+
+@dataclass
 class ModelParams:
     model_name: str
     h_params: ClinicalLongformerParams | TransformerEncoderParams
@@ -47,6 +57,10 @@ class ModelParams:
             self.h_params = ClinicalLongformerParams(**self.h_params)
         elif self.model_name == "transformer_encoder":
             self.h_params = TransformerEncoderParams(**self.h_params)
+        elif self.model_name == "mistral":
+            self.h_params = MistralParams()
+        elif self.model_name == "temporal_recurrent_mistral":
+            self.h_params = TemporalRecurrentMistralParams()
         else:
             raise NotImplementedError(f"Unknown model: {self.model_name}")
 
@@ -59,6 +73,7 @@ class TrainingParams:
     num_workers: int = 0
     devices: Union[list[int], str] = "cpu"
     patience: int = 10
+    accumulate_grad_batches: int = 1
 
 
 @dataclass
@@ -102,7 +117,10 @@ class SurvMetrics(Metric):
         )
         ci = {}
         for t in self.evaluation_times:
-            ci[t] = concordance_index(event_times=durations, predicted_scores=surv[:, t], event_observed=events)
+            try:
+                ci[t] = concordance_index(event_times=durations, predicted_scores=surv[:, t], event_observed=events)
+            except ZeroDivisionError:
+                ci[t] = 0.0
         return {"roc_auc": roc_auc, "ci": ci}
 
 
@@ -211,6 +229,16 @@ def load_lightning_model(model_params: ModelParams, time_intervals: int):
             time_intervals=24,
         )
         collate_fn = partial(collate_fn_smart_poc, tokenizer=tokenizer)
+    elif model_params.model_name == "mistral":
+        tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.3")
+        tokenizer.add_special_tokens({"pad_token": "<pad>"})
+        model = MistralForRegression(time_intervals=time_intervals + 1, tokenizer=tokenizer)
+        collate_fn = partial(collate_fn_mistral, tokenizer=tokenizer)
+    elif model_params.model_name == "temporal_recurrent_mistral":
+        tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.3")
+        tokenizer.add_special_tokens({"pad_token": "<pad>"})
+        model = TemporalRecurrentMistral(num_outputs=time_intervals + 1, tokenizer=tokenizer)
+        collate_fn = partial(collate_fn_temporal_recurrent_mistral, tokenizer=tokenizer)
     else:
         raise NotImplementedError(f"Unknown model: {model_params.model_name}")
     return model, collate_fn

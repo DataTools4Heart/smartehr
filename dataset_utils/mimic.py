@@ -141,3 +141,23 @@ def collate_fn_longformer(batch, tokenizer):
         torch.tensor(durations),
         torch.tensor(events),
     )
+
+
+def collate_fn_mistral(batch, tokenizer):
+    features, durations, events = [b[0]["text"] for b in batch], [b[1][0] for b in batch], [b[1][1] for b in batch]
+    encodings = tokenizer.batch_encode_plus(features, padding=True, return_tensors="pt")
+    return (
+        {"input_ids": encodings["input_ids"], "attention_mask": encodings["attention_mask"]},
+        torch.tensor(durations),
+        torch.tensor(events),
+    )
+
+
+def collate_fn_temporal_recurrent_mistral(batch, tokenizer):
+    features, durations, events = [b[0]["text"] for b in batch], [b[1][0] for b in batch], [b[1][1] for b in batch]
+    encodings = tokenizer.batch_encode_plus(features, padding=True, return_tensors="pt")
+    return (
+        {"input_ids": [encodings["input_ids"]], "attention_mask": [encodings["attention_mask"]]},
+        torch.tensor(durations),
+        torch.tensor(events),
+    )
