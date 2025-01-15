@@ -1,0 +1,5 @@
+defaults:
+  - base_clinical_longformer
+name: clinical_longformer
+freeze_last_n_layers: 0
+freeze_embeddings: false

@@ -1,0 +1,7 @@
+defaults:
+  - base_pycox
+
+batch_size: 256
+device: cpu
+epochs: 500
+patience: 10

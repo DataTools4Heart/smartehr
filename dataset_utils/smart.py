@@ -119,22 +119,3 @@ class SMARTPoC(Dataset):
             self.durations[idx],
             self.events[idx],
         )
-
-
-def collate_fn_smart_poc(batch, tokenizer):
-    features, durations, events = [b[0] for b in batch], [b[1] for b in batch], [b[2] for b in batch]
-    features = [[v for v in f.values()] for f in features]
-
-    for i in range(len(features)):
-        random.shuffle(features[i])
-        features[i] = "<sep>".join(features[i])
-
-    encodings = tokenizer.encode_batch(features)
-    ids = torch.stack([torch.tensor(e.ids) for e in encodings])
-    masks = ~torch.stack([torch.tensor(e.attention_mask, dtype=torch.bool) for e in encodings])
-
-    return (
-        {"input_ids": ids, "padding_mask": masks},
-        torch.tensor(durations),
-        torch.tensor(events),
-    )

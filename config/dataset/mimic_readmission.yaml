@@ -1,0 +1,4 @@
+defaults:
+  - base_mimic_readmission
+name: mimic_readmission
+root_path: data/mimic_readmission

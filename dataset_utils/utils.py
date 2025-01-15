@@ -7,39 +7,13 @@ from pycox.preprocessing import label_transforms
 from pathlib import Path
 from dataset_utils.smart import SMARTPoC
 
+from dataset_utils.mimic import MIMICReadmission
+from dataset_utils.smart import SMARTPoC, preprocess_smart
+from pycox.preprocessing import label_transforms
+import numpy as np
 
-@dataclass
-class MimicReadmissionParams:
-    root_path: str
-
-
-@dataclass
-class SMARTParams:
-    root_path: str
-    use_full_feature_set: bool
-
-
-@dataclass
-class SMARTPoCParams:
-    root_path: str
-    value_dict_path: str
-    data_dict_path: str
-
-
-@dataclass
-class DatasetParams:
-    dataset_name: str
-    params: SMARTPoCParams | MimicReadmissionParams | SMARTParams
-
-    def __post_init__(self):
-        if self.dataset_name == "smart_poc":
-            self.params = SMARTPoCParams(**self.params)
-        elif self.dataset_name == "mimic_readmission":
-            self.params = MimicReadmissionParams(**self.params)
-        elif self.dataset_name == "smart":
-            self.params = SMARTParams(**self.params)
-        else:
-            raise NotImplementedError(f"Unknown dataset: {self.dataset_name}")
+from config.dataset.dataset import DatasetParams, MimicReadmissionParams, SmartPoCParams, SmartParams
+from sklearn.preprocessing import OrdinalEncoder
 
 
 def load_smart(root_path: Path):
@@ -100,3 +74,103 @@ def load_smart_poc(root_path: str, value_dict_path: str, data_dict_path: str):
         name_map[col] = f"<feature_{i}>"
 
     return train, val, test, name_map
+
+
+def load_for_lightning(dataset_params: DatasetParams, time_intervals: int):
+    if dataset_params.name == "mimic_readmission":
+        dataset_params = MimicReadmissionParams(**dataset_params)
+        lab_trans = label_transforms.LabTransDiscreteTime(cuts=np.array([i for i in range(time_intervals + 1)], dtype=float))
+        train, val, test = load_mimic_readmission(Path(dataset_params.root_path))
+        train, val, test = MIMICReadmission(train, lab_trans), MIMICReadmission(val, lab_trans), MIMICReadmission(test, lab_trans)
+    elif dataset_params.name == "smart_poc":
+        dataset_params = SmartPoCParams(**dataset_params)
+        train, val, test, name_map = load_smart_poc(
+            Path(dataset_params.root_path),
+            value_dict_path=Path(dataset_params.value_dict_path),
+            data_dict_path=Path(dataset_params.data_dict_path),
+        )
+        lab_trans = label_transforms.LabTransDiscreteTime(time_intervals).fit(train["cd_time"].values, train["cd_event"].values)
+        train, val, test = (
+            SMARTPoC(train, name_map, lab_trans),
+            SMARTPoC(val, name_map, lab_trans),
+            SMARTPoC(test, name_map, lab_trans),
+        )
+    else:
+        raise NotImplementedError(f"Unknown dataset: {dataset_params.dataset_name}")
+    return train, val, test
+
+
+class Normalizer:
+    def __init__(self) -> None:
+        self.stats = {}
+
+    def fit(self, data: pd.DataFrame):
+        for col in data.columns:
+            if len(data[col].unique()) > 2:
+                self.stats[col] = {"mean": data[col].mean(), "std": data[col].std()}
+            else:
+                self.stats[col] = None
+
+    def transform(self, data: pd.DataFrame):
+        for col in data.columns:
+            if self.stats[col] is not None:
+                data[col] = (data[col] - self.stats[col]["mean"]) / self.stats[col]["std"]
+            data[col] = data[col].astype(np.float32)
+        return data
+
+
+def encode_categorical_features(train, val, test):
+    encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+    categorical_cols = train.select_dtypes(include=["object"]).columns
+    train[categorical_cols] = encoder.fit_transform(train[categorical_cols])
+    val[categorical_cols] = encoder.transform(val[categorical_cols])
+    test[categorical_cols] = encoder.transform(test[categorical_cols])
+    return train, val, test
+
+
+def load_for_pycox(dataset_params: DatasetParams):
+    if dataset_params.name == "smart":
+        dataset_params = SmartParams(**dataset_params)
+        train, val, test = load_smart(Path(dataset_params.root_path))
+        if not dataset_params.use_full_feature_set:
+            train, val, test = preprocess_smart(train), preprocess_smart(val), preprocess_smart(test)
+        num_intervals = 24
+        evaluation_times = [i * 365 for i in range(1, 11)]
+        y_names = ["cd_time", "cd_event"]
+        x_names = [k for k in train.columns if k not in y_names and k != "SmrtRisk"]
+
+    elif dataset_params.name == "mimic_readmission":
+        dataset_params = MimicReadmissionParams(**dataset_params)
+        train, val, test = load_mimic_readmission(Path(dataset_params.root_path))
+        num_intervals = 366
+        evaluation_times = [i * 30 for i in range(1, 11)]
+        y_names = ["days_next_admit", "event"]
+        x_names = [k for k in train.columns if k not in (y_names + ["split", "hadm_id", "text"])]
+    else:
+        raise NotImplementedError(f"Unknown dataset: {dataset_params.name}")
+
+    x_train, y_train = train.loc[:, x_names], train.loc[:, y_names]
+    x_val, y_val = val.loc[:, x_names], val.loc[:, y_names]
+    x_test, y_test = test.loc[:, x_names], test.loc[:, y_names]
+    x_train, x_val, x_test = encode_categorical_features(x_train, x_val, x_test)
+    x_train, x_val, x_test = x_train.fillna(-1), x_val.fillna(-1), x_test.fillna(-1)
+
+    normalizer = Normalizer()
+    normalizer.fit(x_train)
+    x_train, x_val, x_test = normalizer.transform(x_train), normalizer.transform(x_val), normalizer.transform(x_test)
+    y_train, y_val, y_test = (
+        [y_train[col].values for col in y_train],
+        [y_val[col].values for col in y_val],
+        [y_test[col].values for col in y_test],
+    )
+
+    return {
+        "x_train": x_train,
+        "y_train": y_train,
+        "x_val": x_val,
+        "y_val": y_val,
+        "x_test": x_test,
+        "y_test": y_test,
+        "evaluation_times": evaluation_times,
+        "num_intervals": num_intervals,
+    }

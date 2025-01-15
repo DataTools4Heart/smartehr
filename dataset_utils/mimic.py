@@ -3,8 +3,7 @@ from typing import Optional, Union
 from pycox.preprocessing.label_transforms import LabTransCoxTime, LabTransDiscreteTime, LabTransPCHazard
 import re
 import os
-import torch
-from tokenizers import ByteLevelBPETokenizer
+from tokenizers.implementations import ByteLevelBPETokenizer
 from torch.utils.data import Dataset, DataLoader
 
 itemids_lab = [
@@ -131,13 +130,3 @@ def train_tokenizer(train: pd.DataFrame, use_notes: bool = True):
             dl, vocab_size=52_000, min_frequency=2, special_tokens=["<pad>", "<unk>", "<mask>", "<sep>"]
         )
         tokenizer.save_model(".", "mimic/smartehr")
-
-
-def collate_fn_longformer(batch, tokenizer):
-    features, durations, events = [b[0]["text"] for b in batch], [b[1][0] for b in batch], [b[1][1] for b in batch]
-    encodings = tokenizer.batch_encode_plus(features, padding=True, max_length=4096, truncation=True, return_tensors="pt")
-    return (
-        {"input_ids": encodings["input_ids"], "attention_mask": encodings["attention_mask"]},
-        torch.tensor(durations),
-        torch.tensor(events),
-    )

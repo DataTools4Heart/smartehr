@@ -1,0 +1,11 @@
+defaults:
+  - base_lightning
+
+lr: 2e-5
+epochs: 100
+batch_size: 4
+num_workers: 4
+devices: 
+  - 1
+patience: 10
+time_intervals: 10

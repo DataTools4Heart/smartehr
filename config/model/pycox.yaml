@@ -1,0 +1,10 @@
+defaults:
+  - base_pycox
+name: bce_surv
+batch_norm: true
+dropout: 0.2
+num_nodes:
+- 32
+- 32
+- 32
+output_bias: true

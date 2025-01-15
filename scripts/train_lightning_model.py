@@ -3,20 +3,25 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from lightning.pytorch.callbacks.model_checkpoint import ModelCheckpoint
 import os
 import torch
-from lightning_utils.utils import SurvivalAnalysisModule
+from lightning_training.modules import SurvivalAnalysisModule
 import lightning.pytorch as L
 from torch.utils.data import DataLoader
-import argparse
-from omegaconf import OmegaConf
-from lightning_utils.utils import prepare_data_for_training, load_lightning_model, LightningParams
+from lightning_training.utils import load_lightning_model
+from dataset_utils.utils import load_for_lightning
+import hydra
+from config.config import Config
+from config.training.training import LightningTrainingParams
 
 
-def train_lightning_model(params: LightningParams):
-    model_params = params.model_params
-    train_params = params.train_params
-    dataset_params = params.dataset_params
-    model, collate_fn = load_lightning_model(model_params, params.time_intervals)
-    train, val, test = prepare_data_for_training(dataset_params, params.time_intervals)
+@hydra.main(version_base=None, config_path="../config", config_name="config")
+def train_lightning_model(cfg: Config):
+    model_params = cfg.model
+    train_params = cfg.training
+    dataset_params = cfg.dataset
+    train_params = LightningTrainingParams(**train_params)
+
+    model, collate_fn = load_lightning_model(model_params, train_params.time_intervals)
+    train, val, test = load_for_lightning(dataset_params, train_params.time_intervals)
 
     model = SurvivalAnalysisModule(model, lr=train_params.lr)
 
@@ -32,6 +37,7 @@ def train_lightning_model(params: LightningParams):
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
         torch.set_float32_matmul_precision("medium")
     devices = train_params.devices
+    print(devices, type(devices))
     callbacks = [
         EarlyStopping(monitor="val_loss", mode="min", patience=train_params.patience),
         ModelCheckpoint(monitor="val_loss", mode="min"),
@@ -49,14 +55,4 @@ def train_lightning_model(params: LightningParams):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train a Lightning model for MIMIC readmission prediction.")
-    parser.add_argument("--cfg-path", type=str, required=True, help="Path to the configuration file.")
-    args = parser.parse_args()
-
-    # Load configuration from the provided path
-    with open(args.cfg_path, "r") as f:
-        yaml_conf = OmegaConf.to_container(OmegaConf.load(f), resolve=True)
-    params = LightningParams(**yaml_conf)
-
-    # Train the model
-    train_lightning_model(params)
+    train_lightning_model()

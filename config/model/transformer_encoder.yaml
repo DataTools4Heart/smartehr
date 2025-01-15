@@ -1,0 +1,10 @@
+defaults:
+  - base_transformer_encoder
+
+name: transformer_encoder
+tokenizer_path: data/smart_poc_tokenizer
+d_model: 32
+nhead: 4
+dim_feedforward: 32
+num_layers: 1
+dropout: 0.2
