@@ -1,19 +1,19 @@
 import torch
-from config.model.model import ModelParams, ClinicalLongformerModelParams, TransformerEncoderModelParams
+from config.model.model import ModelParams, ClinicalLongformerModelParams, TransformerEncoderModelParams, TrainParams
 from transformers import AutoTokenizer
-from models.models import TransformerEncoderForClassification, MIMICNotesModel
+from models.models import TransformerEncoderForClassification, MIMICNotesModel, MistralForRegression
 from functools import partial
 import torch.nn.functional as F
 from pathlib import Path
 import pickle as pkl
 from tokenizers.implementations import ByteLevelBPETokenizer
-from transformers import PreTrainedTokenizer
+from transformers import PreTrainedTokenizer, AutoModelForCausalLM
 import random
-
-
+from lightning_training.modules import SurvivalAnalysisModuleLLM
+from config.training.training import LightningTrainingParams
 def collate_fn_longformer(batch, tokenizer: PreTrainedTokenizer):
     features, durations, events = [b[0]["text"] for b in batch], [b[1][0] for b in batch], [b[1][1] for b in batch]
-    encodings = tokenizer.batch_encode_plus(features, padding=True, max_length=4096, truncation=True, return_tensors="pt")
+    encodings = tokenizer.batch_encode_plus(features, padding=True, max_length=2048, truncation=True, return_tensors="pt")
     return (
         {"input_ids": encodings["input_ids"], "attention_mask": encodings["attention_mask"]},
         torch.tensor(durations),
@@ -56,7 +56,7 @@ def load_tokenizer(tokenizer_path: str):
     return tokenizer
 
 
-def load_lightning_model(model_params: ModelParams, time_intervals: int):
+def load_lightning_model(model_params: ModelParams, time_intervals: int, train_params: LightningTrainingParams):
     if model_params.name == "clinical_longformer":
         model_params = ClinicalLongformerModelParams(**model_params)
         tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
@@ -81,6 +81,15 @@ def load_lightning_model(model_params: ModelParams, time_intervals: int):
             time_intervals=24,
         )
         collate_fn = partial(collate_fn_smart_poc, tokenizer=tokenizer)
+    #elif model_params.name == "meta-llama/Llama-3.1-8B-Instruct":
     else:
-        raise NotImplementedError(f"Unknown model: {model_params.name}")
+        tokenizer = AutoTokenizer.from_pretrained(model_params.model_name)
+        tokenizer.pad_token = tokenizer.eos_token
+        #num_embeddings = tokenizer.get_vocab_size()
+        model = MistralForRegression(model_name=model_params.model_name, time_intervals=time_intervals + 1, tokenizer=tokenizer)
+        model = SurvivalAnalysisModuleLLM(model, lr=train_params.lr)
+        collate_fn = partial(collate_fn_longformer, tokenizer=tokenizer)
     return model, collate_fn
+    #else:
+    #    raise NotImplementedError(f"Unknown model: {model_params.name}")
+    #return model, collate_fn

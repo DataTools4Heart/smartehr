@@ -6,7 +6,16 @@ from hydra.core.config_store import ConfigStore
 class ModelParams:
     name: str
 
-
+@dataclass
+class TrainParams:
+    lr: float
+    batch_size: int
+    num_workers: int
+    patience: int
+    epochs: int
+    devices: list[int]
+    time_intervals: int
+    max_steps: int
 @dataclass
 class PycoxModelParams(ModelParams):
     batch_norm: bool
@@ -33,9 +42,14 @@ class TransformerEncoderModelParams(ModelParams):
     num_layers: int
     dropout: float
 
+@dataclass
+class LLMModelParams(ModelParams):
+    model_name: str
+
 
 def register_configs() -> None:
     cs = ConfigStore.instance()
     cs.store(group="model", name="base_pycox", node=PycoxModelParams)
     cs.store(group="model", name="base_clinical_longformer", node=ClinicalLongformerModelParams)
     cs.store(group="model", name="base_transformer_encoder", node=TransformerEncoderModelParams)
+    cs.store(group="model", name="base_llm", node=LLMModelParams)

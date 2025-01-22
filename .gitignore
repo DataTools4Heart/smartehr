@@ -4,3 +4,5 @@ data/
 lightning_logs/
 legacy/
 outputs/
+checkpoints/
+wandb/

@@ -3,9 +3,12 @@ defaults:
 
 lr: 2e-5
 epochs: 100
-batch_size: 4
-num_workers: 4
+batch_size: 1
+num_workers: 32
 devices: 
+  - 0
   - 1
+  
 patience: 10
-time_intervals: 10
+time_intervals: 365
+max_steps: 100000

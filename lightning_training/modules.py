@@ -3,7 +3,11 @@ import torch.nn as nn
 import lightning.pytorch as L
 from pycox.models.loss import nll_pmf
 from lightning_training.metrics import SurvMetrics
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
+from peft import LoraConfig
+import peft
+import bitsandbytes as bnb
 
 class SurvivalAnalysisModule(L.LightningModule):
     def __init__(self, model: nn.Module, lr: float):
@@ -46,4 +50,27 @@ class SurvivalAnalysisModule(L.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return optimizer
+
+
+class SurvivalAnalysisModuleLLM(SurvivalAnalysisModule):
+    def __init__(self, model: nn.Module, lr: float):
+        #self.time_intervals = time_intervals
+        super().__init__(model=model,lr=lr)
+        #self.model.config.use_cache = False
+        self.peft_config = LoraConfig(
+                            lora_alpha=4, lora_dropout=0.1, r=16,
+                            bias="none", #task_type="CAUSAL_LM",
+                            target_modules=[
+                                "q_proj",
+                                'k_proj',
+                                'v_proj',
+                                'fc1',
+                                'fc2'])
+                
+        self.model = peft.get_peft_model(self.model, self.peft_config)
+        #self.model.config.use_cache = False
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr)
         return optimizer

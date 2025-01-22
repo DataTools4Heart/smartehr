@@ -21,7 +21,14 @@ class SurvMetrics(Metric):
     def compute(self):
         preds, events, durations = self.preds, self.events, self.durations
         if isinstance(preds, list):
+            print(preds[0].shape)
+            print(events[0].shape)
+            print(durations[0].shape)
             preds, events, durations = torch.cat(self.preds), torch.cat(self.events), torch.cat(self.durations)
+        print(preds.shape)
+        print(events.shape)
+        print(durations.shape)
+        #0/0
         preds = torch.cat([preds, torch.zeros((preds.shape[0], 1), device=preds.device)], dim=1)
         preds = torch.softmax(preds, dim=1)[:, :-1]
         surv = 1 - preds.cumsum(dim=1)
@@ -33,5 +40,8 @@ class SurvMetrics(Metric):
         )
         ci = {}
         for t in self.evaluation_times:
-            ci[t] = concordance_index(event_times=durations, predicted_scores=surv[:, t], event_observed=events)
+            try:
+                ci[t] = concordance_index(event_times=durations, predicted_scores=surv[:, t], event_observed=events)
+            except:
+                ci[t] = 0
         return {"roc_auc": roc_auc, "ci": ci}

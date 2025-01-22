@@ -17,7 +17,7 @@ class LightningTrainingParams(TrainingParams):
     devices: list[int]
     patience: int
     time_intervals: int
-
+    max_steps: int
     def __post_init__(self):
         self.devices = [int(device) for device in self.devices]
 

@@ -2,11 +2,10 @@ import torch
 import math
 from torch import Tensor
 from typing import Optional
-from transformers import AutoModel, PreTrainedTokenizer
+from transformers import AutoModel, PreTrainedTokenizer, BitsAndBytesConfig
 import pandas as pd
 import numpy as np
 import torch.nn as nn
-
 
 smart_weights = {
     "age": -0.0850,
@@ -49,39 +48,20 @@ def smart_survival_times(weights, data: pd.DataFrame):
 
 
 class MistralForRegression(nn.Module):
-    def __init__(self, time_intervals: int, tokenizer: PreTrainedTokenizer):
+    def __init__(self,model_name: str, time_intervals: int, tokenizer: PreTrainedTokenizer):
         super().__init__()
         self.time_intervals = time_intervals
         self.tokenizer = tokenizer
         vocab_size = len(tokenizer.get_vocab())
-        config = MistralConfig(
-            **{
-                "architectures": ["MistralForCausalLM"],
-                "attention_dropout": 0.0,
-                "bos_token_id": 1,
-                "eos_token_id": 2,
-                "head_dim": 128,
-                "hidden_act": "silu",
-                "hidden_size": 1024,
-                "initializer_range": 0.02,
-                "intermediate_size": 14336,
-                "max_position_embeddings": vocab_size,
-                "model_type": "mistral",
-                "num_attention_heads": 8,
-                "num_hidden_layers": 8,
-                "num_key_value_heads": 4,
-                "rms_norm_eps": 1e-05,
-                "rope_theta": 1000000.0,
-                "sliding_window": 4096,
-                "tie_word_embeddings": False,
-                "torch_dtype": "bfloat16",
-                "transformers_version": "4.45.1",
-                "use_cache": True,
-                "vocab_size": vocab_size,
-            }
-        )
+        self.bnb_config = BitsAndBytesConfig(
+                            load_in_4bit=True,
+                            bnb_4bit_quant_type="nf4",
+                            bnb_4bit_compute_dtype=torch.bfloat16,
+                        )
+        
 
-        self.model = MistralModel(config=config)
+        self.model = AutoModel.from_pretrained(model_name, quantization_config=self.bnb_config,
+                                               trust_remote_code=True,max_length=2048)
         self.cls = nn.Linear(self.model.config.hidden_size, time_intervals)
 
     def forward(self, input_ids: Tensor, attention_mask: Optional[Tensor] = None):
