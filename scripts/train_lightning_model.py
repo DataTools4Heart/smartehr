@@ -15,15 +15,17 @@ from config.training.training import LightningTrainingParams
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def train_lightning_model(cfg: Config):
+    if torch.cuda.is_available():
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
+        torch.set_float32_matmul_precision("medium")
+
     model_params = cfg.model
     train_params = cfg.training
     dataset_params = cfg.dataset
     train_params = LightningTrainingParams(**train_params)
 
-    model, collate_fn = load_lightning_model(model_params, train_params.time_intervals)
-    train, val, test = load_for_lightning(dataset_params, train_params.time_intervals)
-
-    model = SurvivalAnalysisModule(model, lr=train_params.lr)
+    model, collate_fn = load_lightning_model(model_params, train_params)
+    train, val, test = load_for_lightning(dataset_params, train_params.task)
 
     train_dl = DataLoader(
         train, batch_size=train_params.batch_size, shuffle=True, collate_fn=collate_fn, num_workers=train_params.num_workers
@@ -33,11 +35,7 @@ def train_lightning_model(cfg: Config):
     )
     test_dl = DataLoader(test, batch_size=1, shuffle=False, collate_fn=collate_fn, num_workers=1)
 
-    if torch.cuda.is_available():
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
-        torch.set_float32_matmul_precision("medium")
     devices = train_params.devices
-    print(devices, type(devices))
     callbacks = [
         EarlyStopping(monitor="val_loss", mode="min", patience=train_params.patience),
         ModelCheckpoint(monitor="val_loss", mode="min"),
@@ -49,6 +47,7 @@ def train_lightning_model(cfg: Config):
         max_epochs=train_params.epochs,
         strategy=strategy,
         precision="16-mixed" if isinstance(devices, list) or devices == "cuda" else "auto",
+        accumulate_grad_batches=train_params.accumulation_steps,
     )
     trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
     trainer.test(dataloaders=test_dl)

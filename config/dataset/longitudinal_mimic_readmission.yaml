@@ -1,0 +1,7 @@
+defaults:
+  - base_longitudinal_mimic_readmission
+
+name: longitudinal_mimic_readmission
+root_path: data/mimic_readmission
+only_one_readmission_label: true
+only_last_feature: false

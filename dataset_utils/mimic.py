@@ -5,6 +5,10 @@ import re
 import os
 from tokenizers.implementations import ByteLevelBPETokenizer
 from torch.utils.data import Dataset, DataLoader
+import numpy as np
+import spacy
+import json
+from pathlib import Path
 
 itemids_lab = [
     51006,
@@ -93,6 +97,65 @@ class MIMICReadmission(Dataset):
         features = self.data.iloc[idx].to_dict()
         outcomes = [o[idx] for o in self.outcomes]
         return features, outcomes
+
+
+class LongitudinalMIMICReadmission(Dataset):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        split: str = "train",
+        only_one_readmission_label: bool = True,
+        only_last_feature: bool = False,
+        lab_trans: Optional[Union[LabTransCoxTime, LabTransDiscreteTime, LabTransPCHazard]] = None,
+    ):
+        data = data[data["split"] == split]
+        data.loc[:, "text"] = data["text"].apply(preprocess_note)
+        data = data.sort_values(["subject_id", "admittime"])
+        dataset = []
+        if lab_trans:
+            data["days_next_admit"], data["event"] = lab_trans.transform(data["days_next_admit"].values, data["event"].values)
+        for subject_id, group in data.groupby("subject_id"):
+            if only_one_readmission_label:
+                group = group.iloc[:-1]
+                outcomes = {
+                    "duration": np.array([group["days_next_admit"].iloc[-1]]),
+                    "event": np.array([group["event"].iloc[-1]]),
+                }
+            else:
+                outcomes = {"duration": group["days_next_admit"].values, "event": group["event"].values}
+            time_deltas = group["days_next_admit"].iloc[:-1].cumsum().values
+            time_deltas = np.array([0.0] + time_deltas.tolist())
+            outcomes["time_deltas"] = time_deltas
+            group = group.drop(["days_next_admit", "event", "split", "hadm_id", "subject_id", "admittime"], axis=1)
+            if only_last_feature:
+                group = group.iloc[-1:]
+            dataset.append({"subject_id": subject_id, "features": group, "outcomes": outcomes})
+        self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        features = self.dataset[idx]["features"]
+        outcomes = self.dataset[idx]["outcomes"]
+        return features, outcomes
+
+
+class MIMICWordTokenizer:
+    def __init__(self, vocab_path: str, lang: str = "en"):
+        self.vocab_path = Path(vocab_path)
+        with open(self.vocab_path / "vocab.json", "r") as f:
+            self.vocab = json.load(f)
+        self.tokenizer = spacy.blank(lang)
+
+    def encode(self, text: str) -> list[int]:
+        ids = []
+        for token in self.tokenizer(text):
+            token = token.text
+            if token not in self.vocab:
+                token = "[UNK]"
+            ids.append(self.vocab[token])
+        return ids
 
 
 def load_tokenizer(use_notes: bool = True):

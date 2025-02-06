@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from hydra.core.config_store import ConfigStore
+from config.training.task import task
 
 
 # Training params
@@ -14,9 +15,10 @@ class LightningTrainingParams(TrainingParams):
     epochs: int
     batch_size: int
     num_workers: int
+    accumulation_steps: int
     devices: list[int]
     patience: int
-    time_intervals: int
+    task: task.TaskParams
 
     def __post_init__(self):
         self.devices = [int(device) for device in self.devices]
@@ -42,3 +44,4 @@ def register_configs() -> None:
         name="base_lightning",
         node=LightningTrainingParams,
     )
+    task.register_configs()

@@ -34,8 +34,41 @@ class TransformerEncoderModelParams(ModelParams):
     dropout: float
 
 
+@dataclass
+class WeightedLSTMModelParams(ModelParams):
+    vocab_path: str
+    lang: str
+    word_embedding_dim: int
+    time_embedding_dim: int
+    lstm_hidden_size: int
+    lstm_dropout: float
+
+
+@dataclass
+class TANNModelParams(ModelParams):
+    vocab_path: str
+    lang: str
+    embedding_dim: int
+    hidden_dim: int
+    num_layers: int
+    k: int
+    one_day: float
+    uniform_bank: bool
+    probabilities: list[float] | None
+
+
+@dataclass
+class MLPModelParams(ModelParams):
+    input_size: int
+    num_nodes: list[int]
+    dropout: float
+
+
 def register_configs() -> None:
     cs = ConfigStore.instance()
     cs.store(group="model", name="base_pycox", node=PycoxModelParams)
     cs.store(group="model", name="base_clinical_longformer", node=ClinicalLongformerModelParams)
     cs.store(group="model", name="base_transformer_encoder", node=TransformerEncoderModelParams)
+    cs.store(group="model", name="base_weighted_lstm", node=WeightedLSTMModelParams)
+    cs.store(group="model", name="base_tann", node=TANNModelParams)
+    cs.store(group="model", name="base_mlp", node=MLPModelParams)

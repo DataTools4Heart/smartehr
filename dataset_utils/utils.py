@@ -6,13 +6,18 @@ from collections import defaultdict
 from pycox.preprocessing import label_transforms
 from pathlib import Path
 from dataset_utils.smart import SMARTPoC
-
-from dataset_utils.mimic import MIMICReadmission
+from dataset_utils.mimic import MIMICReadmission, LongitudinalMIMICReadmission
 from dataset_utils.smart import SMARTPoC, preprocess_smart
 from pycox.preprocessing import label_transforms
 import numpy as np
 
-from config.dataset.dataset import DatasetParams, MimicReadmissionParams, SmartPoCParams, SmartParams
+from config.dataset.dataset import (
+    DatasetParams,
+    MimicReadmissionParams,
+    SmartPoCParams,
+    SmartParams,
+    LongitudinalMimicReadmissionParams,
+)
 from sklearn.preprocessing import OrdinalEncoder
 
 
@@ -29,6 +34,10 @@ def load_mimic_readmission(root_path: Path):
     val = data[data["split"] == "val"]
     test = data[data["split"] == "test"]
     return train, val, test
+
+
+def load_longitudinal_mimic_readmission(root_path: Path):
+    return pd.read_csv(root_path / "longitudinal_mimic_readmission.csv")
 
 
 def load_smart_poc(root_path: str, value_dict_path: str, data_dict_path: str):
@@ -76,12 +85,53 @@ def load_smart_poc(root_path: str, value_dict_path: str, data_dict_path: str):
     return train, val, test, name_map
 
 
-def load_for_lightning(dataset_params: DatasetParams, time_intervals: int):
+from hydra.core.hydra_config import HydraConfig
+from config.training.task.task import SurvivalAnalysisParams, TaskParams
+
+
+def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
+    task_name = HydraConfig.get().runtime.choices["training/task"]
+    if task_name == "survival_analysis":
+        task_params = SurvivalAnalysisParams(**task_params)
+        lab_trans = label_transforms.LabTransDiscreteTime(
+            cuts=np.array([i for i in range(task_params.num_time_intervals)], dtype=float)
+        )
+    elif task_name == "binary_classification":
+        lab_trans = None
+    else:
+        raise NotImplementedError(f"Unknown task: {task_name}")
+
     if dataset_params.name == "mimic_readmission":
         dataset_params = MimicReadmissionParams(**dataset_params)
-        lab_trans = label_transforms.LabTransDiscreteTime(cuts=np.array([i for i in range(time_intervals + 1)], dtype=float))
         train, val, test = load_mimic_readmission(Path(dataset_params.root_path))
         train, val, test = MIMICReadmission(train, lab_trans), MIMICReadmission(val, lab_trans), MIMICReadmission(test, lab_trans)
+    elif dataset_params.name == "longitudinal_mimic_readmission":
+        dataset_params = LongitudinalMimicReadmissionParams(**dataset_params)
+        data = load_longitudinal_mimic_readmission(Path(dataset_params.root_path))
+        data = prepare_structured_data(data)
+        train, val, test = (
+            LongitudinalMIMICReadmission(
+                data,
+                split="train",
+                only_one_readmission_label=dataset_params.only_one_readmission_label,
+                only_last_feature=dataset_params.only_last_feature,
+                lab_trans=lab_trans,
+            ),
+            LongitudinalMIMICReadmission(
+                data,
+                split="val",
+                only_one_readmission_label=dataset_params.only_one_readmission_label,
+                only_last_feature=dataset_params.only_last_feature,
+                lab_trans=lab_trans,
+            ),
+            LongitudinalMIMICReadmission(
+                data,
+                split="test",
+                only_one_readmission_label=dataset_params.only_one_readmission_label,
+                only_last_feature=dataset_params.only_last_feature,
+                lab_trans=lab_trans,
+            ),
+        )
     elif dataset_params.name == "smart_poc":
         dataset_params = SmartPoCParams(**dataset_params)
         train, val, test, name_map = load_smart_poc(
@@ -89,7 +139,7 @@ def load_for_lightning(dataset_params: DatasetParams, time_intervals: int):
             value_dict_path=Path(dataset_params.value_dict_path),
             data_dict_path=Path(dataset_params.data_dict_path),
         )
-        lab_trans = label_transforms.LabTransDiscreteTime(time_intervals).fit(train["cd_time"].values, train["cd_event"].values)
+        # lab_trans = label_transforms.LabTransDiscreteTime(time_intervals).fit(train["cd_time"].values, train["cd_event"].values)
         train, val, test = (
             SMARTPoC(train, name_map, lab_trans),
             SMARTPoC(val, name_map, lab_trans),
@@ -119,6 +169,32 @@ class Normalizer:
         return data
 
 
+def prepare_structured_data(dataset: pd.DataFrame):
+    original_index = dataset.index
+    dataset = dataset.sort_values(by=["subject_id", "admittime"])
+    train = dataset[dataset["split"] == "train"]
+    val = dataset[dataset["split"] == "val"]
+    test = dataset[dataset["split"] == "test"]
+    other_cols = ["days_next_admit", "event", "split", "hadm_id", "text", "subject_id", "admittime"]
+    x_names = [k for k in train.columns if k not in other_cols]
+    x_train = train.loc[:, x_names]
+    x_val = val.loc[:, x_names]
+    x_test = test.loc[:, x_names]
+    x_train, x_val, x_test = encode_categorical_features(x_train, x_val, x_test)
+    x_train, x_val, x_test = x_train.fillna(-1), x_val.fillna(-1), x_test.fillna(-1)
+
+    normalizer = Normalizer()
+    normalizer.fit(x_train)
+    x_train, x_val, x_test = normalizer.transform(x_train), normalizer.transform(x_val), normalizer.transform(x_test)
+    train = pd.concat([x_train, train[other_cols]], axis=1)
+    val = pd.concat([x_val, val[other_cols]], axis=1)
+    test = pd.concat([x_test, test[other_cols]], axis=1)
+
+    dataset = pd.concat([train, val, test])
+    dataset = dataset.reindex(original_index)
+    return dataset
+
+
 def encode_categorical_features(train, val, test):
     encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
     categorical_cols = train.select_dtypes(include=["object"]).columns
@@ -146,6 +222,24 @@ def load_for_pycox(dataset_params: DatasetParams):
         evaluation_times = [i * 30 for i in range(1, 11)]
         y_names = ["days_next_admit", "event"]
         x_names = [k for k in train.columns if k not in (y_names + ["split", "hadm_id", "text"])]
+    elif dataset_params.name == "longitudinal_mimic_readmission":
+        dataset_params = LongitudinalMimicReadmissionParams(**dataset_params)
+        dataset = load_longitudinal_mimic_readmission(Path(dataset_params.root_path))
+        dataset = dataset.sort_values(by=["subject_id", "admittime"])
+        new_data = []
+        for _, group in dataset.groupby("subject_id"):
+            if dataset_params.only_one_readmission_label:
+                group = group.iloc[:-1]
+            group = group.iloc[-1]
+            new_data.append(group)
+        dataset = pd.DataFrame(new_data).reset_index(drop=True)
+        train = dataset[dataset["split"] == "train"]
+        val = dataset[dataset["split"] == "val"]
+        test = dataset[dataset["split"] == "test"]
+        num_intervals = 366
+        evaluation_times = [i * 30 for i in range(1, 11)]
+        y_names = ["days_next_admit", "event"]
+        x_names = [k for k in train.columns if k not in (y_names + ["split", "hadm_id", "text", "subject_id", "admittime"])]
     else:
         raise NotImplementedError(f"Unknown dataset: {dataset_params.name}")
 

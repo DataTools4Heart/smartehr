@@ -1,0 +1,11 @@
+defaults:
+  - base_survival_analysis
+
+num_time_intervals: 366
+evaluation_times:
+  - 1
+  - 30
+  - 60
+  - 90
+  - 180
+  - 365

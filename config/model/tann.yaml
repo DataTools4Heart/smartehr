@@ -1,0 +1,13 @@
+defaults:
+  - base_tann
+
+name: tann
+vocab_path: data/mimic_readmission/word_tokenizer_one_label/
+lang: en
+embedding_dim: 512
+hidden_dim: 512
+num_layers: 3
+k: 16
+one_day: 1.0
+uniform_bank: true
+probabilities: null

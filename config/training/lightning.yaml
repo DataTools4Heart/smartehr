@@ -1,5 +1,6 @@
 defaults:
   - base_lightning
+  - task: survival_analysis
 
 lr: 2e-5
 epochs: 100
@@ -8,4 +9,4 @@ num_workers: 4
 devices: 
   - 1
 patience: 10
-time_intervals: 10
+accumulation_steps: 1

@@ -51,10 +51,12 @@ def load_readmission_data(mimic_db_path: str, notes_db_path: str, itemids_lab: l
     data = data.loc[
         :,
         [
+            "subject_id",
             "hadm_id",
             "text",
             "event",
             "days_next_admit",
+            "admittime",
             "gender",
             "anchor_age",
             "marital_status",
@@ -85,20 +87,36 @@ def load_readmission_data(mimic_db_path: str, notes_db_path: str, itemids_lab: l
     data["Temperature Celsius"] = data["Temperature Celsius"].fillna(data["Temperature Fahrenheit"])
     data["Temperature Celsius"] = data["Temperature Celsius"].astype(float).round(1)
     data = data.drop("Temperature Fahrenheit", axis=1)
+
+    more_than_one_entry_subjects = data.groupby("subject_id").size()
+    more_than_one_entry_subjects = more_than_one_entry_subjects[more_than_one_entry_subjects > 1].index
+    data = data[(data["subject_id"].isin(more_than_one_entry_subjects))]
+    data = data.sort_values(["subject_id", "admittime"])
+
+    cols = data.columns.tolist()
+    cols.remove("subject_id")
+    cols = ["subject_id"] + cols
+    data = data[cols]
     return data
 
 
 def save_readmission_data(readmission_path: str, readmission_data: pd.DataFrame):
-    n = len(readmission_data)
+    unique_subjects = readmission_data["subject_id"].unique()
+    n = len(unique_subjects)
     test_size = int(n * 0.2)
     train_size = int((n - test_size) * 0.8)
     splits = np.array(["test"] * test_size + ["train"] * train_size + ["val"] * (n - test_size - train_size))
     np.random.seed(42)
     np.random.shuffle(splits)
-    readmission_data["split"] = splits
+
+    # Create mapping of subject_id to split
+    subject_to_split = dict(zip(unique_subjects, splits))
+
+    # Add split column by mapping from subject_id
+    readmission_data.loc[:, "split"] = readmission_data["subject_id"].map(subject_to_split)
     readmission_path = Path(readmission_path)
     os.makedirs(readmission_path, exist_ok=True)
-    readmission_data.to_csv(readmission_path / "readmission.csv", index=False)
+    readmission_data.to_csv(readmission_path / "longitudinal_mimic_readmission.csv", index=False)
 
 
 if __name__ == "__main__":

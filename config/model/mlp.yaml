@@ -1,0 +1,7 @@
+defaults:
+  - base_mlp
+
+name: mlp
+input_size: 100
+num_nodes: [512, 512, 512, 512]
+dropout: 0.2

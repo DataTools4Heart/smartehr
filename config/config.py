@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-import hydra
 from hydra.core.config_store import ConfigStore
-from omegaconf import ListConfig, DictConfig, OmegaConf
+from omegaconf import ListConfig, DictConfig
 import config.training.training as training
 import config.model.model as model
 import config.dataset.dataset as dataset
