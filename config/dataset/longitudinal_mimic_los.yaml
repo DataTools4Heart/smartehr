@@ -1,0 +1,6 @@
+defaults:
+  - base_longitudinal_mimic_los
+
+name: longitudinal_mimic_los
+root_path: data/mimic_los
+only_last_feature: false

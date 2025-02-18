@@ -141,7 +141,43 @@ class LongitudinalMIMICReadmission(Dataset):
         return features, outcomes
 
 
-class MIMICWordTokenizer:
+class LongitudinalMIMICLoS(Dataset):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        split: str = "train",
+        only_last_feature: bool = False,
+    ):
+        data = data[data["split"] == split]
+        data.loc[:, "text"] = data["text"].apply(preprocess_note)
+        data = data.sort_values(["subject_id", "intime"])
+        dataset = []
+        for subject_id, group in data.groupby("subject_id"):
+            outcomes = {
+                "los": np.array([group["class"].iloc[-1]]),
+            }
+
+            time_deltas = ((group["intime"].iloc[-1] - group["intime"]).dt.total_seconds() / (24 * 3600)).values
+            group = group[
+                [
+                    col
+                    for col in group.columns
+                    if col not in ["outtime", "class", "split", "subject_id", "hadm_id", "stay_id", "los", "intime"]
+                ]
+            ]
+            if only_last_feature:
+                group = group.iloc[-1:]
+            dataset.append({"subject_id": subject_id, "features": group, "time_deltas": time_deltas, "outcomes": outcomes})
+        self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        return self.dataset[idx]
+
+
+class WordTokenizer:
     def __init__(self, vocab_path: str, lang: str = "en"):
         self.vocab_path = Path(vocab_path)
         with open(self.vocab_path / "vocab.json", "r") as f:

@@ -1,5 +1,5 @@
 import init
-from dataset_utils.mimic import LongitudinalMIMICReadmission
+from dataset_utils.mimic import LongitudinalMIMICReadmission, LongitudinalMIMICLoS
 import pandas as pd
 import spacy
 from collections import defaultdict
@@ -8,12 +8,15 @@ import json
 from pathlib import Path
 import argparse
 import os
-from dataset_utils.mimic import preprocess_note
 
 
 def train_word_tokenizer(dataset_path: str, out_path: str, lang: str = "en"):
     dataset = pd.read_csv(dataset_path)
-    train = LongitudinalMIMICReadmission(dataset, split="train", only_one_readmission_label=True)
+    if "class" in dataset.columns:
+        dataset["intime"] = pd.to_datetime(dataset["intime"])
+        train = LongitudinalMIMICLoS(dataset, split="train")
+    else:
+        train = LongitudinalMIMICReadmission(dataset, split="train", only_one_readmission_label=True)
     tokenizer = spacy.blank(lang)
     vocab = defaultdict(int)
     for i in tqdm(range(len(train))):

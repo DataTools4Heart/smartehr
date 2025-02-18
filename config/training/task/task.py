@@ -5,13 +5,18 @@ from hydra.core.config_store import ConfigStore
 # Task params
 @dataclass
 class TaskParams:
-    pass
+    name: str
 
 
 # Training params
 @dataclass
 class BinaryClassificationParams(TaskParams):
     pass
+
+
+@dataclass
+class MulticlassClassificationParams(TaskParams):
+    num_outputs: int
 
 
 @dataclass
@@ -31,4 +36,9 @@ def register_configs() -> None:
         group="training/task",
         name="base_survival_analysis",
         node=SurvivalAnalysisParams,
+    )
+    cs.store(
+        group="training/task",
+        name="base_multiclass_classification",
+        node=MulticlassClassificationParams,
     )

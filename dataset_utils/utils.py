@@ -6,7 +6,7 @@ from collections import defaultdict
 from pycox.preprocessing import label_transforms
 from pathlib import Path
 from dataset_utils.smart import SMARTPoC
-from dataset_utils.mimic import MIMICReadmission, LongitudinalMIMICReadmission
+from dataset_utils.mimic import MIMICReadmission, LongitudinalMIMICReadmission, LongitudinalMIMICLoS
 from dataset_utils.smart import SMARTPoC, preprocess_smart
 from pycox.preprocessing import label_transforms
 import numpy as np
@@ -17,6 +17,7 @@ from config.dataset.dataset import (
     SmartPoCParams,
     SmartParams,
     LongitudinalMimicReadmissionParams,
+    LongitudinalMimicLoSParams,
 )
 from sklearn.preprocessing import OrdinalEncoder
 
@@ -34,6 +35,12 @@ def load_mimic_readmission(root_path: Path):
     val = data[data["split"] == "val"]
     test = data[data["split"] == "test"]
     return train, val, test
+
+
+def load_longitudinal_mimic_los(root_path: Path):
+    data = pd.read_csv(root_path / "longitudinal_mimic_los.csv")
+    data["intime"] = pd.to_datetime(data["intime"])
+    return data
 
 
 def load_longitudinal_mimic_readmission(root_path: Path):
@@ -90,13 +97,13 @@ from config.training.task.task import SurvivalAnalysisParams, TaskParams
 
 
 def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
-    task_name = HydraConfig.get().runtime.choices["training/task"]
+    task_name = task_params.name
     if task_name == "survival_analysis":
         task_params = SurvivalAnalysisParams(**task_params)
         lab_trans = label_transforms.LabTransDiscreteTime(
             cuts=np.array([i for i in range(task_params.num_time_intervals)], dtype=float)
         )
-    elif task_name == "binary_classification":
+    elif task_name == "binary_classification" or task_name == "multiclass_classification":
         lab_trans = None
     else:
         raise NotImplementedError(f"Unknown task: {task_name}")
@@ -108,7 +115,8 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
     elif dataset_params.name == "longitudinal_mimic_readmission":
         dataset_params = LongitudinalMimicReadmissionParams(**dataset_params)
         data = load_longitudinal_mimic_readmission(Path(dataset_params.root_path))
-        data = prepare_structured_data(data)
+        ignore_cols = ["days_next_admit", "event", "split", "hadm_id", "text", "subject_id", "admittime"]
+        data = prepare_structured_data(data, ignore_cols)
         train, val, test = (
             LongitudinalMIMICReadmission(
                 data,
@@ -132,6 +140,16 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
                 lab_trans=lab_trans,
             ),
         )
+    elif dataset_params.name == "longitudinal_mimic_los":
+        dataset_params = LongitudinalMimicLoSParams(**dataset_params)
+        data = load_longitudinal_mimic_los(Path(dataset_params.root_path))
+        ignore_cols = ["class", "split", "stay_id", "hadm_id", "text", "subject_id", "intime", "outtime"]
+        data = prepare_structured_data(data, ignore_cols)
+        train, val, test = (
+            LongitudinalMIMICLoS(data, split="train", only_last_feature=dataset_params.only_last_feature),
+            LongitudinalMIMICLoS(data, split="val", only_last_feature=dataset_params.only_last_feature),
+            LongitudinalMIMICLoS(data, split="test", only_last_feature=dataset_params.only_last_feature),
+        )
     elif dataset_params.name == "smart_poc":
         dataset_params = SmartPoCParams(**dataset_params)
         train, val, test, name_map = load_smart_poc(
@@ -146,7 +164,7 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
             SMARTPoC(test, name_map, lab_trans),
         )
     else:
-        raise NotImplementedError(f"Unknown dataset: {dataset_params.dataset_name}")
+        raise NotImplementedError(f"Unknown dataset: {dataset_params.name}")
     return train, val, test
 
 
@@ -169,14 +187,12 @@ class Normalizer:
         return data
 
 
-def prepare_structured_data(dataset: pd.DataFrame):
+def prepare_structured_data(dataset: pd.DataFrame, ignore_cols: list[str]):
     original_index = dataset.index
-    dataset = dataset.sort_values(by=["subject_id", "admittime"])
     train = dataset[dataset["split"] == "train"]
     val = dataset[dataset["split"] == "val"]
     test = dataset[dataset["split"] == "test"]
-    other_cols = ["days_next_admit", "event", "split", "hadm_id", "text", "subject_id", "admittime"]
-    x_names = [k for k in train.columns if k not in other_cols]
+    x_names = [k for k in train.columns if k not in ignore_cols]
     x_train = train.loc[:, x_names]
     x_val = val.loc[:, x_names]
     x_test = test.loc[:, x_names]
@@ -186,9 +202,9 @@ def prepare_structured_data(dataset: pd.DataFrame):
     normalizer = Normalizer()
     normalizer.fit(x_train)
     x_train, x_val, x_test = normalizer.transform(x_train), normalizer.transform(x_val), normalizer.transform(x_test)
-    train = pd.concat([x_train, train[other_cols]], axis=1)
-    val = pd.concat([x_val, val[other_cols]], axis=1)
-    test = pd.concat([x_test, test[other_cols]], axis=1)
+    train = pd.concat([x_train, train[ignore_cols]], axis=1)
+    val = pd.concat([x_val, val[ignore_cols]], axis=1)
+    test = pd.concat([x_test, test[ignore_cols]], axis=1)
 
     dataset = pd.concat([train, val, test])
     dataset = dataset.reindex(original_index)
@@ -240,6 +256,28 @@ def load_for_pycox(dataset_params: DatasetParams):
         evaluation_times = [i * 30 for i in range(1, 11)]
         y_names = ["days_next_admit", "event"]
         x_names = [k for k in train.columns if k not in (y_names + ["split", "hadm_id", "text", "subject_id", "admittime"])]
+    elif dataset_params.name == "longitudinal_mimic_los":
+        dataset_params = LongitudinalMimicLoSParams(**dataset_params)
+        dataset = load_longitudinal_mimic_los(Path(dataset_params.root_path))
+        dataset = dataset.sort_values(by=["subject_id", "intime"])
+        new_data = []
+        for _, group in dataset.groupby("subject_id"):
+            group = group.iloc[-1]
+            new_data.append(group)
+        dataset = pd.DataFrame(new_data).reset_index(drop=True)
+        dataset["event"] = pd.Series(np.ones(len(dataset)), index=dataset.index)
+        train = dataset[dataset["split"] == "train"]
+        val = dataset[dataset["split"] == "val"]
+        test = dataset[dataset["split"] == "test"]
+        num_intervals = 4
+        evaluation_times = [0, 1, 2]
+
+        y_names = ["class", "event"]
+        x_names = [
+            k
+            for k in train.columns
+            if k not in (y_names + ["split", "hadm_id", "stay_id", "los", "text", "subject_id", "intime", "outtime"])
+        ]
     else:
         raise NotImplementedError(f"Unknown dataset: {dataset_params.name}")
 

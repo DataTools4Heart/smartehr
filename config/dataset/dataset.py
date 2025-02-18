@@ -26,6 +26,12 @@ class LongitudinalMimicReadmissionParams(DatasetParams):
 
 
 @dataclass
+class LongitudinalMimicLoSParams(DatasetParams):
+    root_path: str
+    only_last_feature: bool
+
+
+@dataclass
 class SmartPoCParams(DatasetParams):
     root_path: str
     value_dict_path: str
@@ -38,3 +44,4 @@ def register_configs() -> None:
     cs.store(group="dataset", name="base_mimic_readmission", node=MimicReadmissionParams)
     cs.store(group="dataset", name="base_smart_poc", node=SmartPoCParams)
     cs.store(group="dataset", name="base_longitudinal_mimic_readmission", node=LongitudinalMimicReadmissionParams)
+    cs.store(group="dataset", name="base_longitudinal_mimic_los", node=LongitudinalMimicLoSParams)
