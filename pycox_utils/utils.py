@@ -66,9 +66,6 @@ def discrete_label_transform(y_train, y_val, labtrans_cls, num_intervals):
 
 
 def eval_pycox(model, x_test: pd.DataFrame, y_test: tuple, is_discrete: bool, evaluation_times: list[int]):
-    """if is_discrete:
-        surv = model.interpolate(365).predict_surv_df(x_test.values).T
-    else:"""
     surv = model.predict_surv_df(x_test.values).T
     cols = [i for i in surv.columns]
     series = {}
@@ -81,6 +78,7 @@ def eval_pycox(model, x_test: pd.DataFrame, y_test: tuple, is_discrete: bool, ev
     surv = surv.interpolate(axis=1)
     event_times = y_test[0]
     event_observed = y_test[1]
+
     roc = time_dependent_roc_auc_score(event_observed, surv.loc[:, evaluation_times].to_numpy(), event_times, evaluation_times)
     ci = {}
     for e in evaluation_times:

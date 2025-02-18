@@ -4,6 +4,7 @@ import lightning.pytorch as L
 from pycox.models.loss import nll_pmf
 from lightning_training.metrics import SurvMetrics
 from typing import Optional, Callable
+from lightning_training.collator import DatasetBatch
 
 
 class SurvivalAnalysisModule(L.LightningModule):
@@ -13,28 +14,28 @@ class SurvivalAnalysisModule(L.LightningModule):
         self.lr = lr
         self.surv_metrics = SurvMetrics(evaluation_times=evaluation_times)
 
-    def training_step(self, batch, batch_idx):
+    def training_step(self, batch: DatasetBatch, batch_idx):
         features = batch["inputs"]
-        durations = batch["labels"]["duration"]
-        events = batch["labels"]["event"]
+        durations = batch["survival_labels"]["duration"]
+        events = batch["survival_labels"]["event"]
         logits = self.model(**features)
         loss = nll_pmf(logits, durations, events)
         self.log("train_loss", loss, on_epoch=True, sync_dist=True, batch_size=durations.shape[0])
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch: DatasetBatch, batch_idx):
         features = batch["inputs"]
-        durations = batch["labels"]["duration"]
-        events = batch["labels"]["event"]
+        durations = batch["survival_labels"]["duration"]
+        events = batch["survival_labels"]["event"]
         logits = self.model(**features)
         loss = nll_pmf(logits, durations, events)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True, batch_size=durations.shape[0])
         self.surv_metrics.update(preds=logits, events=events, durations=durations)
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: DatasetBatch, batch_idx):
         features = batch["inputs"]
-        durations = batch["labels"]["duration"]
-        events = batch["labels"]["event"]
+        durations = batch["survival_labels"]["duration"]
+        events = batch["survival_labels"]["event"]
         logits = self.model(**features)
         self.surv_metrics.update(preds=logits, events=events, durations=durations)
 
@@ -59,25 +60,45 @@ class SurvivalAnalysisModule(L.LightningModule):
 from torchmetrics import Accuracy, F1Score, AUROC, Precision, Recall
 
 
-class BinaryClassificationModule(L.LightningModule):
-    def __init__(self, model: nn.Module, lr: float):
+class ClassificationModule(L.LightningModule):
+    def __init__(self, model: nn.Module, lr: float, task: str, num_outputs: int):
         super().__init__()
         self.model = model
         self.lr = lr
+        self.num_outputs = num_outputs
+        self.task = task
+
+        if task == "binary_classification":
+            self.loss_fn = nn.BCEWithLogitsLoss()
+            metric_task = "binary"
+        elif task == "multiclass_classification":
+            self.loss_fn = nn.CrossEntropyLoss()
+            metric_task = "multiclass"
+        else:
+            raise ValueError(f"Task {task} not supported")
+
         self.metrics = nn.ModuleDict(
             {
-                "acc": Accuracy(task="binary"),
-                "f1": F1Score(task="binary"),
-                "precision": Precision(task="binary"),
-                "recall": Recall(task="binary"),
-                "auroc": AUROC(task="binary"),
+                "acc": Accuracy(task=metric_task, num_classes=self.num_outputs),
+                "f1": F1Score(task=metric_task, num_classes=self.num_outputs),
+                "precision": Precision(task=metric_task, num_classes=self.num_outputs),
+                "recall": Recall(task=metric_task, num_classes=self.num_outputs),
+                "auroc": AUROC(task=metric_task, num_classes=self.num_outputs),
             }
         )
-        self.loss_fn = nn.BCEWithLogitsLoss()
+
+    def select_labels(self, batch: DatasetBatch):
+        if self.task == "binary_classification":
+            return batch["binary_cls_labels"]
+        elif self.task == "multiclass_classification":
+            return batch["multiclass_cls_labels"]
+        else:
+            raise ValueError(f"Task {self.task} not supported")
 
     def training_step(self, batch, batch_idx):
         features = batch["inputs"]
-        labels = batch["labels"]
+
+        labels = self.select_labels(batch)
         logits = self.model(**features)
         loss = self.loss_fn(logits, labels)
         self.log("train_loss", loss, on_epoch=True, sync_dist=True, batch_size=labels.shape[0])
@@ -85,12 +106,10 @@ class BinaryClassificationModule(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         features = batch["inputs"]
-        labels = batch["labels"]
+        labels = self.select_labels(batch)
         logits = self.model(**features)
         loss = self.loss_fn(logits, labels)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True, batch_size=labels.shape[0])
-        logits = logits.squeeze(1).sigmoid()
-        labels = labels.squeeze(1)
         for metric in self.metrics.values():
             metric.update(logits, labels)
         return loss
@@ -100,9 +119,9 @@ class BinaryClassificationModule(L.LightningModule):
             self.log(f"val_{metric_name}", metric.compute(), sync_dist=True)
             metric.reset()
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch: DatasetBatch, batch_idx):
         features = batch["inputs"]
-        labels = batch["labels"]
+        labels = self.select_labels(batch)
         logits = self.model(**features)
         for metric in self.metrics.values():
             metric.update(logits, labels)

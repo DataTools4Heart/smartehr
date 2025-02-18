@@ -11,6 +11,7 @@ from dataset_utils.utils import load_for_lightning
 import hydra
 from config.config import Config
 from config.training.training import LightningTrainingParams
+from lightning_training.collator import build_collate_fn
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
@@ -24,7 +25,8 @@ def train_lightning_model(cfg: Config):
     dataset_params = cfg.dataset
     train_params = LightningTrainingParams(**train_params)
 
-    model, collate_fn = load_lightning_model(model_params, train_params)
+    model, tokenizer = load_lightning_model(model_params, train_params)
+    collate_fn = build_collate_fn(dataset_params.name, model_params.name, tokenizer)
     train, val, test = load_for_lightning(dataset_params, train_params.task)
 
     train_dl = DataLoader(
