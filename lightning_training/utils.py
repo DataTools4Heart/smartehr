@@ -10,7 +10,7 @@ from config.model.model import (
 from config.training.training import LightningTrainingParams
 from config.training.task.task import SurvivalAnalysisParams, BinaryClassificationParams, MulticlassClassificationParams
 from transformers import AutoTokenizer
-from models.models import TransformerEncoderForClassification, MIMICNotesModel, WeightedLSTM, MLP
+from models import TransformerEncoderForClassification, WeightedLSTM, TANN, ClinicalLongformer, MLP
 from functools import partial
 import torch.nn.functional as F
 from pathlib import Path
@@ -19,7 +19,6 @@ from tokenizers.implementations import ByteLevelBPETokenizer
 from dataset_utils.mimic import WordTokenizer
 from lightning_training.modules import SurvivalAnalysisModule, ClassificationModule
 import numpy as np
-from models.models import TANN
 
 
 def load_tokenizer(tokenizer_path: str):
@@ -61,7 +60,7 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
     if model_name == "clinical_longformer":
         model_params = ClinicalLongformerModelParams(**model_params)
         tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
-        model = MIMICNotesModel(  # TODO: change the name of the model
+        model = ClinicalLongformer(
             time_intervals=num_outputs,
             freeze_last_n_layers=model_params.freeze_last_n_layers,
             freeze_embeddings=model_params.freeze_embeddings,

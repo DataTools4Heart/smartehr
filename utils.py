@@ -3,7 +3,7 @@ from sklearn.metrics import roc_auc_score
 import pandas as pd
 from lifelines import CoxPHFitter
 from lifelines.utils import concordance_index
-from models.models import smart_survival_times, original_smart_risk_score, smart_weights
+from models import smart_survival_times, original_smart_risk_score, smart_weights
 
 
 def time_dependent_roc_auc_score(y_true, y_pred, survival_times, times):
