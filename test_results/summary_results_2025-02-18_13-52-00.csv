@@ -1,0 +1,2 @@
+model_type,checkpoint_path,test_batch_size,time_intervals,timestamp
+llm,/home/michele/smartehr/checkpoints/meta-llama/Llama-3.2-1B-0.0002-4-10-2025-01-24-09-50-18/epoch=0-step=275.ckpt,4,365,2025-02-18_13-52-00

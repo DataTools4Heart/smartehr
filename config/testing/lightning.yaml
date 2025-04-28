@@ -1,0 +1,8 @@
+defaults:
+  - base_lightning
+
+checkpoint_path: "/home/michele/smartehr/checkpoints/meta-llama/Llama-3.2-1B-0.0002-4-10-2025-01-24-09-50-18/epoch=0-step=275.ckpt"
+test_batch_size: 4
+lr: 2e-4
+time_intervals: 365
+num_workers: 32
