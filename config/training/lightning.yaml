@@ -8,5 +8,6 @@ batch_size: 4
 num_workers: 4
 devices: 
   - 1
-patience: 10
+patience: 5
 accumulation_steps: 1
+resume_ckpt_path: null

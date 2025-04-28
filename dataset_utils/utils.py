@@ -6,7 +6,10 @@ from collections import defaultdict
 from pycox.preprocessing import label_transforms
 from pathlib import Path
 from dataset_utils.smart import SMARTPoC
-from dataset_utils.mimic import MIMICReadmission, LongitudinalMIMICReadmission, LongitudinalMIMICLoS
+from dataset_utils.mimic import (
+    MIMICReadmission,
+    LongitudinalMIMICReadmission,
+)
 from dataset_utils.smart import SMARTPoC, preprocess_smart
 from pycox.preprocessing import label_transforms
 import numpy as np
@@ -20,6 +23,7 @@ from config.dataset.dataset import (
     LongitudinalMimicLoSParams,
 )
 from sklearn.preprocessing import OrdinalEncoder
+from datasets import load_dataset
 
 
 def load_smart(root_path: Path):
@@ -38,8 +42,7 @@ def load_mimic_readmission(root_path: Path):
 
 
 def load_longitudinal_mimic_los(root_path: Path):
-    data = pd.read_csv(root_path / "longitudinal_mimic_los.csv")
-    data["intime"] = pd.to_datetime(data["intime"])
+    data = pd.read_csv(root_path / "longitudinal_mimic_los.csv", parse_dates=["intime", "outtime"])
     return data
 
 
@@ -92,7 +95,6 @@ def load_smart_poc(root_path: str, value_dict_path: str, data_dict_path: str):
     return train, val, test, name_map
 
 
-from hydra.core.hydra_config import HydraConfig
 from config.training.task.task import SurvivalAnalysisParams, TaskParams
 
 
@@ -142,14 +144,8 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
         )
     elif dataset_params.name == "longitudinal_mimic_los":
         dataset_params = LongitudinalMimicLoSParams(**dataset_params)
-        data = load_longitudinal_mimic_los(Path(dataset_params.root_path))
-        ignore_cols = ["class", "split", "stay_id", "hadm_id", "text", "subject_id", "intime", "outtime"]
-        data = prepare_structured_data(data, ignore_cols)
-        train, val, test = (
-            LongitudinalMIMICLoS(data, split="train", only_last_feature=dataset_params.only_last_feature),
-            LongitudinalMIMICLoS(data, split="val", only_last_feature=dataset_params.only_last_feature),
-            LongitudinalMIMICLoS(data, split="test", only_last_feature=dataset_params.only_last_feature),
-        )
+        datasets = load_dataset(dataset_params.root_path, keep_in_memory=True)
+        train, val, test = datasets["train"], datasets["validation"], datasets["test"]
     elif dataset_params.name == "smart_poc":
         dataset_params = SmartPoCParams(**dataset_params)
         train, val, test, name_map = load_smart_poc(
@@ -266,11 +262,13 @@ def load_for_pycox(dataset_params: DatasetParams):
             new_data.append(group)
         dataset = pd.DataFrame(new_data).reset_index(drop=True)
         dataset["event"] = pd.Series(np.ones(len(dataset)), index=dataset.index)
+        dataset["class"] = dataset["class"] + 1
+        # dataset.loc[dataset["class"] == 4, "event"] = 0
         train = dataset[dataset["split"] == "train"]
         val = dataset[dataset["split"] == "val"]
         test = dataset[dataset["split"] == "test"]
-        num_intervals = 4
-        evaluation_times = [0, 1, 2]
+        num_intervals = len(dataset["class"].unique()) + 1
+        evaluation_times = [1, 2, 3, 4]
 
         y_names = ["class", "event"]
         x_names = [

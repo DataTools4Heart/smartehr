@@ -18,6 +18,7 @@ class LightningTrainingParams(TrainingParams):
     accumulation_steps: int
     devices: list[int]
     patience: int
+    resume_ckpt_path: None | str
     task: task.TaskParams
 
     def __post_init__(self):
@@ -30,6 +31,7 @@ class PycoxTrainingParams(TrainingParams):
     device: str
     epochs: int
     patience: int
+    lr: None | float
 
 
 def register_configs() -> None:

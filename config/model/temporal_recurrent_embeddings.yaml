@@ -1,0 +1,6 @@
+defaults:
+  - base_temporal_recurrent_embeddings
+
+name: temporal_recurrent_embeddings
+embedding_dim: 1024
+dropout: 0.3

@@ -6,19 +6,33 @@ from config.model.model import (
     WeightedLSTMModelParams,
     TANNModelParams,
     MLPModelParams,
+    TemporalRecurrentLLMParams,
+    LLMParams,
+    TemporalRecurrentEmbeddingsParams,
 )
 from config.training.training import LightningTrainingParams
 from config.training.task.task import SurvivalAnalysisParams, BinaryClassificationParams, MulticlassClassificationParams
 from transformers import AutoTokenizer
-from models import TransformerEncoderForClassification, WeightedLSTM, TANN, ClinicalLongformer, MLP
+from models import (
+    TransformerEncoderForClassification,
+    WeightedLSTM,
+    TANN,
+    ClinicalLongformer,
+    MLP,
+    TemporalRecurrentLLM,
+    LLM,
+    TemporalRecurrentEmbeddings,
+)
 from functools import partial
 import torch.nn.functional as F
 from pathlib import Path
 import pickle as pkl
 from tokenizers.implementations import ByteLevelBPETokenizer
-from dataset_utils.mimic import WordTokenizer
+from tokenizer_utils.word_tokenizer import load_tann_tokenizer, load_tokenizers
 from lightning_training.modules import SurvivalAnalysisModule, ClassificationModule
-import numpy as np
+from omegaconf import OmegaConf
+import yaml
+import os
 
 
 def load_tokenizer(tokenizer_path: str):
@@ -61,11 +75,37 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         model_params = ClinicalLongformerModelParams(**model_params)
         tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
         model = ClinicalLongformer(
-            time_intervals=num_outputs,
-            freeze_last_n_layers=model_params.freeze_last_n_layers,
+            num_outputs=num_outputs,
+            freeze_first_n_layers=model_params.freeze_first_n_layers,
             freeze_embeddings=model_params.freeze_embeddings,
         )
-
+    elif model_name == "llm":
+        model_params = LLMParams(**model_params)
+        model = LLM(
+            llm_name=model_params.llm_name,
+            llm_config_overrides=model_params.llm_config_overrides,
+            num_outputs=num_outputs,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(model_params.llm_name)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+    elif model_name == "temporal_recurrent_llm":
+        model_params = TemporalRecurrentLLMParams(**model_params)
+        tokenizer = AutoTokenizer.from_pretrained(model_params.llm_name)
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        model = TemporalRecurrentLLM(
+            llm_name=model_params.llm_name,
+            llm_config_overrides=model_params.llm_config_overrides,
+            num_outputs=num_outputs,
+        )
+    elif model_name == "temporal_recurrent_embeddings":
+        model_params = TemporalRecurrentEmbeddingsParams(**model_params)
+        model = TemporalRecurrentEmbeddings(
+            embedding_dim=model_params.embedding_dim,
+            num_outputs=num_outputs,
+            dropout=model_params.dropout,
+        )
     elif model_name == "transformer_encoder":
         model_params = TransformerEncoderModelParams(**model_params)
         tokenizer = load_tokenizer(model_params.tokenizer_path)
@@ -84,16 +124,23 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         model_params = MLPModelParams(**model_params)
         model = MLP(
             input_size=model_params.input_size,
-            output_size=task_params.num_time_intervals,
+            output_size=num_outputs,
             num_nodes=model_params.num_nodes,
             dropout=model_params.dropout,
         )
     elif model_name == "weighted_lstm":
         model_params = WeightedLSTMModelParams(**model_params)
-        tokenizer = WordTokenizer(vocab_path=model_params.vocab_path, lang=model_params.lang)
+        vocab_path = Path(model_params.vocab_path)
+        feature_types = [f.name.split(".")[0] for f in vocab_path.glob("*.json")]
+        if model_params.data_types == "unstructured":
+            feature_types = ["clinical_note"]
+        elif model_params.data_types == "structured":
+            feature_types = [k for k in feature_types if k not in ["clinical_note"]]
+        tokenizer = load_tokenizers(vocab_path)
+        vocabs = {feature_type: tokenizer[feature_type].vocab for feature_type in feature_types}
         model = WeightedLSTM(
-            vocab_size=len(tokenizer.vocab),
-            word_embedding_dim=model_params.word_embedding_dim,
+            vocabs=vocabs,
+            alpha_r=model_params.alpha_r,
             time_embedding_dim=model_params.time_embedding_dim,
             lstm_hidden_size=model_params.lstm_hidden_size,
             lstm_dropout=model_params.lstm_dropout,
@@ -101,7 +148,7 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         )
     elif model_name == "tann":
         model_params = TANNModelParams(**model_params)
-        tokenizer = WordTokenizer(vocab_path=model_params.vocab_path, lang=model_params.lang)
+        tokenizer = load_tann_tokenizer(Path(model_params.vocab_path))
         if not model_params.uniform_bank:
             assert model_params.probabilities is not None, "probabilities must be provided"
             assert len(model_params.probabilities) == 4, "probabilities must have length 4"
@@ -122,3 +169,13 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
 
     model = module_cls(model, lr=train_params.lr)
     return model, tokenizer
+
+
+def save_config(cfg, logger):
+    config_dict = OmegaConf.to_container(cfg, resolve=True)
+    config_path = os.path.join(logger.log_dir, "config.yaml")
+
+    with open(config_path, "w") as f:
+        yaml.dump(config_dict, f, default_flow_style=False)
+
+    print(f"Config saved to: {config_path}")

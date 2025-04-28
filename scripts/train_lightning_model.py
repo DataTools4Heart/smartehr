@@ -12,10 +12,15 @@ import hydra
 from config.config import Config
 from config.training.training import LightningTrainingParams
 from lightning_training.collator import build_collate_fn
+from lightning.pytorch.loggers import TensorBoardLogger
+from lightning_training.utils import save_config
+from lightning_training.transforms import apply_transforms
+from transformers import set_seed
 
 
 @hydra.main(version_base=None, config_path="../config", config_name="config")
 def train_lightning_model(cfg: Config):
+    set_seed(42)
     if torch.cuda.is_available():
         os.environ["TOKENIZERS_PARALLELISM"] = "false"
         torch.set_float32_matmul_precision("medium")
@@ -26,8 +31,10 @@ def train_lightning_model(cfg: Config):
     train_params = LightningTrainingParams(**train_params)
 
     model, tokenizer = load_lightning_model(model_params, train_params)
-    collate_fn = build_collate_fn(dataset_params.name, model_params.name, tokenizer)
     train, val, test = load_for_lightning(dataset_params, train_params.task)
+    train, val, test = apply_transforms(train, val, test, model_params.name)
+
+    collate_fn = build_collate_fn(dataset_params.name, model_params, tokenizer)
 
     train_dl = DataLoader(
         train, batch_size=train_params.batch_size, shuffle=True, collate_fn=collate_fn, num_workers=train_params.num_workers
@@ -43,16 +50,22 @@ def train_lightning_model(cfg: Config):
         ModelCheckpoint(monitor="val_loss", mode="min"),
     ]
     strategy = "ddp_find_unused_parameters_true" if len(devices) > 1 else "auto"
+
+    logger = TensorBoardLogger(save_dir=".", name=f"lightning_logs/{model_params.name}")
     trainer = L.Trainer(
         callbacks=callbacks,
         devices=devices,
         max_epochs=train_params.epochs,
         strategy=strategy,
-        precision="16-mixed" if isinstance(devices, list) or devices == "cuda" else "auto",
+        precision="bf16-true" if isinstance(devices, list) or devices == "cuda" else "auto",
         accumulate_grad_batches=train_params.accumulation_steps,
+        logger=logger,
+        log_every_n_steps=2,
     )
-    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
+    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl, ckpt_path=train_params.resume_ckpt_path)
     trainer.test(dataloaders=test_dl)
+    if trainer.is_global_zero:
+        save_config(cfg, logger)
 
 
 if __name__ == "__main__":

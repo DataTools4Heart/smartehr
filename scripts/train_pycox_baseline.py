@@ -61,8 +61,11 @@ def train_and_evaluate_pycox_model_for_smart(cfg: Config):
         model = model_cls(net, tt.optim.Adam, duration_index=labtrans.cuts, device=train_params.device)
     else:
         model = model_cls(net, tt.optim.Adam, device=train_params.device)
-    lrfinder = model.lr_finder(x_train.values, y_train, train_params.batch_size, tolerance=10)
-    lr = lrfinder.get_best_lr()
+    if train_params.lr is None:
+        lrfinder = model.lr_finder(x_train.values, y_train, train_params.batch_size, tolerance=10)
+        lr = lrfinder.get_best_lr()
+    else:
+        lr = train_params.lr
 
     model.optimizer.set_lr(lr)
     callbacks = [tt.callbacks.EarlyStopping(patience=train_params.patience)]

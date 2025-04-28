@@ -20,7 +20,7 @@ class PycoxModelParams(ModelParams):
 
 @dataclass
 class ClinicalLongformerModelParams(ModelParams):
-    freeze_last_n_layers: int
+    freeze_first_n_layers: int
     freeze_embeddings: bool
 
 
@@ -35,13 +35,33 @@ class TransformerEncoderModelParams(ModelParams):
 
 
 @dataclass
+class LLMParams(ModelParams):
+    llm_name: str
+    llm_config_overrides: dict
+
+
+@dataclass
+class TemporalRecurrentLLMParams(ModelParams):
+    llm_name: str
+    llm_config_overrides: dict
+    llm_batch_size: int
+
+
+@dataclass
+class TemporalRecurrentEmbeddingsParams(ModelParams):
+    embedding_dim: int
+    dropout: float
+
+
+@dataclass
 class WeightedLSTMModelParams(ModelParams):
     vocab_path: str
+    alpha_r: float
     lang: str
-    word_embedding_dim: int
     time_embedding_dim: int
     lstm_hidden_size: int
     lstm_dropout: float
+    data_types: str
 
 
 @dataclass
@@ -55,6 +75,7 @@ class TANNModelParams(ModelParams):
     one_day: float
     uniform_bank: bool
     probabilities: list[float] | None
+    data_types: str
 
 
 @dataclass
@@ -69,6 +90,9 @@ def register_configs() -> None:
     cs.store(group="model", name="base_pycox", node=PycoxModelParams)
     cs.store(group="model", name="base_clinical_longformer", node=ClinicalLongformerModelParams)
     cs.store(group="model", name="base_transformer_encoder", node=TransformerEncoderModelParams)
+    cs.store(group="model", name="base_llm", node=LLMParams)
+    cs.store(group="model", name="base_temporal_recurrent_llm", node=TemporalRecurrentLLMParams)
+    cs.store(group="model", name="base_temporal_recurrent_embeddings", node=TemporalRecurrentEmbeddingsParams)
     cs.store(group="model", name="base_weighted_lstm", node=WeightedLSTMModelParams)
     cs.store(group="model", name="base_tann", node=TANNModelParams)
     cs.store(group="model", name="base_mlp", node=MLPModelParams)

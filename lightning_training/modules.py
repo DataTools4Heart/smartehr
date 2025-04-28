@@ -3,7 +3,6 @@ import torch.nn as nn
 import lightning.pytorch as L
 from pycox.models.loss import nll_pmf
 from lightning_training.metrics import SurvMetrics
-from typing import Optional, Callable
 from lightning_training.collator import DatasetBatch
 
 
@@ -79,13 +78,25 @@ class ClassificationModule(L.LightningModule):
 
         self.metrics = nn.ModuleDict(
             {
-                "acc": Accuracy(task=metric_task, num_classes=self.num_outputs),
-                "f1": F1Score(task=metric_task, num_classes=self.num_outputs),
-                "precision": Precision(task=metric_task, num_classes=self.num_outputs),
-                "recall": Recall(task=metric_task, num_classes=self.num_outputs),
-                "auroc": AUROC(task=metric_task, num_classes=self.num_outputs),
+                "accuracy": Accuracy(task=metric_task, num_classes=self.num_outputs),
+                "f1": F1Score(task=metric_task, num_classes=self.num_outputs, average="none"),
+                "precision": Precision(task=metric_task, num_classes=self.num_outputs, average="none"),
+                "recall": Recall(task=metric_task, num_classes=self.num_outputs, average="none"),
+                "auroc": AUROC(task=metric_task, num_classes=self.num_outputs, average="none"),
             }
         )
+
+    def log_metrics(self, split: str):
+        for metric_name, metric in self.metrics.items():
+            results = metric.compute()
+            if metric_name == "accuracy":
+                self.log(f"{split}_{metric_name}", results, sync_dist=True)
+            else:
+                for i, result in enumerate(results):
+                    self.log(f"{split}_{metric_name}_class_{i}", result, sync_dist=True)
+                macro_score = sum(results) / len(results)
+                self.log(f"{split}_{metric_name}_macro", macro_score, sync_dist=True)
+            metric.reset()
 
     def select_labels(self, batch: DatasetBatch):
         if self.task == "binary_classification":
@@ -115,9 +126,7 @@ class ClassificationModule(L.LightningModule):
         return loss
 
     def on_validation_epoch_end(self):
-        for metric_name, metric in self.metrics.items():
-            self.log(f"val_{metric_name}", metric.compute(), sync_dist=True)
-            metric.reset()
+        self.log_metrics("val")
 
     def test_step(self, batch: DatasetBatch, batch_idx):
         features = batch["inputs"]
@@ -127,9 +136,7 @@ class ClassificationModule(L.LightningModule):
             metric.update(logits, labels)
 
     def on_test_epoch_end(self):
-        for metric_name, metric in self.metrics.items():
-            self.log(f"test_{metric_name}", metric.compute(), sync_dist=True)
-            metric.reset()
+        self.log_metrics("test")
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)

@@ -67,6 +67,10 @@ def discrete_label_transform(y_train, y_val, labtrans_cls, num_intervals):
 
 def eval_pycox(model, x_test: pd.DataFrame, y_test: tuple, is_discrete: bool, evaluation_times: list[int]):
     surv = model.predict_surv_df(x_test.values).T
+    import pickle
+
+    with open("surv.pkl", "wb") as f:
+        pickle.dump(surv, f)
     cols = [i for i in surv.columns]
     series = {}
     for i in evaluation_times:
@@ -79,6 +83,8 @@ def eval_pycox(model, x_test: pd.DataFrame, y_test: tuple, is_discrete: bool, ev
     event_times = y_test[0]
     event_observed = y_test[1]
 
+    with open("surv2.pkl", "wb") as f:
+        pickle.dump(surv, f)
     roc = time_dependent_roc_auc_score(event_observed, surv.loc[:, evaluation_times].to_numpy(), event_times, evaluation_times)
     ci = {}
     for e in evaluation_times:

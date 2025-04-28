@@ -4,3 +4,14 @@ data/
 lightning_logs/
 legacy/
 outputs/
+env_cop/
+.vscode/
+*.ipynb
+*.ckpt
+*.csv
+*.json
+*.png
+*.sh
+*.pt
+bash_scripts/
+multirun/

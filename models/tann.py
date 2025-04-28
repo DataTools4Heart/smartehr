@@ -75,7 +75,7 @@ class TANN(nn.Module):
     def get_fn_bank(self):
         return [
             Lambda(lambda delta: torch.log(delta + self.one_day)),
-            Lambda(lambda delta: torch.ones(delta.shape, device=delta.device)),
+            Lambda(lambda delta: torch.ones(delta.shape, device=delta.device, requires_grad=False)),
             Lambda(lambda delta: delta),
             PiecewiseFunction(),
         ]
@@ -85,33 +85,27 @@ class TANN(nn.Module):
         A = torch.stack([self.fn_bank[i](time_deltas) for i in range(self.k)], dim=-1)
         return torch.sum(p * A, dim=-1)
 
-    def forward(self, input_ids_list: list[list[torch.Tensor]], time_deltas_list: list[torch.Tensor]):
-        sequences = []
-        time_deltas = []
-        for input_ids, time_delta in zip(input_ids_list, time_deltas_list):
-            sequence = []
-            deltas = []
-            for i, ids in enumerate(input_ids):
-                embeddings = self.embedding(ids)
-                delta = torch.broadcast_to(time_delta[i], (embeddings.shape[0],))
-                sequence.append(embeddings)
-                deltas.append(delta)
-            sequence = torch.cat(sequence, dim=0)
-            sequences.append(sequence)
-            deltas = torch.cat(deltas, dim=0)
-            time_deltas.append(deltas)
-        sequences_end = torch.tensor([seq.shape[0] for seq in sequences], dtype=torch.int64, device=sequences[0].device)
-        sequences = torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True, padding_value=0)
-        time_deltas = torch.nn.utils.rnn.pad_sequence(time_deltas, batch_first=True, padding_value=0)
+    def forward(self, sequences: torch.Tensor, time_deltas: torch.Tensor, sequences_end: torch.Tensor):
+        sequences = self.embedding(sequences)
         a = self.compute_attribution_logits(sequences, time_deltas)
-
         E = []
         for b_i, e_i, end in zip(a, sequences, sequences_end):
             e_i, b_i = e_i[None, :end], b_i[None, :end]
             b_i = torch.softmax(b_i, dim=-1)
             E_i = torch.sum(b_i[..., None].broadcast_to(e_i.shape) * e_i, dim=1)
-            s1 = torch.log(torch.ones(e_i.shape[0], device=e_i.device) + end)
+            s1 = torch.log(torch.ones(e_i.shape[0], device=e_i.device, requires_grad=False) + end)
             s2 = torch.log(torch.sum(b_i**2, dim=-1))
             E.append(torch.cat([E_i, s1[..., None], s2[..., None]], dim=-1))
         E = torch.cat(E, dim=0)
-        return self.mlp(E)
+        out = self.mlp(E)
+        return out
+
+
+def tensorize_features(batch):
+    for batch_item in batch["features"]:
+        for feature_dict in batch_item:
+            for feature_type in feature_dict:
+                feature_dict[feature_type] = torch.tensor(feature_dict[feature_type])
+    batch["time_deltas"] = [torch.tensor(t) for t in batch["time_deltas"]]
+    batch["outcomes"] = [torch.tensor(t["los"]) for t in batch["outcomes"]]
+    return batch
