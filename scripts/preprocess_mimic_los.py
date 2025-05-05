@@ -63,7 +63,7 @@ def preprocess_mimic_los_for_clinical_longformer(batch, tokenizer):
     return {"input_ids": tokenized_texts["input_ids"], "labels": outcomes}
 
 
-def preprocess_mimic_los_for_tr_llm(batch, tokenizer):
+def preprocess_mimic_los_for_tr_lm(batch, tokenizer):
     input_ids_list = []
     time_deltas_list = []
     outcomes = []
@@ -87,6 +87,25 @@ def preprocess_mimic_los_for_tr_llm(batch, tokenizer):
         input_ids_list.append(all_ids[start_idx : start_idx + seq_len])
         start_idx += seq_len
     return {"input_ids_list": input_ids_list, "time_deltas_list": time_deltas_list, "labels": outcomes}
+
+
+def preprocess_mimic_los_for_mlp(batch):
+    inputs = []
+    labels = []
+    for features, outcomes in zip(batch["features"], batch["outcomes"]):
+        features = features[-1]
+        values = []
+        for feature_type in features:
+            for feature_name in features[feature_type]:
+                value = features[feature_type][feature_name]
+                if not isinstance(value, str):
+                    values.append(value)
+        inputs.append(values)
+        labels.append(outcomes["los"][0])
+    return {
+        "inputs": inputs,
+        "labels": labels,
+    }
 
 
 def preprocess_mimic_los_for_tr_embedding(batch, embedder, jina_task):
@@ -115,6 +134,30 @@ def preprocess_mimic_los_for_tr_embedding(batch, embedder, jina_task):
     return {"embeddings": embeddings, "time_deltas_list": time_deltas_list, "labels": outcomes}
 
 
+def preprocess_mimic_los_for_tr_mlp(batch):
+    inputs = []
+    time_deltas_list = []
+    labels = []
+    for features_list, outcomes, time_deltas in zip(batch["features"], batch["outcomes"], batch["time_deltas"]):
+        values_list = []
+        for features in features_list:
+            values = []
+            for feature_type in features:
+                for feature_name in features[feature_type]:
+                    value = features[feature_type][feature_name]
+                    if not isinstance(value, str):
+                        values.append(value)
+            values_list.append(values)
+        inputs.append(values_list)
+        time_deltas_list.append(time_deltas)
+        labels.append(outcomes["los"][0])
+    return {
+        "inputs": inputs,
+        "time_deltas_list": time_deltas_list,
+        "labels": labels,
+    }
+
+
 def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path: str, device_id: int | None, jina_task: str):
     datasets = load_dataset(data_path)
 
@@ -126,6 +169,11 @@ def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path:
         tokenizer = load_tann_tokenizer(Path(vocabs_path))
         for split in datasets.keys():
             datasets[split] = datasets[split].map(lambda x: preprocess_mimic_los_for_tann(x, tokenizer))
+    elif model == "mlp":
+        for split in datasets.keys():
+            datasets[split] = datasets[split].map(
+                lambda x: preprocess_mimic_los_for_mlp(x), batched=True, remove_columns=datasets[split].column_names
+            )
     elif model == "clinical_longformer":
         tokenizer = AutoTokenizer.from_pretrained("yikuan8/Clinical-Longformer")
         for split in datasets.keys():
@@ -134,11 +182,11 @@ def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path:
                 batched=True,
                 remove_columns=datasets[split].column_names,
             )
-    elif model == "temporal_recurrent_llm":
+    elif model == "temporal_recurrent_lm":
         tokenizer = AutoTokenizer.from_pretrained(args.vocabs_path)
         for split in datasets.keys():
             datasets[split] = datasets[split].map(
-                lambda x: preprocess_mimic_los_for_tr_llm(x, tokenizer), batched=True, remove_columns=datasets[split].column_names
+                lambda x: preprocess_mimic_los_for_tr_lm(x, tokenizer), batched=True, remove_columns=datasets[split].column_names
             )
     elif model == "temporal_recurrent_embedding":
         if device_id is None:
@@ -151,6 +199,11 @@ def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path:
                 batched=True,
                 remove_columns=datasets[split].column_names,
             )
+    elif model == "temporal_recurrent_mlp":
+        for split in datasets.keys():
+            datasets[split] = datasets[split].map(
+                lambda x: preprocess_mimic_los_for_tr_mlp(x), batched=True, remove_columns=datasets[split].column_names
+            )
     else:
         raise ValueError(f"Invalid model: {model}")
     save_datasets(out_path, datasets)
@@ -162,7 +215,15 @@ if __name__ == "__main__":
         "--model",
         type=str,
         required=True,
-        choices=["weighted_lstm", "tann", "clinical_longformer", "temporal_recurrent_llm", "temporal_recurrent_embedding"],
+        choices=[
+            "weighted_lstm",
+            "tann",
+            "mlp",
+            "clinical_longformer",
+            "temporal_recurrent_lm",
+            "temporal_recurrent_embedding",
+            "temporal_recurrent_mlp",
+        ],
         help="The model to preprocess for",
     )
     parser.add_argument("--data_path", type=str, required=True, help="The path to the longitudinal MIMIC LoS dataset")

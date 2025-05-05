@@ -108,26 +108,28 @@ def collate_fn_llm(batch, pad_value: int = 0):
 
 
 def collate_fn_mlp(batch):
-    inputs = []
-    for batch_item in batch:
-        values = []
-        assert len(batch_item["features"]) == 1
-        features = batch_item["features"][0]
-        for feature_type in features:
-            for feature_name in features[feature_type]:
-                value = features[feature_type][feature_name]
-                if not isinstance(value, str):
-                    values.append(value)
-        inputs.append(values)
+    inputs = [b["inputs"] for b in batch]
+    outcomes = [b["labels"] for b in batch]
     inputs = torch.tensor(inputs)
-    outcomes = torch.tensor([b["outcomes"]["los"][0] for b in batch])
+    outcomes = torch.tensor(outcomes)
     return {
         "inputs": {"inputs": inputs},
         "multiclass_cls_labels": outcomes,
     }
 
 
-def collate_fn_tr_llm(batch, llm_batch_size: int, llm_pad_value: int = 0):
+def collate_fn_tr_mlp(batch):
+    inputs = [b["inputs"] for b in batch]
+    outcomes = [b["labels"] for b in batch]
+    time_deltas_list = [b["time_deltas_list"] for b in batch]
+    inputs = [torch.tensor(sequence) for sequence in inputs]
+    inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True, padding_value=0)
+    time_deltas_list = [torch.tensor(deltas) for deltas in time_deltas_list]
+    outcomes = torch.tensor(outcomes)
+    return {"inputs": {"input_sequence": inputs, "time_deltas_list": time_deltas_list}, "multiclass_cls_labels": outcomes}
+
+
+def collate_fn_tr_lm(batch, lm_batch_size: int, lm_pad_value: int = 0):
     max_seq_len = 10
     max_model_len = 8192
     input_ids_list = [b["input_ids_list"][-max_seq_len:] for b in batch]
@@ -146,24 +148,24 @@ def collate_fn_tr_llm(batch, llm_batch_size: int, llm_pad_value: int = 0):
             attention_masks.append(torch.ones_like(tensor, device=flat_tensors[0].device))
 
     # Process in batches
-    llm_batches = []
-    llm_masks = []
+    lm_batches = []
+    lm_masks = []
 
-    for i in range(0, len(flat_tensors), llm_batch_size):
-        batch_tensors = flat_tensors[i : i + llm_batch_size]
-        batch_masks = attention_masks[i : i + llm_batch_size]
+    for i in range(0, len(flat_tensors), lm_batch_size):
+        batch_tensors = flat_tensors[i : i + lm_batch_size]
+        batch_masks = attention_masks[i : i + lm_batch_size]
 
         # Pad batch to max length
         max_len = max(len(t) for t in batch_tensors)
         padded_tensors = torch.stack(
-            [torch.nn.functional.pad(t, (0, max_len - len(t)), value=llm_pad_value) for t in batch_tensors]
+            [torch.nn.functional.pad(t, (0, max_len - len(t)), value=lm_pad_value) for t in batch_tensors]
         )
         padded_masks = torch.stack([torch.nn.functional.pad(m, (0, max_len - len(m)), value=0) for m in batch_masks])
-        llm_batches.append(padded_tensors)
-        llm_masks.append(padded_masks)
+        lm_batches.append(padded_tensors)
+        lm_masks.append(padded_masks)
 
     return {
-        "inputs": {"llm_batches": llm_batches, "llm_masks": llm_masks, "time_deltas_list": time_deltas_list},
+        "inputs": {"lm_batches": lm_batches, "lm_masks": lm_masks, "time_deltas_list": time_deltas_list},
         "multiclass_cls_labels": outcomes,
     }
 
@@ -229,12 +231,14 @@ def build_collate_fn(
         model_collate_fn = partial(collate_fn_clinical_longformer, pad_value=tokenizer.pad_token_id)
     elif model_name == "llm":
         model_collate_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id)
-    elif model_name == "temporal_recurrent_llm":
+    elif model_name == "temporal_recurrent_lm":
         model_collate_fn = partial(
-            collate_fn_tr_llm, llm_batch_size=model_params.llm_batch_size, llm_pad_value=tokenizer.pad_token_id
+            collate_fn_tr_lm, lm_batch_size=model_params.lm_batch_size, lm_pad_value=tokenizer.pad_token_id
         )
     elif model_name == "temporal_recurrent_embeddings":
         model_collate_fn = collate_fn_tr_embedding
+    elif model_name == "temporal_recurrent_mlp":
+        model_collate_fn = collate_fn_tr_mlp
     else:
         raise NotImplementedError(f"Unknown model: {model_name}")
 

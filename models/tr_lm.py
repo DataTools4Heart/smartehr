@@ -3,30 +3,35 @@ import torch.nn as nn
 from transformers import AutoModel, AutoConfig
 
 
-class TemporalRecurrentLLM(nn.Module):
-    def __init__(self, llm_name: str, llm_config_overrides: dict, num_outputs: int):
+class TemporalRecurrentLM(nn.Module):
+    def __init__(self, lm_name: str, lm_config_overrides: dict, num_outputs: int, is_encoder: bool):
         super().__init__()
         self.num_outputs = num_outputs
-        model_config = AutoConfig.from_pretrained(llm_name)
-        for k, v in llm_config_overrides.items():
-            setattr(model_config, k, v)
+        model_config = AutoConfig.from_pretrained(lm_name)
+        for k, v in lm_config_overrides.items():
+            if k in model_config.__dict__:
+                setattr(model_config, k, v)
         self.model = AutoModel.from_config(model_config)
         self.rnn = nn.LSTM(model_config.hidden_size, model_config.hidden_size, batch_first=True)
         self.time_delta_encoder = nn.Linear(1, model_config.hidden_size)
         self.cls = nn.Linear(model_config.hidden_size, num_outputs)
+        self.is_encoder = is_encoder
 
-    def forward(self, llm_batches, llm_masks, time_deltas_list):
+    def forward(self, lm_batches, lm_masks, time_deltas_list):
         # Process in batches
         all_embeddings = []
 
-        for llm_batch, llm_mask in zip(llm_batches, llm_masks):
+        for lm_batch, lm_mask in zip(lm_batches, lm_masks):
             # Get embeddings from LLM
-            outputs = self.model(input_ids=llm_batch, attention_mask=llm_mask)
+            outputs = self.model(input_ids=lm_batch, attention_mask=lm_mask)
             hidden_states = outputs.last_hidden_state
 
             # Get last non-padded embedding for each sequence
-            last_indices = (llm_mask.sum(dim=1) - 1).long()
-            batch_embeddings = hidden_states[torch.arange(hidden_states.size(0), device=hidden_states.device), last_indices]
+            if not self.is_encoder:
+                last_indices = (lm_mask.sum(dim=1) - 1).long()
+                batch_embeddings = hidden_states[torch.arange(hidden_states.size(0), device=hidden_states.device), last_indices]
+            else:
+                batch_embeddings = hidden_states[:, 0]
             all_embeddings.append(batch_embeddings)
 
         # Concatenate all embeddings
