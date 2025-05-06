@@ -46,6 +46,8 @@ class TemporalRecurrentLMParams(ModelParams):
     lm_config_overrides: dict
     lm_batch_size: int
     is_encoder: bool
+    max_tokens: int | None
+    max_seq_length: int | None
 
 
 @dataclass

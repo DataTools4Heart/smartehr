@@ -129,12 +129,17 @@ def collate_fn_tr_mlp(batch):
     return {"inputs": {"input_sequence": inputs, "time_deltas_list": time_deltas_list}, "multiclass_cls_labels": outcomes}
 
 
-def collate_fn_tr_lm(batch, lm_batch_size: int, lm_pad_value: int = 0):
-    max_seq_len = 10
-    max_model_len = 8192
-    input_ids_list = [b["input_ids_list"][-max_seq_len:] for b in batch]
+def collate_fn_tr_lm(
+    batch, lm_batch_size: int, lm_pad_value: int = 0, max_tokens: int | None = None, max_seq_length: int | None = None
+):
+
+    input_ids_list = [b["input_ids_list"] for b in batch]
+    time_deltas_list = [b["time_deltas_list"] for b in batch]
+    if max_seq_length is not None:
+        input_ids_list = [sequence[-max_seq_length:] for sequence in input_ids_list]
+        time_deltas_list = [deltas[-max_seq_length:] for deltas in time_deltas_list]
+
     input_ids_list = [[torch.tensor(ids) for ids in sequence] for sequence in input_ids_list]
-    time_deltas_list = [b["time_deltas_list"][-max_seq_len:] for b in batch]
     time_deltas_list = [torch.tensor(deltas) for deltas in time_deltas_list]
     outcomes = torch.tensor([b["labels"] for b in batch])
 
@@ -143,7 +148,8 @@ def collate_fn_tr_lm(batch, lm_batch_size: int, lm_pad_value: int = 0):
     attention_masks = []
     for sequence in input_ids_list:
         for tensor in sequence:
-            tensor = tensor[:max_model_len]
+            if max_tokens is not None:
+                tensor = tensor[:max_tokens]
             flat_tensors.append(tensor)
             attention_masks.append(torch.ones_like(tensor, device=flat_tensors[0].device))
 
@@ -233,7 +239,11 @@ def build_collate_fn(
         model_collate_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id)
     elif model_name == "temporal_recurrent_lm":
         model_collate_fn = partial(
-            collate_fn_tr_lm, lm_batch_size=model_params.lm_batch_size, lm_pad_value=tokenizer.pad_token_id
+            collate_fn_tr_lm,
+            lm_batch_size=model_params.lm_batch_size,
+            lm_pad_value=tokenizer.pad_token_id,
+            max_tokens=model_params.max_tokens,
+            max_seq_length=model_params.max_seq_length,
         )
     elif model_name == "temporal_recurrent_embeddings":
         model_collate_fn = collate_fn_tr_embedding
