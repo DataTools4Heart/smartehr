@@ -115,7 +115,53 @@ def preprocess_mimic_los_for_tr_embedding(batch, embedder, jina_task):
     return {"embeddings": embeddings, "time_deltas_list": time_deltas_list, "labels": outcomes}
 
 
-def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path: str, device_id: int | None, jina_task: str):
+def preprocess_mimic_los_for_llm(batch, tokenizer, style="default", truncate_decimals=2):
+    input_ids_list = []
+    attention_mask_list = []
+    time_deltas_list = []
+    outcomes = []
+    all_texts = []
+    sequence_lengths = []
+    time_deltas_description = "This are the time deltas, they describe the time (in days) with the last time point as reference: "
+    if style == "default":
+        for batch_item, batch_item_time_delta, batch_item_outcome in zip(batch["features"], batch["time_deltas"], batch["outcomes"]):
+            seq_len = 0
+            batch_item_text = ""
+            for i, time_point in enumerate(batch_item):
+                for feature_type in time_point:
+                    for feature_name, feature_value in time_point[feature_type].items():
+                        batch_item_text += f"{feature_name}: {feature_value}\n"
+                        seq_len += 1
+                batch_item_text += f"Time delta: {batch_item_time_delta[i]}\n"
+            sequence_lengths.append(seq_len)
+            time_deltas_list.append(batch_item_time_delta)
+            outcomes.append(batch_item_outcome["los"][0])
+            all_texts.append(batch_item_text)
+    elif style == "separate_features":
+        for batch_item, batch_item_time_delta, batch_item_outcome in zip(batch["features"], batch["time_deltas"], batch["outcomes"]):
+            seq_len = 0
+            batch_item_text = ""
+            for i, time_point in enumerate(batch_item):
+                for feature_type in time_point:
+                    for feature_name, feature_value in time_point[feature_type].items():
+                        if truncate_decimals:
+                            if isinstance(feature_value, float):
+                                feature_value = round(feature_value, truncate_decimals)
+                        batch_item_text += f"{feature_name.upper()}: {feature_value}\n"
+                        seq_len += 1
+
+
+            sequence_lengths.append(seq_len)
+            time_deltas_list.append(batch_item_time_delta)
+            outcomes.append(batch_item_outcome["los"][0])
+            all_texts.append(batch_item_text)
+    tokenized_texts = tokenizer(all_texts, truncation=False)
+    #breakpoint()
+    start_idx = 0
+    return {"input_ids": tokenized_texts["input_ids"], "time_deltas_list": time_deltas_list, "labels": outcomes}
+
+
+def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path: str, device_id: int | None, jina_task: str, style: str = "default", truncate_decimals: int = 2):
     datasets = load_dataset(data_path)
 
     if model == "weighted_lstm":
@@ -151,6 +197,13 @@ def preprocess_mimic_los(model: str, data_path: str, out_path: str, vocabs_path:
                 batched=True,
                 remove_columns=datasets[split].column_names,
             )
+    elif model == "llm":
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.2-1B")
+        tokenizer.pad_token = tokenizer.eos_token
+        for split in datasets.keys():
+            datasets[split] = datasets[split].map(
+                lambda x: preprocess_mimic_los_for_llm(x, tokenizer, style, truncate_decimals), batched=True, remove_columns=datasets[split].column_names
+            )
     else:
         raise ValueError(f"Invalid model: {model}")
     save_datasets(out_path, datasets)
@@ -162,7 +215,7 @@ if __name__ == "__main__":
         "--model",
         type=str,
         required=True,
-        choices=["weighted_lstm", "tann", "clinical_longformer", "temporal_recurrent_llm", "temporal_recurrent_embedding"],
+        choices=["weighted_lstm", "tann", "clinical_longformer", "temporal_recurrent_llm", "temporal_recurrent_embedding", "llm"],
         help="The model to preprocess for",
     )
     parser.add_argument("--data_path", type=str, required=True, help="The path to the longitudinal MIMIC LoS dataset")
@@ -187,6 +240,18 @@ if __name__ == "__main__":
         default=None,
         help="The device id to use for the embedding model. Required for temporal_recurrent_embedding model.",
     )
+    parser.add_argument(
+        "--style",
+        type=str,
+        required=False,
+        default="default",
+    )
+    parser.add_argument(
+        "--truncate_decimals",
+        type=int,
+        required=False,
+        default=2,
+    )
     args = parser.parse_args()
 
-    preprocess_mimic_los(args.model, args.data_path, args.out_path, args.vocabs_path, args.device_id, args.jina_task)
+    preprocess_mimic_los(args.model, args.data_path, args.out_path, args.vocabs_path, args.device_id, args.jina_task, args.style, args.truncate_decimals)
