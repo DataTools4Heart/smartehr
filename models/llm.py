@@ -4,7 +4,7 @@ from transformers import AutoModel, AutoConfig
 
 
 class LLM(nn.Module):
-    def __init__(self, llm_name: str, llm_config_overrides: dict, num_outputs: int):
+    def __init__(self, llm_name: str, num_outputs: int, llm_config_overrides: dict = {}):
         super().__init__()
         self.num_outputs = num_outputs
         model_config = AutoConfig.from_pretrained(llm_name)
