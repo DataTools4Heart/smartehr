@@ -6,9 +6,10 @@ from config.model.model import (
     WeightedLSTMModelParams,
     TANNModelParams,
     MLPModelParams,
-    TemporalRecurrentLLMParams,
+    TemporalRecurrentLMParams,
     LLMParams,
     TemporalRecurrentEmbeddingsParams,
+    TemporalRecurrentMLPModelParams,
 )
 from config.training.training import LightningTrainingParams
 from config.training.task.task import SurvivalAnalysisParams, BinaryClassificationParams, MulticlassClassificationParams
@@ -19,9 +20,10 @@ from models import (
     TANN,
     ClinicalLongformer,
     MLP,
-    TemporalRecurrentLLM,
+    TemporalRecurrentLM,
     LLM,
     TemporalRecurrentEmbeddings,
+    TemporalRecurrentMLP,
 )
 from functools import partial
 import torch.nn.functional as F
@@ -89,21 +91,30 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         tokenizer = AutoTokenizer.from_pretrained(model_params.llm_name)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
-    elif model_name == "temporal_recurrent_llm":
-        model_params = TemporalRecurrentLLMParams(**model_params)
-        tokenizer = AutoTokenizer.from_pretrained(model_params.llm_name)
+    elif model_name == "temporal_recurrent_lm":
+        model_params = TemporalRecurrentLMParams(**model_params)
+        tokenizer = AutoTokenizer.from_pretrained(model_params.lm_name)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
-        model = TemporalRecurrentLLM(
-            llm_name=model_params.llm_name,
-            llm_config_overrides=model_params.llm_config_overrides,
+        model = TemporalRecurrentLM(
+            lm_name=model_params.lm_name,
+            lm_config_overrides=model_params.lm_config_overrides,
             num_outputs=num_outputs,
+            is_encoder=model_params.is_encoder,
         )
     elif model_name == "temporal_recurrent_embeddings":
         model_params = TemporalRecurrentEmbeddingsParams(**model_params)
         model = TemporalRecurrentEmbeddings(
             embedding_dim=model_params.embedding_dim,
             num_outputs=num_outputs,
+            dropout=model_params.dropout,
+        )
+    elif model_name == "temporal_recurrent_mlp":
+        model_params = TemporalRecurrentMLPModelParams(**model_params)
+        model = TemporalRecurrentMLP(
+            input_size=model_params.input_size,
+            output_size=num_outputs,
+            num_nodes=model_params.num_nodes,
             dropout=model_params.dropout,
         )
     elif model_name == "transformer_encoder":

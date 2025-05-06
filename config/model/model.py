@@ -41,10 +41,11 @@ class LLMParams(ModelParams):
 
 
 @dataclass
-class TemporalRecurrentLLMParams(ModelParams):
-    llm_name: str
-    llm_config_overrides: dict
-    llm_batch_size: int
+class TemporalRecurrentLMParams(ModelParams):
+    lm_name: str
+    lm_config_overrides: dict
+    lm_batch_size: int
+    is_encoder: bool
 
 
 @dataclass
@@ -85,14 +86,22 @@ class MLPModelParams(ModelParams):
     dropout: float
 
 
+@dataclass
+class TemporalRecurrentMLPModelParams(ModelParams):
+    input_size: int
+    num_nodes: list[int]
+    dropout: float
+
+
 def register_configs() -> None:
     cs = ConfigStore.instance()
     cs.store(group="model", name="base_pycox", node=PycoxModelParams)
     cs.store(group="model", name="base_clinical_longformer", node=ClinicalLongformerModelParams)
     cs.store(group="model", name="base_transformer_encoder", node=TransformerEncoderModelParams)
     cs.store(group="model", name="base_llm", node=LLMParams)
-    cs.store(group="model", name="base_temporal_recurrent_llm", node=TemporalRecurrentLLMParams)
+    cs.store(group="model", name="base_temporal_recurrent_lm", node=TemporalRecurrentLMParams)
     cs.store(group="model", name="base_temporal_recurrent_embeddings", node=TemporalRecurrentEmbeddingsParams)
     cs.store(group="model", name="base_weighted_lstm", node=WeightedLSTMModelParams)
     cs.store(group="model", name="base_tann", node=TANNModelParams)
     cs.store(group="model", name="base_mlp", node=MLPModelParams)
+    cs.store(group="model", name="base_temporal_recurrent_mlp", node=TemporalRecurrentMLPModelParams)
