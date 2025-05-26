@@ -1,0 +1,76 @@
+feature_explanations = {
+    # Admission Features
+    "admission_location": "The specific location from which a patient was admitted to the hospital. This could be 'EMERGENCY ROOM' (implying an urgent/emergency case), 'PROCEDURE SITE' (indicating admission from a procedure location), or various other locations that represent the entry point of the patient into the hospital system.",
+
+    "admission_type": "The classification of the admission based on urgency and planning. 'EW EMER.' indicates emergency admission through the emergency ward. Other possible values include 'ELECTIVE' (planned admission), 'URGENT' (required prompt attention but not an emergency), and 'OBSERVATION' (for monitoring without formally admitting).",
+
+    # Care Unit Features
+    "first_careunit": "The initial care unit where the patient was placed upon hospital admission. Examples include 'Coronary Care Unit (CCU)', 'Medical/Surgical Intensive Care Unit (MICU/SICU)', and 'Medical Intensive Care Unit (MICU)'. This indicates the initial assessment of the patient's critical care needs.",
+
+    "last_careunit": "The final care unit where the patient was treated before discharge or the current sampling point. This may differ from the first care unit if the patient's condition changed during their stay, requiring transfer to a unit with different capabilities.",
+
+    # Clinical Note
+    "text": "The comprehensive clinical notes written by healthcare providers during the patient's stay. These notes contain detailed observations, assessments, treatment plans, medication information, and other critical information documented by physicians, nurses, and other clinical staff. These text entries provide rich contextual information about the patient's condition and care progression.",
+
+    # Demographics
+    "anchor_age": "The patient's age (in years) at the time of hospital admission. This is a critical demographic factor that influences diagnosis, treatment approaches, and risk assessment. Age is a strong predictor of health outcomes and length of stay.",
+
+    "gender": "The patient's biological sex, typically recorded as 'M' for male or 'F' for female. Gender is an important demographic factor as many diseases have different prevalence rates, presentations, and treatment responses based on biological sex.",
+
+    # Diagnoses
+    "diagnosis_1": "The primary diagnosis code (typically ICD-9 or ICD-10) assigned to the patient's condition. This represents the main reason for the patient's admission or the condition requiring the most resources during the stay. For example, code '41011' may represent an acute myocardial infarction.",
+
+    "diagnosis_2": "The secondary diagnosis code assigned to the patient, representing a significant comorbidity or complication. This diagnosis is considered clinically relevant but not the primary reason for admission. For example, code '486' may represent pneumonia.",
+
+    # Laboratory Values
+    "Anion Gap": "The difference between the primary measured cations (sodium, potassium) and the primary measured anions (chloride, bicarbonate) in the blood. Normal range is typically 8-16 mEq/L. Elevated levels may indicate metabolic acidosis, while decreased levels may indicate metabolic alkalosis or other electrolyte disorders.",
+
+    "Bicarbonate": "The measurement of bicarbonate (HCO3-) in the blood, which is a critical component of the body's acid-base buffering system. Normal range is typically 22-28 mEq/L. Abnormal levels may indicate acid-base imbalances, kidney dysfunction, or respiratory disorders.",
+
+    "Chloride": "An essential electrolyte that helps maintain fluid balance and is crucial for nerve and muscle function. Normal range is typically 96-106 mEq/L. Abnormal levels may indicate dehydration, kidney disease, acid-base imbalances, or other conditions.",
+
+    "Creatinine": "A waste product from normal muscle breakdown that is filtered by the kidneys. Normal range is typically 0.6-1.2 mg/dL for men and 0.5-1.1 mg/dL for women. Elevated levels indicate decreased kidney function, potentially due to acute kidney injury or chronic kidney disease.",
+
+    "Glucose": "Blood sugar level, representing the amount of glucose circulating in the bloodstream. Normal fasting range is typically 70-100 mg/dL. Elevated levels may indicate diabetes, stress response, or medication effects, while low levels may indicate hypoglycemia.",
+
+    "Hematocrit": "The percentage of total blood volume that consists of red blood cells. Normal range is typically 41-50% for men and 36-44% for women. Abnormal values may indicate anemia, polycythemia, dehydration, or blood loss.",
+
+    "Hemoglobin": "The protein in red blood cells that carries oxygen throughout the body. Normal range is typically 13.5-17.5 g/dL for men and 12.0-15.5 g/dL for women. Abnormal levels may indicate various types of anemia, blood disorders, or blood loss.",
+
+    "MCH": "Mean Corpuscular Hemoglobin, the average amount of hemoglobin per red blood cell. Normal range is typically 27-33 picograms. Abnormal values may help classify types of anemia and blood disorders.",
+
+    "MCHC": "Mean Corpuscular Hemoglobin Concentration, the average concentration of hemoglobin in a given volume of red blood cells. Normal range is typically 32-36 g/dL. Abnormal values assist in diagnosing and classifying different types of anemia.",
+
+    "MCV": "Mean Corpuscular Volume, the average size of red blood cells. Normal range is typically 80-100 femtoliters. Increased values (macrocytosis) or decreased values (microcytosis) help classify different types of anemia and blood disorders.",
+
+    "Magnesium": "An essential mineral that plays a role in over 300 enzyme reactions in the body. Normal range is typically 1.7-2.2 mg/dL. Abnormal levels may affect heart rhythm, muscle function, and neurological function.",
+
+    "Platelet Count": "The number of platelets in the blood, which are essential for blood clotting. Normal range is typically 150,000-450,000 per microliter. Low counts (thrombocytopenia) increase bleeding risk, while high counts (thrombocytosis) may increase clotting risk.",
+
+    "Potassium": "A critical electrolyte that regulates heart function, muscle contractions, and fluid balance. Normal range is typically 3.5-5.0 mEq/L. Abnormal levels can cause serious, sometimes life-threatening, cardiac arrhythmias and muscle dysfunction.",
+
+    "RDW": "Red Cell Distribution Width, a measure of the variation in red blood cell size. Normal range is typically 11.5-14.5%. Elevated values indicate greater variation in cell size, which may suggest certain types of anemia or other conditions.",
+
+    "Red Blood Cells": "The count of red blood cells per volume of blood. Normal range is typically 4.5-5.9 million cells/microliter for men and 4.1-5.1 million cells/microliter for women. Abnormal counts may indicate anemia, polycythemia, or other conditions.",
+
+    "Sodium": "The main electrolyte in the extracellular fluid, crucial for maintaining fluid balance and nerve/muscle function. Normal range is typically 135-145 mEq/L. Abnormal levels can lead to neurological symptoms, seizures, and other serious complications.",
+
+    "Urea Nitrogen": "Blood Urea Nitrogen (BUN) measures the amount of urea nitrogen in the blood. Normal range is typically 7-20 mg/dL. Elevated levels may indicate kidney dysfunction, dehydration, or increased protein catabolism.",
+
+    "White Blood Cells": "The count of white blood cells, which are critical components of the immune system. Normal range is typically 4,500-11,000 cells/microliter. Elevated counts may indicate infection, inflammation, or certain blood disorders, while decreased counts may indicate immune suppression.",
+
+    # Vital Signs
+    "glc_eye": "Glasgow Coma Scale (GCS) Eye Response component. Scored from 1-4, with higher scores indicating better eye-opening response. This is part of the overall neurological assessment that evaluates consciousness level.",
+
+    "glc_motor": "Glasgow Coma Scale (GCS) Motor Response component. Scored from 1-6, with higher scores indicating better motor responses to stimuli. This is a critical component for assessing neurological function and brain injury severity.",
+
+    "glc_verbal": "Glasgow Coma Scale (GCS) Verbal Response component. Scored from 1-5, with higher scores indicating more appropriate verbal responses. This evaluates a patient's ability to communicate and orient verbally.",
+
+    "heart_rate": "The number of heartbeats per minute. Normal resting range is typically 60-100 beats per minute. Abnormal rates (tachycardia or bradycardia) may indicate cardiac conditions, shock, medication effects, or other physiological stressors.",
+
+    "respiration": "Respiratory rate, measured as breaths per minute. Normal adult range is typically 12-20 breaths per minute. Abnormal rates may indicate respiratory distress, metabolic disorders, neurological issues, or pain.",
+
+    "saturation": "Oxygen saturation level, typically measured via pulse oximetry (SpO2). Normal is generally 95-100%. Lower levels indicate hypoxemia, which may result from respiratory or cardiac conditions, and may necessitate supplemental oxygen.",
+
+    "temperature": "Body temperature, typically measured in degrees Fahrenheit or Celsius. Normal range is approximately 97.8-99.1°F (36.5-37.3°C). Abnormal values may indicate infection (fever), hypothermia, or other conditions affecting thermoregulation."
+} 
