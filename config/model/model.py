@@ -48,6 +48,8 @@ class TemporalRecurrentLMParams(ModelParams):
     is_encoder: bool
     max_tokens: int | None
     max_seq_length: int | None
+    use_lora: bool
+    lora_config: dict | None
 
 
 @dataclass

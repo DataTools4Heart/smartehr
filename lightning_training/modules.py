@@ -98,7 +98,7 @@ class ClassificationModule(L.LightningModule):
                 self.log(f"{split}_{metric_name}_macro", macro_score, sync_dist=True)
             metric.reset()
 
-    def select_labels(self, batch: DatasetBatch):
+    def select_labels(self, batch):
         if self.task == "binary_classification":
             return batch["binary_cls_labels"]
         elif self.task == "multiclass_classification":
@@ -108,7 +108,6 @@ class ClassificationModule(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         features = batch["inputs"]
-
         labels = self.select_labels(batch)
         logits = self.model(**features)
         loss = self.loss_fn(logits, labels)
@@ -128,7 +127,7 @@ class ClassificationModule(L.LightningModule):
     def on_validation_epoch_end(self):
         self.log_metrics("val")
 
-    def test_step(self, batch: DatasetBatch, batch_idx):
+    def test_step(self, batch, batch_idx):
         features = batch["inputs"]
         labels = self.select_labels(batch)
         logits = self.model(**features)

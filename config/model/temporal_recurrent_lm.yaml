@@ -8,3 +8,13 @@ lm_batch_size: 128
 is_encoder: false
 max_tokens: null
 max_seq_length: null
+use_lora: false
+lora_config:
+  r: 8
+  lora_alpha: 32
+  lora_dropout: 0.2
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj

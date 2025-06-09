@@ -33,6 +33,7 @@ from tokenizers.implementations import ByteLevelBPETokenizer
 from tokenizer_utils.word_tokenizer import load_tann_tokenizer, load_tokenizers
 from lightning_training.modules import SurvivalAnalysisModule, ClassificationModule
 from omegaconf import OmegaConf
+from peft import get_peft_model, LoraConfig
 import yaml
 import os
 
@@ -102,6 +103,10 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
             num_outputs=num_outputs,
             is_encoder=model_params.is_encoder,
         )
+        if model_params.use_lora:
+
+            lora_config = LoraConfig(inference_mode=False, **model_params.lora_config)
+            model.model = get_peft_model(model.model, lora_config)
     elif model_name == "temporal_recurrent_embeddings":
         model_params = TemporalRecurrentEmbeddingsParams(**model_params)
         model = TemporalRecurrentEmbeddings(

@@ -4,14 +4,20 @@ from transformers import AutoModel, AutoConfig
 
 
 class TemporalRecurrentLM(nn.Module):
-    def __init__(self, lm_name: str, lm_config_overrides: dict, num_outputs: int, is_encoder: bool):
+    def __init__(
+        self, lm_name: str, lm_config_overrides: dict, num_outputs: int, is_encoder: bool, quantization_config: dict = None
+    ):
         super().__init__()
         self.num_outputs = num_outputs
-        model_config = AutoConfig.from_pretrained(lm_name)
-        for k, v in lm_config_overrides.items():
-            if k in model_config.__dict__:
-                setattr(model_config, k, v)
-        self.model = AutoModel.from_config(model_config)
+        if quantization_config:
+            self.model = AutoModel.from_pretrained(lm_name, quantization_config=quantization_config)
+            model_config = self.model.config
+        else:
+            model_config = AutoConfig.from_pretrained(lm_name)
+            for k, v in lm_config_overrides.items():
+                if k in model_config.__dict__:
+                    setattr(model_config, k, v)
+            self.model = AutoModel.from_config(model_config)
         self.rnn = nn.LSTM(model_config.hidden_size, model_config.hidden_size, batch_first=True)
         self.time_delta_encoder = nn.Linear(1, model_config.hidden_size)
         self.cls = nn.Linear(model_config.hidden_size, num_outputs)
