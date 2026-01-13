@@ -38,6 +38,7 @@ class TransformerEncoderModelParams(ModelParams):
 class LLMParams(ModelParams):
     llm_name: str
     llm_config_overrides: dict
+    max_tokens: int | None
 
 
 @dataclass

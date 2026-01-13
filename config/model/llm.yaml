@@ -10,3 +10,4 @@ llm_config_overrides:
   intermediate_size: 1024
   num_attention_heads: 4
   head_dim: 16
+max_tokens: null

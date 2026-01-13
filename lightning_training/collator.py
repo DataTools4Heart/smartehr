@@ -97,9 +97,12 @@ def collate_fn_clinical_longformer(batch, pad_value: int = 0):
     return {"inputs": {"input_ids": inputs, "attention_mask": attention_mask}, "multiclass_cls_labels": outcomes}
 
 
-def collate_fn_llm(batch, pad_value: int = 0):
+def collate_fn_llm(batch, pad_value: int = 0, max_tokens: int | None = None):
     inputs = [b["input_ids"] for b in batch]
+    if max_tokens is not None:
+        inputs = [ids[-max_tokens:] for ids in inputs]
     inputs = [torch.tensor(ids) for ids in inputs]
+
     attention_mask = [torch.ones_like(ids) for ids in inputs]
     inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True, padding_value=pad_value)
     attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
@@ -236,7 +239,7 @@ def build_collate_fn(
     elif model_name == "clinical_longformer":
         model_collate_fn = partial(collate_fn_clinical_longformer, pad_value=tokenizer.pad_token_id)
     elif model_name == "llm":
-        model_collate_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id)
+        model_collate_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id, max_tokens=model_params.max_tokens)
     elif model_name == "temporal_recurrent_lm":
         model_collate_fn = partial(
             collate_fn_tr_lm,

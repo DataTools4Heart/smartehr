@@ -62,7 +62,7 @@ def train_lightning_model(cfg: Config):
         logger=logger,
         log_every_n_steps=2,
     )
-    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl, ckpt_path=train_params.resume_ckpt_path)
+    trainer.fit(model, train_dataloaders=train_dl, val_dataloaders=val_dl)
     trainer.test(dataloaders=test_dl)
     if trainer.is_global_zero:
         save_config(cfg, logger)
