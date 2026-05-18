@@ -11,8 +11,6 @@ env_cop/
 *.csv
 *.json
 *.png
-*.sh
 *.pt
-bash_scripts/
 multirun/
 results/

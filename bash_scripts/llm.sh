@@ -1,0 +1,20 @@
+python scripts/train_lightning_model.py \
+    dataset=longitudinal_mimic_los \
+    dataset.root_path=data/mimic_los/longitudinal_mimic_los_llm_gemma/ \
+    model=llm \
+    model.llm_name=google/gemma-3-1b-pt \
+    model.llm_config_overrides.num_key_value_heads=4 \
+    model.llm_config_overrides.num_hidden_layers=3 \
+    model.llm_config_overrides.hidden_size=512 \
+    model.llm_config_overrides.intermediate_size=1024 \
+    model.llm_config_overrides.num_attention_heads=4 \
+    model.llm_config_overrides.head_dim=16 \
+    model.max_tokens=22750 \
+    training=lightning \
+    training/task=multiclass_classification \
+    training.batch_size=2 \
+    training.accumulation_steps=128 \
+    training.devices=[3] \
+    training.num_workers=0 \
+    training.lr=1e-4 \
+    training.epochs=30 

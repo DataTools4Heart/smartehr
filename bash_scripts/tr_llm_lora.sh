@@ -1,0 +1,20 @@
+python scripts/train_lightning_model.py \
+    dataset=longitudinal_mimic_los \
+    dataset.root_path=data/mimic_los/longitudinal_mimic_los_tr_llama32/ \
+    model=temporal_recurrent_lm \
+    model.lm_name=meta-llama/Llama-3.2-1B \
+    model.max_seq_length=10 \
+    model.max_tokens=6171 \
+    model.lm_batch_size=10 \
+    model.use_lora=true \
+    model.lora_config.r=8 \
+    model.lora_config.lora_alpha=32 \
+    model.lora_config.lora_dropout=0.2 \
+    training=lightning \
+    training/task=multiclass_classification \
+    training.batch_size=1 \
+    training.accumulation_steps=256 \
+    training.devices=[3] \
+    training.num_workers=0 \
+    training.lr=2e-5 \
+    training.epochs=30

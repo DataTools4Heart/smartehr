@@ -1,0 +1,19 @@
+python scripts/train_lightning_model.py \
+    dataset=longitudinal_mimic_los \
+    dataset.root_path=data/mimic_los/longitudinal_mimic_los_tr_modernbert/ \
+    model=temporal_recurrent_lm \
+    model.lm_name=answerdotai/ModernBERT-base\
+    model.lm_batch_size=32 \
+    model.lm_config_overrides.num_hidden_layers=3 \
+    model.lm_config_overrides.hidden_size=384 \
+    model.lm_config_overrides.intermediate_size=1024 \
+    model.lm_config_overrides.num_attention_heads=4 \
+    model.is_encoder=true \
+    training=lightning \
+    training/task=multiclass_classification \
+    training.batch_size=32 \
+    training.accumulation_steps=8 \
+    training.devices=[2] \
+    training.num_workers=0 \
+    training.lr=2e-4 \
+    training.epochs=30

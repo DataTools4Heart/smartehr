@@ -1,0 +1,20 @@
+python scripts/train_lightning_model_copy.py \
+    dataset=longitudinal_mimic_los \
+    dataset.root_path=data/mimic_los/longitudinal_mimic_los_tr_llama32/ \
+    model=temporal_recurrent_llm \
+    model.llm_name=meta-llama/Llama-3.2-1B \
+    model.llm_batch_size=4 \
+    model.llm_config_overrides.num_key_value_heads=4 \
+    model.llm_config_overrides.num_hidden_layers=3 \
+    model.llm_config_overrides.hidden_size=384 \
+    model.llm_config_overrides.intermediate_size=1024 \
+    model.llm_config_overrides.num_attention_heads=4 \
+    model.llm_config_overrides.head_dim=64 \
+    training=lightning \
+    training/task=multiclass_classification \
+    training.batch_size=4 \
+    training.accumulation_steps=64 \
+    training.devices=[3] \
+    training.num_workers=0 \
+    training.lr=2e-4 \
+    training.epochs=30
