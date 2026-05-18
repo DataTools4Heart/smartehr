@@ -89,7 +89,7 @@ class ClassificationModule(L.LightningModule):
     def log_metrics(self, split: str):
         for metric_name, metric in self.metrics.items():
             results = metric.compute()
-            if metric_name == "accuracy":
+            if metric_name == "accuracy" or results.ndim == 0:
                 self.log(f"{split}_{metric_name}", results, sync_dist=True)
             else:
                 for i, result in enumerate(results):
@@ -100,16 +100,22 @@ class ClassificationModule(L.LightningModule):
 
     def select_labels(self, batch):
         if self.task == "binary_classification":
-            return batch["binary_cls_labels"]
+            return batch["binary_cls_labels"].float()
         elif self.task == "multiclass_classification":
-            return batch["multiclass_cls_labels"]
+            return batch["multiclass_cls_labels"].long()
         else:
             raise ValueError(f"Task {self.task} not supported")
+
+    def _prepare_logits(self, logits):
+        """Squeeze last dim for binary classification (model outputs [B,1]) and cast to float32."""
+        if self.task == "binary_classification" and logits.ndim == 2 and logits.shape[-1] == 1:
+            return logits.squeeze(-1).float()
+        return logits.float()
 
     def training_step(self, batch, batch_idx):
         features = batch["inputs"]
         labels = self.select_labels(batch)
-        logits = self.model(**features)
+        logits = self._prepare_logits(self.model(**features))
         loss = self.loss_fn(logits, labels)
         self.log("train_loss", loss, on_epoch=True, sync_dist=True, batch_size=labels.shape[0])
         return loss
@@ -117,7 +123,7 @@ class ClassificationModule(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         features = batch["inputs"]
         labels = self.select_labels(batch)
-        logits = self.model(**features)
+        logits = self._prepare_logits(self.model(**features))
         loss = self.loss_fn(logits, labels)
         self.log("val_loss", loss, on_epoch=True, sync_dist=True, batch_size=labels.shape[0])
         for metric in self.metrics.values():
@@ -130,7 +136,7 @@ class ClassificationModule(L.LightningModule):
     def test_step(self, batch, batch_idx):
         features = batch["inputs"]
         labels = self.select_labels(batch)
-        logits = self.model(**features)
+        logits = self._prepare_logits(self.model(**features))
         for metric in self.metrics.values():
             metric.update(logits, labels)
 
@@ -138,5 +144,6 @@ class ClassificationModule(L.LightningModule):
         self.log_metrics("test")
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        trainable = [p for p in self.model.parameters() if p.requires_grad]
+        optimizer = torch.optim.Adam(trainable, lr=self.lr)
         return optimizer

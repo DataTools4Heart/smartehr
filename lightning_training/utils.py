@@ -63,9 +63,9 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         num_outputs = task_params.num_time_intervals
         module_cls = partial(SurvivalAnalysisModule, evaluation_times=task_params.evaluation_times)
     elif task_name == "binary_classification":
-        task_params = BinaryClassificationParams(**task_params, num_outputs=1)
+        task_params = BinaryClassificationParams(**task_params)
         num_outputs = 1
-        module_cls = partial(ClassificationModule, task=task_name)
+        module_cls = partial(ClassificationModule, task=task_name, num_outputs=num_outputs)
     elif task_name == "multiclass_classification":
         task_params = MulticlassClassificationParams(**task_params)
         num_outputs = task_params.num_outputs
@@ -88,6 +88,9 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
             llm_name=model_params.llm_name,
             llm_config_overrides=model_params.llm_config_overrides,
             num_outputs=num_outputs,
+            freeze_backbone=model_params.freeze_backbone,
+            gradient_checkpointing=model_params.gradient_checkpointing,
+            chunk_size=model_params.chunk_size,
         )
         tokenizer = AutoTokenizer.from_pretrained(model_params.llm_name)
         if tokenizer.pad_token is None:

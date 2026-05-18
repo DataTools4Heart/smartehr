@@ -21,6 +21,7 @@ from config.dataset.dataset import (
     SmartParams,
     LongitudinalMimicReadmissionParams,
     LongitudinalMimicLoSParams,
+    LongitudinalDummySmartParams,
 )
 from sklearn.preprocessing import OrdinalEncoder
 from datasets import load_dataset
@@ -144,6 +145,10 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
         )
     elif dataset_params.name == "longitudinal_mimic_los":
         dataset_params = LongitudinalMimicLoSParams(**dataset_params)
+        datasets = load_dataset(dataset_params.root_path, keep_in_memory=True)
+        train, val, test = datasets["train"], datasets["validation"], datasets["test"]
+    elif dataset_params.name == "longitudinal_dummy_smart":
+        dataset_params = LongitudinalDummySmartParams(**dataset_params)
         datasets = load_dataset(dataset_params.root_path, keep_in_memory=True)
         train, val, test = datasets["train"], datasets["validation"], datasets["test"]
     elif dataset_params.name == "smart_poc":

@@ -39,6 +39,9 @@ class LLMParams(ModelParams):
     llm_name: str
     llm_config_overrides: dict
     max_tokens: int | None
+    freeze_backbone: bool = False
+    gradient_checkpointing: bool = False
+    chunk_size: int | None = None
 
 
 @dataclass

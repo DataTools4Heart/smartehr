@@ -57,7 +57,7 @@ def train_lightning_model(cfg: Config):
         devices=devices,
         max_epochs=train_params.epochs,
         strategy=strategy,
-        precision="bf16-true" if isinstance(devices, list) or devices == "cuda" else "auto",
+        precision=train_params.precision,
         accumulate_grad_batches=train_params.accumulation_steps,
         logger=logger,
         log_every_n_steps=2,

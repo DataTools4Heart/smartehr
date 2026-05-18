@@ -1,0 +1,16 @@
+defaults:
+  - base_llm
+
+name: llm
+llm_name: meta-llama/Llama-3.2-1B
+# No llm_config_overrides → pretrained weights are loaded as-is.
+llm_config_overrides: {}
+# max_tokens: null means the collator does not truncate; the model handles long sequences.
+max_tokens: null
+# Freeze backbone and only train the classification head.
+freeze_backbone: true
+# gradient_checkpointing is not needed when backbone is frozen.
+gradient_checkpointing: false
+# chunk_size: split sequences longer than this into chunks and mean-pool their embeddings.
+# Set to e.g. 512 to bound peak memory. null = process full sequence in one pass.
+chunk_size: 512

@@ -1,0 +1,5 @@
+defaults:
+  - base_longitudinal_dummy_smart
+
+name: longitudinal_dummy_smart
+root_path: data/dummy_data/longitudinal_dummy_smart

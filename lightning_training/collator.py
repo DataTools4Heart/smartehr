@@ -227,6 +227,8 @@ def build_collate_fn(
         dataset_collate_fn = collate_fn_smart_poc
     elif dataset_name == "longitudinal_mimic_los":
         dataset_collate_fn = lambda x: x
+    elif dataset_name == "longitudinal_dummy_smart":
+        dataset_collate_fn = lambda x: x
     else:
         raise NotImplementedError(f"Unknown dataset: {dataset_name}")
 
@@ -239,7 +241,13 @@ def build_collate_fn(
     elif model_name == "clinical_longformer":
         model_collate_fn = partial(collate_fn_clinical_longformer, pad_value=tokenizer.pad_token_id)
     elif model_name == "llm":
-        model_collate_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id, max_tokens=model_params.max_tokens)
+        _llm_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id, max_tokens=model_params.max_tokens)
+        # collate_fn_llm always emits multiclass_cls_labels; remap for binary tasks
+        def model_collate_fn(batch):
+            out = _llm_fn(batch)
+            if "multiclass_cls_labels" in out and "binary_cls_labels" not in out:
+                out["binary_cls_labels"] = out.pop("multiclass_cls_labels").float()
+            return out
     elif model_name == "temporal_recurrent_lm":
         model_collate_fn = partial(
             collate_fn_tr_lm,

@@ -11,3 +11,6 @@ llm_config_overrides:
   num_attention_heads: 4
   head_dim: 16
 max_tokens: null
+freeze_backbone: false
+gradient_checkpointing: false
+chunk_size: null

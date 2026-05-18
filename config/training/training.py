@@ -20,6 +20,9 @@ class LightningTrainingParams(TrainingParams):
     patience: int
     resume_ckpt_path: None | str
     task: task.TaskParams
+    # Precision string passed to Lightning Trainer (e.g. "bf16-true", "bf16-mixed", "16-mixed").
+    # Use "16-mixed" on Tesla T4 (no native bf16); use "bf16-true" on A100/H100.
+    precision: str = "bf16-true"
 
     def __post_init__(self):
         self.devices = [int(device) for device in self.devices]
