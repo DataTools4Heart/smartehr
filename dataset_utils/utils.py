@@ -160,17 +160,23 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
         train, val, test = datasets["train"], datasets["validation"], datasets["test"]
         if lab_trans is not None:
             # Discretize continuous durations using equidistant cuts spanning the horizon
-            max_duration = float(max(train["duration"]))
+            durations_raw = [d for d in train["duration"] if d is not None]
+            max_duration = float(max(durations_raw))
             cuts = np.linspace(0, max_duration, task_params.num_time_intervals + 1)[1:]
             lab_trans = label_transforms.LabTransDiscreteTime(cuts)
 
             def discretize_split(split):
-                durations = np.array(split["duration"], dtype=np.float64)
-                events = np.array(split["event"], dtype=np.float64)
+                # Convert to numpy, replacing None with NaN
+                durations = np.array(
+                    [d if d is not None else float("nan") for d in split["duration"]], dtype=np.float64
+                )
+                events = np.array(
+                    [e if e is not None else float("nan") for e in split["event"]], dtype=np.float64
+                )
                 # Filter out rows with NaN/None values
                 valid_mask = ~(np.isnan(durations) | np.isnan(events))
                 if not valid_mask.all():
-                    n_invalid = (~valid_mask).sum()
+                    n_invalid = int((~valid_mask).sum())
                     print(f"WARNING: Dropping {n_invalid} rows with missing duration/event")
                     split = split.select(np.where(valid_mask)[0].tolist())
                     durations = durations[valid_mask]
