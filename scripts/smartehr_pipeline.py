@@ -5,6 +5,47 @@ import pandas as pd
 import argparse
 import os
 
+
+def compute_first_event(row):
+    """Compute first_event as the minimum non-negative value across all e*_f (endpoint time) columns."""
+    min_value = float("inf")
+    for column in row.index:
+        if column.startswith("e") and column.endswith("_f"):
+            if row[column] is not None and row[column] >= 0:
+                min_value = min(min_value, row[column])
+    if min_value == float("inf"):
+        return None
+    return min_value
+
+
+def compute_cd_event(row):
+    """Compute cd_event: 1 if ANY endpoint indicator (e*_n) is positive at the first_event time.
+
+    Logic: for each endpoint time column (e*_f), check if it equals first_event AND
+    the corresponding indicator column (e*_n) is positive. If so, a true event occurred.
+    If first_event corresponds only to censoring times, cd_event = 0.
+    """
+    first_event = row.get("first_event")
+    if first_event is None or pd.isna(first_event):
+        return 0
+
+    for column in row.index:
+        if column.startswith("e") and column.endswith("_f"):
+            if row[column] == first_event:
+                # Check corresponding _n indicator column
+                indicator_col = column[:-2] + "_n"
+                if indicator_col in row.index and pd.notna(row[indicator_col]) and row[indicator_col] > 0:
+                    return 1
+    return 0
+
+
+def drop_outcomes(df):
+    """Drop all outcome-related columns (e*_f and their sibling columns e*_n, e*_s, etc.)."""
+    outcome_prefixes = ["_".join(c.split("_")[:-1]) for c in df.columns if c.startswith("e") and c.endswith("_f")]
+    cols_to_drop = [c for c in df.columns if "_".join(c.split("_")[:-1]) in outcome_prefixes]
+    return df.drop(columns=cols_to_drop)
+
+
 def preprocess_smart_ehr(
     smart_csv,
     event_csvs,
@@ -16,8 +57,7 @@ def preprocess_smart_ehr(
     Preprocess SmartEHR data to create a longitudinal dataset.
 
     Parameters:
-    - smart_csv: Path to the smart.csv file. Must contain 'first_event' (time)
-      and 'cd_event' (0/1 indicator) columns for survival analysis.
+    - smart_csv: Path to the smart.csv file (raw, with outcome columns e*_f, e*_n, etc.).
     - event_csvs: Dictionary of event source names and their file paths.
     - baseline_time: Reference point; events with datediff < this are kept.
     - end_of_study: Maximum follow-up time. Patients with first_event > this
@@ -26,18 +66,29 @@ def preprocess_smart_ehr(
     """
     # Load smart.csv
     smart_df = pd.read_csv(smart_csv)
+    n_raw = len(smart_df)
+
+    # Compute survival targets from outcome columns
+    smart_df["first_event"] = smart_df.apply(compute_first_event, axis=1)
+    smart_df["cd_event"] = smart_df.apply(compute_cd_event, axis=1)
+
+    # Drop outcome columns from features (they must not leak into inputs)
+    smart_df = drop_outcomes(smart_df)
+
+    # Drop patients with no follow-up data
+    smart_df = smart_df[~smart_df["first_event"].isna()]
+
+    # Deduplicate: keep the row with the minimum first_event per patient
+    smart_df = smart_df.loc[smart_df.groupby("m3life_no")["first_event"].idxmin()]
     n_total = len(smart_df)
 
-    # Ensure cd_event column exists; if missing, assume all are events (legacy behavior)
-    if "cd_event" not in smart_df.columns:
-        print("WARNING: 'cd_event' column not found. Assuming all patients had events.")
-        smart_df["cd_event"] = 1
-
-    # Apply administrative censoring at end_of_study rather than dropping patients
+    # Apply administrative censoring at end_of_study (keep all patients, censor the late ones)
     beyond_study = smart_df["first_event"] - baseline_time > end_of_study
     smart_df.loc[beyond_study, "first_event"] = end_of_study + baseline_time
     smart_df.loc[beyond_study, "cd_event"] = 0
-    print(f"Patients: {n_total:,} total, {beyond_study.sum():,} administratively censored at end_of_study={end_of_study}")
+    smart_df = smart_df.reset_index(drop=True)
+    print(f"Patients: {n_raw:,} raw rows → {n_total:,} unique patients, "
+          f"{beyond_study.sum():,} administratively censored at end_of_study={end_of_study}")
 
     # Columns that belong to smart (everything except m3life_no)
     smart_feature_cols = [c for c in smart_df.columns if c != "m3life_no"]
@@ -47,8 +98,6 @@ def preprocess_smart_ehr(
     for source, path in event_csvs.items():
         df = pd.read_csv(path)
         df = df[df["datediff"] < baseline_time].copy()
-        source_cols = [c for c in df.columns if c in ("m3life_no", "datediff") or c.startswith(f"{source}_")]
-        df = df[source_cols]
         df["_source"] = source
         event_frames.append(df)
 
@@ -90,9 +139,11 @@ def preprocess_smart_ehr(
         for record in dataset:
             f.write(json.dumps(record) + "\n")
 
+    n_events = sum(1 for r in dataset if r["smart"]["cd_event"] == 1)
     print(f"Saved {len(dataset):,} patient records → {output_path}")
+    print(f"  Events: {n_events:,} ({100*n_events/len(dataset):.1f}%) | Censored: {len(dataset)-n_events:,}")
     total_events = sum(len(p["events"]) for p in dataset)
-    print(f"Total events across all patients: {total_events:,}")
+    print(f"  Total longitudinal events across all patients: {total_events:,}")
 
     return dataset
 
