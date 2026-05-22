@@ -98,7 +98,16 @@ def preprocess_dummy_smart_survival(
     durations_list = []
     events_list = []
 
+    n_skipped = 0
     for rec in records:
+        first_event = rec["smart"].get("first_event")
+        if first_event is None:
+            n_skipped += 1
+            continue
+
+        cd_event_raw = rec["smart"].get("cd_event")
+        cd_event = int(cd_event_raw) if cd_event_raw is not None else 1  # default 1 for legacy data
+
         text = serialize_patient(rec, exclusion_window=exclusion_window)
         if truncate:
             enc = tokenizer(text, truncation=True, max_length=max_length, add_special_tokens=True)
@@ -106,10 +115,12 @@ def preprocess_dummy_smart_survival(
             enc = tokenizer(text, add_special_tokens=True)
         input_ids_list.append(enc["input_ids"])
 
-        cd_event = int(rec["smart"].get("cd_event", 1))  # default 1 for legacy data without indicator
-        duration, event = apply_censoring(rec["smart"]["first_event"], cd_event, horizon_days)
+        duration, event = apply_censoring(first_event, cd_event, horizon_days)
         durations_list.append(duration)
         events_list.append(event)
+
+    if n_skipped > 0:
+        print(f"WARNING: Skipped {n_skipped} patients with missing first_event")
 
     # Print statistics
     n = len(input_ids_list)

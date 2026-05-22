@@ -167,6 +167,14 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
             def discretize_split(split):
                 durations = np.array(split["duration"], dtype=np.float64)
                 events = np.array(split["event"], dtype=np.float64)
+                # Filter out rows with NaN/None values
+                valid_mask = ~(np.isnan(durations) | np.isnan(events))
+                if not valid_mask.all():
+                    n_invalid = (~valid_mask).sum()
+                    print(f"WARNING: Dropping {n_invalid} rows with missing duration/event")
+                    split = split.select(np.where(valid_mask)[0].tolist())
+                    durations = durations[valid_mask]
+                    events = events[valid_mask]
                 disc_durations, disc_events = lab_trans.transform(durations, events)
                 return split.remove_columns(["duration", "event"]).add_column(
                     "duration", disc_durations.tolist()
