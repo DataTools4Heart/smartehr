@@ -106,8 +106,20 @@ def collate_fn_llm(batch, pad_value: int = 0, max_tokens: int | None = None):
     attention_mask = [torch.ones_like(ids) for ids in inputs]
     inputs = torch.nn.utils.rnn.pad_sequence(inputs, batch_first=True, padding_value=pad_value)
     attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0)
-    outcomes = torch.tensor([b["labels"] for b in batch])
-    return {"inputs": {"input_ids": inputs, "attention_mask": attention_mask}, "multiclass_cls_labels": outcomes}
+
+    result = {"inputs": {"input_ids": inputs, "attention_mask": attention_mask}}
+
+    # Support both classification (labels) and survival (duration + event) targets
+    if "duration" in batch[0] and "event" in batch[0]:
+        result["survival_labels"] = {
+            "duration": torch.tensor([b["duration"] for b in batch]),
+            "event": torch.tensor([b["event"] for b in batch]),
+        }
+    else:
+        outcomes = torch.tensor([b["labels"] for b in batch])
+        result["multiclass_cls_labels"] = outcomes
+
+    return result
 
 
 def collate_fn_mlp(batch):
@@ -229,6 +241,8 @@ def build_collate_fn(
         dataset_collate_fn = lambda x: x
     elif dataset_name == "longitudinal_dummy_smart":
         dataset_collate_fn = lambda x: x
+    elif dataset_name == "smartehr":
+        dataset_collate_fn = lambda x: x
     else:
         raise NotImplementedError(f"Unknown dataset: {dataset_name}")
 
@@ -242,10 +256,11 @@ def build_collate_fn(
         model_collate_fn = partial(collate_fn_clinical_longformer, pad_value=tokenizer.pad_token_id)
     elif model_name == "llm":
         _llm_fn = partial(collate_fn_llm, pad_value=tokenizer.pad_token_id, max_tokens=model_params.max_tokens)
-        # collate_fn_llm always emits multiclass_cls_labels; remap for binary tasks
+        # collate_fn_llm detects survival vs classification by batch keys;
+        # remap multiclass_cls_labels → binary_cls_labels only for binary classification
         def model_collate_fn(batch):
             out = _llm_fn(batch)
-            if "multiclass_cls_labels" in out and "binary_cls_labels" not in out:
+            if "multiclass_cls_labels" in out and "binary_cls_labels" not in out and "survival_labels" not in out:
                 out["binary_cls_labels"] = out.pop("multiclass_cls_labels").float()
             return out
     elif model_name == "temporal_recurrent_lm":

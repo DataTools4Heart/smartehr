@@ -1,0 +1,14 @@
+defaults:
+  - base_lightning
+  - task: survival_analysis_10yr
+
+lr: 2e-5
+epochs: 100
+batch_size: 4
+num_workers: 4
+devices:
+  - 0
+patience: 5
+accumulation_steps: 1
+resume_ckpt_path: null
+precision: bf16-true

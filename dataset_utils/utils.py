@@ -22,6 +22,7 @@ from config.dataset.dataset import (
     LongitudinalMimicReadmissionParams,
     LongitudinalMimicLoSParams,
     LongitudinalDummySmartParams,
+    SmartEHRParams,
 )
 from sklearn.preprocessing import OrdinalEncoder
 from datasets import load_dataset
@@ -102,7 +103,8 @@ from config.training.task.task import SurvivalAnalysisParams, TaskParams
 def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
     task_name = task_params.name
     if task_name == "survival_analysis":
-        task_params = SurvivalAnalysisParams(**task_params)
+        if not isinstance(task_params, SurvivalAnalysisParams):
+            task_params = SurvivalAnalysisParams(**task_params)
         lab_trans = label_transforms.LabTransDiscreteTime(
             cuts=np.array([i for i in range(task_params.num_time_intervals)], dtype=float)
         )
@@ -151,6 +153,28 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
         dataset_params = LongitudinalDummySmartParams(**dataset_params)
         datasets = load_dataset(dataset_params.root_path, keep_in_memory=True)
         train, val, test = datasets["train"], datasets["validation"], datasets["test"]
+    elif dataset_params.name == "smartehr":
+        if not isinstance(dataset_params, SmartEHRParams):
+            dataset_params = SmartEHRParams(**dataset_params)
+        datasets = load_dataset(dataset_params.root_path, keep_in_memory=True)
+        train, val, test = datasets["train"], datasets["validation"], datasets["test"]
+        if lab_trans is not None:
+            # Discretize continuous durations using equidistant cuts spanning the horizon
+            max_duration = float(max(train["duration"]))
+            cuts = np.linspace(0, max_duration, task_params.num_time_intervals + 1)[1:]
+            lab_trans = label_transforms.LabTransDiscreteTime(cuts)
+
+            def discretize_split(split):
+                durations = np.array(split["duration"], dtype=np.float64)
+                events = np.array(split["event"], dtype=np.float64)
+                disc_durations, disc_events = lab_trans.transform(durations, events)
+                return split.remove_columns(["duration", "event"]).add_column(
+                    "duration", disc_durations.tolist()
+                ).add_column("event", disc_events.tolist())
+
+            train = discretize_split(train)
+            val = discretize_split(val)
+            test = discretize_split(test)
     elif dataset_params.name == "smart_poc":
         dataset_params = SmartPoCParams(**dataset_params)
         train, val, test, name_map = load_smart_poc(

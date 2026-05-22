@@ -43,6 +43,11 @@ class LongitudinalDummySmartParams(DatasetParams):
     root_path: str
 
 
+@dataclass
+class SmartEHRParams(DatasetParams):
+    root_path: str
+
+
 def register_configs() -> None:
     cs = ConfigStore.instance()
     cs.store(group="dataset", name="base_smart", node=SmartParams)
@@ -51,3 +56,4 @@ def register_configs() -> None:
     cs.store(group="dataset", name="base_longitudinal_mimic_readmission", node=LongitudinalMimicReadmissionParams)
     cs.store(group="dataset", name="base_longitudinal_mimic_los", node=LongitudinalMimicLoSParams)
     cs.store(group="dataset", name="base_longitudinal_dummy_smart", node=LongitudinalDummySmartParams)
+    cs.store(group="dataset", name="base_smartehr", node=SmartEHRParams)
