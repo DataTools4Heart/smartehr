@@ -163,7 +163,6 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
             durations_raw = [d for d in train["duration"] if d is not None]
             max_duration = float(max(durations_raw))
             cuts = np.linspace(0, max_duration, task_params.num_time_intervals + 1)[1:]
-            lab_trans = label_transforms.LabTransDiscreteTime(cuts)
 
             def discretize_split(split):
                 # Convert to numpy, replacing None with NaN
@@ -181,7 +180,9 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
                     split = split.select(np.where(valid_mask)[0].tolist())
                     durations = durations[valid_mask]
                     events = events[valid_mask]
-                disc_durations, disc_events = lab_trans.transform(durations, events)
+                # Discretize durations into bin indices using searchsorted
+                disc_durations = np.searchsorted(cuts, durations).astype(np.int64)
+                disc_events = events.astype(np.float32)
                 return split.remove_columns(["duration", "event"]).add_column(
                     "duration", disc_durations.tolist()
                 ).add_column("event", disc_events.tolist())
