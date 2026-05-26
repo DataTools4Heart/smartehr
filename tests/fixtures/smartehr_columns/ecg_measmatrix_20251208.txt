@@ -1,0 +1,14 @@
+m3life_no
+QRS_Onset
+QRS_Offset
+T_Onset
+T_Offset
+P_Onset
+P_Offset
+NumQRSComplexes
+QRS_Duration
+QT_Interval
+QTc_Bazett
+VentRate
+AvgRRInterval
+datediff

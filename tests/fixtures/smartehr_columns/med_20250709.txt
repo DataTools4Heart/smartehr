@@ -1,0 +1,6 @@
+m3life_no
+med_genNaam
+med_ZIatc
+klinisch
+datediff
+med_duur
