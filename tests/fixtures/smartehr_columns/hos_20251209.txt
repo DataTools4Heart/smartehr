@@ -1,0 +1,4 @@
+m3life_no
+hos_nr
+datediff
+hos_duur

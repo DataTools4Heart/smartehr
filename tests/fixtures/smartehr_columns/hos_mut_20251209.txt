@@ -1,0 +1,6 @@
+m3life_no
+specialisme_omschrijving
+locatie
+hos_nr
+datediff
+hos_duur

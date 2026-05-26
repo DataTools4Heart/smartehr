@@ -1,0 +1,5 @@
+m3life_no
+verr_oms
+verslagtekst
+status
+datediff

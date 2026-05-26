@@ -1,0 +1,7 @@
+m3life_no
+lab_testcode
+lab_result
+lab_result_txt
+lab_testunit
+material
+datediff
