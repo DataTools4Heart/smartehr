@@ -11,9 +11,10 @@ from dataset_utils.mimic import (
     MIMICReadmission,
     LongitudinalMIMICReadmission,
 )
-from dataset_utils.smart import SMARTPoC, preprocess_smart
+from dataset_utils.smart import SMARTPoC, preprocess_smart, smart_features_map
 from pycox.preprocessing import label_transforms
 import numpy as np
+from sklearn.impute import KNNImputer
 
 from config.dataset.dataset import (
     DatasetParams,
@@ -33,8 +34,13 @@ def load_smart(root_path: Path):
     """Load SMART data from JSONL splits (output of smartehr_pipeline.py).
 
     Reads train.jsonl, validation.jsonl, test.jsonl and extracts the 'smart'
-    fields plus 'm3life_no' into DataFrames. Renames first_event → cd_time
-    and computes cd_event: 0 if cd_time > 3650 or cd_time <= 0, else 1.
+    fields plus 'm3life_no' into DataFrames. Applies runtime preprocessing:
+    - Renames first_event → cd_time
+    - Computes cd_event: 0 if cd_time > 3650 or cd_time <= 0, else 1
+    - Keeps columns with <=10% missing or in smart_features_map
+    - Fixes vz_t2d data issue, drops AlbCr
+    - Casts to float
+    - KNN imputation (fit on train, transform all)
     """
     splits = {}
     for split_name in ["train", "validation", "test"]:
@@ -50,7 +56,42 @@ def load_smart(root_path: Path):
             df = df.rename(columns={"first_event": "cd_time"})
         df["cd_event"] = ((df["cd_time"] > 0) & (df["cd_time"] <= 3650)).astype(int)
         splits[split_name] = df
-    return splits["train"], splits["validation"], splits["test"]
+
+    train, val, test = splits["train"], splits["validation"], splits["test"]
+
+    # Keep columns with <=10% missing or in smart_features_map values
+    protected_cols = set(smart_features_map.values()) | {"m3life_no", "cd_time", "cd_event"}
+    columns_to_keep = [
+        col for col in train.columns
+        if (train[col].isna().sum() / len(train)) <= 0.10 or col in protected_cols
+    ]
+    train, val, test = train[columns_to_keep], val[columns_to_keep], test[columns_to_keep]
+
+    # Fix data issues
+    for df in [train, val, test]:
+        if "vz_t2d" in df.columns:
+            df.loc[df["vz_t2d"] == "LIMA LAD-Y graft FRima D1-Mo", "vz_t2d"] = np.nan
+            df["vz_t2d"] = df["vz_t2d"].astype(float)
+    if "AlbCr" in train.columns:
+        train, val, test = train.drop("AlbCr", axis=1), val.drop("AlbCr", axis=1), test.drop("AlbCr", axis=1)
+
+    # Cast to float
+    non_numeric = {"m3life_no"}
+    for df in [train, val, test]:
+        for col in df.columns:
+            if col not in non_numeric:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # KNN imputation (fit on train, transform all)
+    meta_cols = ["m3life_no", "cd_time", "cd_event"]
+    feature_cols = [c for c in train.columns if c not in meta_cols]
+    imp = KNNImputer(n_neighbors=5, weights="uniform")
+    imp.fit(train[feature_cols])
+    train[feature_cols] = imp.transform(train[feature_cols])
+    val[feature_cols] = imp.transform(val[feature_cols])
+    test[feature_cols] = imp.transform(test[feature_cols])
+
+    return train, val, test
 
 
 def load_mimic_readmission(root_path: Path):
