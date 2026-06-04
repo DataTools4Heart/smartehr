@@ -85,14 +85,21 @@ def load_smart(root_path: Path):
     # KNN imputation (fit on train, transform all)
     meta_cols = ["m3life_no", "cd_time", "cd_event"]
     feature_cols = [c for c in train.columns if c not in meta_cols]
+    # Drop columns that are entirely NaN in train (KNNImputer would drop them)
+    valid_cols = [c for c in feature_cols if not train[c].isna().all()]
+    dropped_cols = [c for c in feature_cols if c not in valid_cols]
+    if dropped_cols:
+        train = train.drop(columns=dropped_cols)
+        val = val.drop(columns=dropped_cols)
+        test = test.drop(columns=dropped_cols)
     imp = KNNImputer(n_neighbors=5, weights="uniform")
-    imp.fit(train[feature_cols].values)
+    imp.fit(train[valid_cols].values)
     train = train.copy()
     val = val.copy()
     test = test.copy()
-    train[feature_cols] = pd.DataFrame(imp.transform(train[feature_cols].values), columns=feature_cols, index=train.index)
-    val[feature_cols] = pd.DataFrame(imp.transform(val[feature_cols].values), columns=feature_cols, index=val.index)
-    test[feature_cols] = pd.DataFrame(imp.transform(test[feature_cols].values), columns=feature_cols, index=test.index)
+    train[valid_cols] = pd.DataFrame(imp.transform(train[valid_cols].values), columns=valid_cols, index=train.index)
+    val[valid_cols] = pd.DataFrame(imp.transform(val[valid_cols].values), columns=valid_cols, index=val.index)
+    test[valid_cols] = pd.DataFrame(imp.transform(test[valid_cols].values), columns=valid_cols, index=test.index)
 
     return train, val, test
 
