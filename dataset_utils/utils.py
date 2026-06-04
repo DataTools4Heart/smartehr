@@ -33,7 +33,8 @@ def load_smart(root_path: Path):
     """Load SMART data from JSONL splits (output of smartehr_pipeline.py).
 
     Reads train.jsonl, validation.jsonl, test.jsonl and extracts the 'smart'
-    fields plus 'm3life_no' into DataFrames. Renames first_event → cd_time.
+    fields plus 'm3life_no' into DataFrames. Renames first_event → cd_time
+    and computes cd_event: 0 if cd_time > 3650 or cd_time <= 0, else 1.
     """
     splits = {}
     for split_name in ["train", "validation", "test"]:
@@ -47,6 +48,7 @@ def load_smart(root_path: Path):
         df = pd.DataFrame(records)
         if "first_event" in df.columns:
             df = df.rename(columns={"first_event": "cd_time"})
+        df["cd_event"] = ((df["cd_time"] > 0) & (df["cd_time"] <= 3650)).astype(int)
         splits[split_name] = df
     return splits["train"], splits["validation"], splits["test"]
 

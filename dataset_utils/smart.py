@@ -76,9 +76,7 @@ def compute_first_cd_event(smart: pd.DataFrame):
 
 def preprocess_smart(smart: pd.DataFrame):
     inverse_smart_features_map = {v: k for k, v in smart_features_map.items()}
-    inverse_smart_outcomes_map = {v: k for k, v in smart_outcomes_map.items()}
-    rename_dict = inverse_smart_features_map | inverse_smart_outcomes_map
-    rename_dict = {k: v for k, v in rename_dict.items() if k in smart.columns}
+    rename_dict = {k: v for k, v in inverse_smart_features_map.items() if k in smart.columns}
     keys = [v for v in rename_dict.values()] + ["cd_event", "cd_time"]
     smart = smart.rename(columns=rename_dict).loc[:, keys]
     for feature, (min_val, max_val) in numeric_feature_ranges.items():
