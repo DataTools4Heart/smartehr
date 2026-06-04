@@ -14,8 +14,6 @@ def compute_first_event(row):
         if column.startswith("e") and column.endswith("_f"):
             if row[column] is not None and row[column] >= 0:
                 min_value = min(min_value, row[column])
-    if min_value == float("inf"):
-        return None
     return min_value
 
 
@@ -41,9 +39,10 @@ def compute_cd_event(row):
 
 
 def drop_outcomes(df):
-    """Drop all outcome-related columns (e*_f and their sibling columns e*_n, e*_s, etc.)."""
+    """Drop all outcome-related columns (e*_f and their sibling columns e*_n, e*_s, etc.) and SmrtRisk."""
     outcome_prefixes = ["_".join(c.split("_")[:-1]) for c in df.columns if c.startswith("e") and c.endswith("_f")]
     cols_to_drop = [c for c in df.columns if "_".join(c.split("_")[:-1]) in outcome_prefixes]
+    cols_to_drop += [c for c in df.columns if c.startswith("SmrtRisk")]
     return df.drop(columns=cols_to_drop)
 
 
@@ -51,7 +50,6 @@ def preprocess_smart_ehr(
     smart_csv,
     event_csvs,
     baseline_time,
-    end_of_study,
     output_path,
     val_size=0.16,
     test_size=0.20,
@@ -64,8 +62,6 @@ def preprocess_smart_ehr(
     - smart_csv: Path to the smart.csv file (raw, with outcome columns e*_f, e*_n, etc.).
     - event_csvs: Dictionary of event source names and their file paths.
     - baseline_time: Reference point; events with datediff < this are kept.
-    - end_of_study: Maximum follow-up time. Patients with first_event > this
-      are administratively censored at end_of_study.
     - output_path: Path whose parent directory will contain the split JSONL files.
     - val_size: Fraction of data for validation.
     - test_size: Fraction of data for test.
@@ -94,20 +90,15 @@ def preprocess_smart_ehr(
             # Without explicit censoring info, assume all patients had an event
             smart_df["cd_event"] = 1
 
-    # Drop patients with no follow-up data
+    # Drop patients with no follow-up data or invalid IDs
     smart_df = smart_df[~smart_df["first_event"].isna()]
+    smart_df = smart_df[smart_df["m3life_no"] >= 0]
 
     # Deduplicate: keep the row with the minimum first_event per patient
     smart_df = smart_df.loc[smart_df.groupby("m3life_no")["first_event"].idxmin()]
     n_total = len(smart_df)
-
-    # Apply administrative censoring at end_of_study (keep all patients, censor the late ones)
-    beyond_study = smart_df["first_event"] - baseline_time > end_of_study
-    smart_df.loc[beyond_study, "first_event"] = end_of_study + baseline_time
-    smart_df.loc[beyond_study, "cd_event"] = 0
     smart_df = smart_df.reset_index(drop=True)
-    print(f"Patients: {n_raw:,} raw rows → {n_total:,} unique patients, "
-          f"{beyond_study.sum():,} administratively censored at end_of_study={end_of_study}")
+    print(f"Patients: {n_raw:,} raw rows → {n_total:,} unique patients")
 
     # Columns that belong to smart (everything except m3life_no)
     smart_feature_cols = [c for c in smart_df.columns if c != "m3life_no"]
@@ -244,7 +235,6 @@ if __name__ == "__main__":
     parser.add_argument("--smart_csv", type=str, required=True, help="Path to the smart.csv file.")
     parser.add_argument("--event_csv_folder", type=str, required=True, help="Path to the folder containing event CSV files.")
     parser.add_argument("--baseline_time", type=int, default=0, help="Reference point; events with datediff < this are kept.")
-    parser.add_argument("--end_of_study", type=int, default=3650, help="Patients with first_event - baseline_time > this are dropped.")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the split JSONL files (train/val/test).")
     parser.add_argument("--window_size", type=int, default=10, help="Size of each time bucket (same unit as datediff).")
     parser.add_argument("--windowed_output_dir", type=str, required=True, help="Directory to save the windowed split JSONL files.")
@@ -262,7 +252,6 @@ if __name__ == "__main__":
         args.smart_csv,
         event_csvs,
         args.baseline_time,
-        args.end_of_study,
         args.output_dir,
         val_size=args.val_size,
         test_size=args.test_size,
