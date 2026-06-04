@@ -51,6 +51,7 @@ def preprocess_smart_ehr(
     event_csvs,
     baseline_time,
     output_path,
+    exclusion_window=0,
     val_size=0.16,
     test_size=0.20,
     seed=42,
@@ -63,6 +64,9 @@ def preprocess_smart_ehr(
     - event_csvs: Dictionary of event source names and their file paths.
     - baseline_time: Reference point; events with datediff < this are kept.
     - output_path: Path whose parent directory will contain the split JSONL files.
+    - exclusion_window: Exclude events within this many days of first_event.
+        E.g. 180 drops events whose temporal distance to the outcome is < 180 days.
+        0 means no exclusion.
     - val_size: Fraction of data for validation.
     - test_size: Fraction of data for test.
     - seed: Random seed for splitting.
@@ -133,13 +137,23 @@ def preprocess_smart_ehr(
     dataset = []
     for _, row in smart_df.iterrows():
         pid = int(row["m3life_no"])
+        first_event = row.get("first_event")
+        patient_events = events_by_patient.get(pid, [])
+
+        # Apply exclusion window: drop events too close to the outcome
+        if exclusion_window > 0 and first_event is not None:
+            patient_events = [
+                e for e in patient_events
+                if (first_event - e["datediff"]) >= exclusion_window
+            ]
+
         record = {
             "m3life_no": pid,
             "smart": {
                 k: (int(v) if isinstance(v, (int,)) else float(v) if isinstance(v, float) else v)
                 for k, v in row.items() if k in smart_feature_cols
             },
-            "events": events_by_patient.get(pid, []),
+            "events": patient_events,
         }
         dataset.append(record)
 
@@ -238,6 +252,9 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the split JSONL files (train/val/test).")
     parser.add_argument("--window_size", type=int, default=10, help="Size of each time bucket (same unit as datediff).")
     parser.add_argument("--windowed_output_dir", type=str, required=True, help="Directory to save the windowed split JSONL files.")
+    parser.add_argument("--exclusion_window", type=int, default=0,
+                        help="Exclude events within this many days of first_event. "
+                             "E.g. 180 drops events whose temporal distance to outcome is < 180 days. Default: 0.")
     parser.add_argument("--val_size", type=float, default=0.15, help="Validation set fraction.")
     parser.add_argument("--test_size", type=float, default=0.15, help="Test set fraction.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting.")
@@ -253,6 +270,7 @@ if __name__ == "__main__":
         event_csvs,
         args.baseline_time,
         args.output_dir,
+        exclusion_window=args.exclusion_window,
         val_size=args.val_size,
         test_size=args.test_size,
         seed=args.seed,

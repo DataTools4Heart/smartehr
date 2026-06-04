@@ -11,6 +11,7 @@ class DatasetParams:
 class SmartParams(DatasetParams):
     root_path: str
     use_full_feature_set: bool
+    smart_csv: str = ""
 
 
 @dataclass

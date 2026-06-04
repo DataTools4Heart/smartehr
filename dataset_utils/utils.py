@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+import json
 import pandas as pd
 from functools import partial
 from collections import defaultdict
@@ -29,10 +30,25 @@ from datasets import load_dataset
 
 
 def load_smart(root_path: Path):
-    train = pd.read_csv(root_path / "smart_full_train.csv", low_memory=False)
-    val = pd.read_csv(root_path / "smart_full_val.csv", low_memory=False)
-    test = pd.read_csv(root_path / "smart_full_test.csv", low_memory=False)
-    return train, val, test
+    """Load SMART data from JSONL splits (output of smartehr_pipeline.py).
+
+    Reads train.jsonl, validation.jsonl, test.jsonl and extracts the 'smart'
+    fields plus 'm3life_no' into DataFrames. Renames first_event → cd_time.
+    """
+    splits = {}
+    for split_name in ["train", "validation", "test"]:
+        records = []
+        with open(root_path / f"{split_name}.jsonl") as f:
+            for line in f:
+                rec = json.loads(line)
+                row = {"m3life_no": rec["m3life_no"]}
+                row.update(rec["smart"])
+                records.append(row)
+        df = pd.DataFrame(records)
+        if "first_event" in df.columns:
+            df = df.rename(columns={"first_event": "cd_time"})
+        splits[split_name] = df
+    return splits["train"], splits["validation"], splits["test"]
 
 
 def load_mimic_readmission(root_path: Path):
@@ -86,7 +102,7 @@ def load_smart_poc(root_path: str, value_dict_path: str, data_dict_path: str):
             x = value_map[col][x]
         return x
 
-    feature_cols = [c for c in train if c not in ["cd_time", "cd_event"]]
+    feature_cols = [c for c in train if c not in ["cd_time", "cd_event", "m3life_no"]]
     for dataset in [train, val, test]:
         for col in feature_cols:
             dataset[col] = dataset[col].apply(partial(substitute_value, col=col))
@@ -269,7 +285,7 @@ def load_for_pycox(dataset_params: DatasetParams):
         num_intervals = 24
         evaluation_times = [i * 365 for i in range(1, 11)]
         y_names = ["cd_time", "cd_event"]
-        x_names = [k for k in train.columns if k not in y_names and k != "SmrtRisk"]
+        x_names = [k for k in train.columns if k not in y_names and k != "m3life_no"]
 
     elif dataset_params.name == "mimic_readmission":
         dataset_params = MimicReadmissionParams(**dataset_params)

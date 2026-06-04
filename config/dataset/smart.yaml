@@ -1,5 +1,6 @@
 defaults:
   - base_smart
 name: smart
-root_path: data/smart
+root_path: data/smart/smartehr
 use_full_feature_set: true
+smart_csv: data/smart/aggregated.csv

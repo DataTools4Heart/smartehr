@@ -9,19 +9,13 @@ from datasets import Dataset
 from transformers import AutoTokenizer
 
 
-def serialize_patient(record: dict, exclusion_window: int = 0) -> str:
+def serialize_patient(record: dict) -> str:
     """Serialize a patient record to a natural-language text string.
 
     Args:
         record: Patient record dict with 'smart' and 'events' keys.
-        exclusion_window: Exclude events within this many days of first_event.
-            E.g. exclusion_window=180 drops events whose temporal distance to
-            the outcome is less than 180 days. This prevents information leakage
-            from events that occur shortly before the outcome.
-            0 means no exclusion.
     """
     smart = record["smart"]
-    first_event = smart.get("first_event", None)
     parts = ["[PATIENT]"]
     for k, v in smart.items():
         if k in ("first_event", "cd_event"):
@@ -29,12 +23,6 @@ def serialize_patient(record: dict, exclusion_window: int = 0) -> str:
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
 
     for event in record.get("events", []):
-        if exclusion_window > 0 and first_event is not None:
-            # Distance from this event to the outcome: first_event - datediff
-            # (datediff is typically negative = before baseline, first_event is positive = after baseline)
-            distance_to_outcome = first_event - event["datediff"]
-            if distance_to_outcome < exclusion_window:
-                continue
         event_parts = [f"[EVENT datediff={event['datediff']}]"]
         for k, v in event.items():
             if k == "datediff":
@@ -79,7 +67,6 @@ def preprocess_dummy_smart_survival(
     tokenizer_name: str = "meta-llama/Llama-3.2-1B",
     max_length: int = 512,
     horizon_days: int = 1825,
-    exclusion_window: int = 0,
 ):
     jsonl_dir = Path(jsonl_dir)
     print(f"Loading split JSONL files from {jsonl_dir} ...")
@@ -119,7 +106,7 @@ def preprocess_dummy_smart_survival(
             cd_event_raw = rec["smart"].get("cd_event")
             cd_event = int(cd_event_raw) if cd_event_raw is not None else 1
 
-            text = serialize_patient(rec, exclusion_window=exclusion_window)
+            text = serialize_patient(rec)
             if truncate:
                 enc = tokenizer(text, truncation=True, max_length=max_length, add_special_tokens=True)
             else:
@@ -151,14 +138,12 @@ def preprocess_dummy_smart_survival(
     print(f"{'='*60}")
     print(f"  Total patients      : {total_n:,}")
     print(f"  Horizon             : {horizon_days} days ({horizon_days/365:.1f} years)")
-    print(f"  Exclusion window    : {exclusion_window} days (relative to first_event)")
     print(f"  Events (Y=1)        : {total_events:,} ({100*total_events/total_n:.1f}%)")
     print(f"  Censored (Y=0)      : {total_n-total_events:,} ({100*(total_n-total_events)/total_n:.1f}%)")
 
     # Save metadata
     metadata = {
         "horizon_days": horizon_days,
-        "exclusion_window": exclusion_window,
         "tokenizer_name": tokenizer_name,
         "max_length": max_length,
         "n_patients": total_n,
@@ -187,9 +172,6 @@ if __name__ == "__main__":
     parser.add_argument("--horizon-days", type=int, default=1825,
                         help="Administrative censoring horizon in days. Default: 1825 (5 years). "
                              "Patients with first_event > horizon are censored at horizon (Y=0, T=horizon).")
-    parser.add_argument("--exclusion-window", type=int, default=0,
-                        help="Exclude events within this many days of first_event. "
-                             "E.g. 180 drops events whose temporal distance to outcome is < 180 days. Default: 0.")
     args = parser.parse_args()
 
     preprocess_dummy_smart_survival(
@@ -198,5 +180,4 @@ if __name__ == "__main__":
         tokenizer_name=args.tokenizer_name,
         max_length=args.max_length,
         horizon_days=args.horizon_days,
-        exclusion_window=args.exclusion_window,
     )

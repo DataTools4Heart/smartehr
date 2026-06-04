@@ -4,17 +4,24 @@ from dataset_utils.utils import load_smart
 from utils import eval_smart
 from pathlib import Path
 from lifelines import CoxPHFitter
+import pandas as pd
 import argparse
 
 
-def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool, same_size_as_original: bool):
+def train_and_evaluate_smart(root_path: Path, smart_csv: Path, use_full_feature_set: bool, same_size_as_original: bool):
     train, val, test = load_smart(root_path)
+
+    # Load SmrtRisk from the original CSV and link by m3life_no
+    original = pd.read_csv(smart_csv, usecols=["M3LIFE_no", "SmrtRisk"], low_memory=False)
+    original = original.rename(columns={"M3LIFE_no": "m3life_no"})
+    test = test.merge(original, on="m3life_no", how="left")
+
     if same_size_as_original:
         train = train.sample(3489, random_state=42)
         test = test.sample(2299, random_state=42)
     test_smart_risk_score = test["SmrtRisk"]
-    train = train.drop("SmrtRisk", axis=1)
-    test = test.drop("SmrtRisk", axis=1)
+    train = train.drop(columns=["m3life_no", "SmrtRisk"], errors="ignore")
+    test = test.drop(columns=["m3life_no", "SmrtRisk"], errors="ignore")
     formula = None
     l1_ratio = 1.0
     penalizer = 0.1
@@ -40,7 +47,8 @@ def train_and_evaluate_smart(root_path: Path, use_full_feature_set: bool, same_s
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train and evaluate SMART model.")
-    parser.add_argument("--root-path", type=Path, help="Root path to the SMART dataset.", required=True)
+    parser.add_argument("--root-path", type=Path, help="Root path to the SMART JSONL splits.", required=True)
+    parser.add_argument("--smart-csv", type=Path, help="Path to the original CSV with SmrtRisk column.", required=True)
     parser.add_argument(
         "--use-full-feature-set", action="store_true", help="Use the full feature set for training.", default=False
     )
@@ -51,4 +59,4 @@ if __name__ == "__main__":
         default=False,
     )
     args = parser.parse_args()
-    train_and_evaluate_smart(args.root_path, args.use_full_feature_set, args.same_size_as_original)
+    train_and_evaluate_smart(args.root_path, args.smart_csv, args.use_full_feature_set, args.same_size_as_original)

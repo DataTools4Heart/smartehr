@@ -2,6 +2,6 @@ defaults:
   - base_smart_poc
 
 name: smart_poc
-root_path: data/smart
+root_path: data/smart/smartehr
 value_dict_path: data/SmartEPjan22dd12072023.xls
 data_dict_path: data/dd.csv
