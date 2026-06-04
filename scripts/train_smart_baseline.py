@@ -12,8 +12,9 @@ def train_and_evaluate_smart(root_path: Path, smart_csv: Path, use_full_feature_
     train, val, test = load_smart(root_path)
 
     # Load SmrtRisk from the original CSV and link by m3life_no
-    original = pd.read_csv(smart_csv, usecols=["M3LIFE_no", "SmrtRisk"], low_memory=False)
+    original = pd.read_csv(smart_csv, low_memory=False)
     original = original.rename(columns={"M3LIFE_no": "m3life_no"})
+    original = original[["m3life_no", "SmrtRisk"]]
     test = test.merge(original, on="m3life_no", how="left")
 
     if same_size_as_original:
