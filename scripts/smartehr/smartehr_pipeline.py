@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 import argparse
 import os
+from sklearn.model_selection import train_test_split
 
 
 def compute_first_event(row):
@@ -52,9 +53,12 @@ def preprocess_smart_ehr(
     baseline_time,
     end_of_study,
     output_path,
+    val_size=0.16,
+    test_size=0.20,
+    seed=42,
 ):
     """
-    Preprocess SmartEHR data to create a longitudinal dataset.
+    Preprocess SmartEHR data to create a longitudinal dataset with train/val/test splits.
 
     Parameters:
     - smart_csv: Path to the smart.csv file (raw, with outcome columns e*_f, e*_n, etc.).
@@ -62,18 +66,33 @@ def preprocess_smart_ehr(
     - baseline_time: Reference point; events with datediff < this are kept.
     - end_of_study: Maximum follow-up time. Patients with first_event > this
       are administratively censored at end_of_study.
-    - output_path: Path to save the longitudinal dataset as JSONL.
+    - output_path: Path whose parent directory will contain the split JSONL files.
+    - val_size: Fraction of data for validation.
+    - test_size: Fraction of data for test.
+    - seed: Random seed for splitting.
+
+    Returns:
+    - dataset: List of all patient records.
+    - splits: Dict mapping split name → list of indices.
     """
     # Load smart.csv
     smart_df = pd.read_csv(smart_csv)
     n_raw = len(smart_df)
 
-    # Compute survival targets from outcome columns
-    smart_df["first_event"] = smart_df.apply(compute_first_event, axis=1)
-    smart_df["cd_event"] = smart_df.apply(compute_cd_event, axis=1)
+    # Check if data has raw outcome columns (e*_f) or pre-computed first_event
+    has_endpoint_cols = any(c.startswith("e") and c.endswith("_f") for c in smart_df.columns)
 
-    # Drop outcome columns from features (they must not leak into inputs)
-    smart_df = drop_outcomes(smart_df)
+    if has_endpoint_cols:
+        # Compute survival targets from outcome columns
+        smart_df["first_event"] = smart_df.apply(compute_first_event, axis=1)
+        smart_df["cd_event"] = smart_df.apply(compute_cd_event, axis=1)
+        # Drop outcome columns from features (they must not leak into inputs)
+        smart_df = drop_outcomes(smart_df)
+    else:
+        # Data already has first_event; ensure cd_event exists
+        if "cd_event" not in smart_df.columns:
+            # Without explicit censoring info, assume all patients had an event
+            smart_df["cd_event"] = 1
 
     # Drop patients with no follow-up data
     smart_df = smart_df[~smart_df["first_event"].isna()]
@@ -133,19 +152,39 @@ def preprocess_smart_ehr(
         }
         dataset.append(record)
 
-    # Save as JSONL
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w") as f:
-        for record in dataset:
-            f.write(json.dumps(record) + "\n")
+    # Train/val/test split (stratified on cd_event)
+    events_for_stratify = [r["smart"]["cd_event"] for r in dataset]
+    indices = list(range(len(dataset)))
+    idx_trainval, idx_test = train_test_split(
+        indices, test_size=test_size, random_state=seed, stratify=events_for_stratify
+    )
+    events_trainval = [events_for_stratify[i] for i in idx_trainval]
+    adjusted_val = val_size / (1.0 - test_size)
+    idx_train, idx_val = train_test_split(
+        idx_trainval, test_size=adjusted_val, random_state=seed, stratify=events_trainval
+    )
+
+    splits = {"train": idx_train, "validation": idx_val, "test": idx_test}
+
+    # Save as split JSONL files
+    output_dir = Path(output_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for split_name, idxs in splits.items():
+        split_path = output_dir / f"{split_name}.jsonl"
+        with open(split_path, "w") as f:
+            for i in idxs:
+                f.write(json.dumps(dataset[i]) + "\n")
 
     n_events = sum(1 for r in dataset if r["smart"]["cd_event"] == 1)
-    print(f"Saved {len(dataset):,} patient records → {output_path}")
+    print(f"Saved {len(dataset):,} patient records → {output_dir}/")
     print(f"  Events: {n_events:,} ({100*n_events/len(dataset):.1f}%) | Censored: {len(dataset)-n_events:,}")
     total_events = sum(len(p["events"]) for p in dataset)
     print(f"  Total longitudinal events across all patients: {total_events:,}")
+    for split_name, idxs in splits.items():
+        split_events = sum(1 for i in idxs if dataset[i]["smart"]["cd_event"] == 1)
+        print(f"  {split_name:12s}: {len(idxs):5,} | events={split_events} ({100*split_events/len(idxs):.1f}%)")
 
-    return dataset
+    return dataset, splits
 
 def apply_time_windows(
     dataset,
@@ -206,9 +245,12 @@ if __name__ == "__main__":
     parser.add_argument("--event_csv_folder", type=str, required=True, help="Path to the folder containing event CSV files.")
     parser.add_argument("--baseline_time", type=int, default=0, help="Reference point; events with datediff < this are kept.")
     parser.add_argument("--end_of_study", type=int, default=3650, help="Patients with first_event - baseline_time > this are dropped.")
-    parser.add_argument("--output_path", type=str, required=True, help="Path to save the longitudinal dataset as JSONL.")
+    parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the split JSONL files (train/val/test).")
     parser.add_argument("--window_size", type=int, default=10, help="Size of each time bucket (same unit as datediff).")
-    parser.add_argument("--windowed_output_path", type=str, required=True, help="Path to save the windowed dataset as JSONL.")
+    parser.add_argument("--windowed_output_dir", type=str, required=True, help="Directory to save the windowed split JSONL files.")
+    parser.add_argument("--val_size", type=float, default=0.15, help="Validation set fraction.")
+    parser.add_argument("--test_size", type=float, default=0.15, help="Test set fraction.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting.")
 
     args = parser.parse_args()
 
@@ -216,18 +258,25 @@ if __name__ == "__main__":
     event_csvs = get_event_csvs(args.event_csv_folder)
 
     # Preprocess the dataset
-    dataset = preprocess_smart_ehr(
+    dataset, splits = preprocess_smart_ehr(
         args.smart_csv,
         event_csvs,
         args.baseline_time,
         args.end_of_study,
-        args.output_path,
+        args.output_dir,
+        val_size=args.val_size,
+        test_size=args.test_size,
+        seed=args.seed,
     )
 
-    # Apply time windows
-    windowed_dataset = apply_time_windows(
-        dataset,
-        args.window_size,
-        args.baseline_time,
-        args.windowed_output_path,
-    )
+    # Apply time windows (per split)
+    windowed_output_dir = Path(args.windowed_output_dir)
+    windowed_output_dir.mkdir(parents=True, exist_ok=True)
+    for split_name, idxs in splits.items():
+        split_dataset = [dataset[i] for i in idxs]
+        windowed_split = apply_time_windows(
+            split_dataset,
+            args.window_size,
+            args.baseline_time,
+            windowed_output_path=str(windowed_output_dir / f"{split_name}.jsonl"),
+        )
