@@ -87,9 +87,9 @@ def load_smart(root_path: Path):
     feature_cols = [c for c in train.columns if c not in meta_cols]
     imp = KNNImputer(n_neighbors=5, weights="uniform")
     imp.fit(train[feature_cols])
-    train[feature_cols] = imp.transform(train[feature_cols])
-    val[feature_cols] = imp.transform(val[feature_cols])
-    test[feature_cols] = imp.transform(test[feature_cols])
+    train.loc[:, feature_cols] = imp.transform(train[feature_cols])
+    val.loc[:, feature_cols] = imp.transform(val[feature_cols])
+    test.loc[:, feature_cols] = imp.transform(test[feature_cols])
 
     return train, val, test
 
