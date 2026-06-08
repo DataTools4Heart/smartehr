@@ -7,6 +7,54 @@ import os
 from sklearn.model_selection import train_test_split
 
 
+# SMART-specific outcome column names (original, unrenamed)
+_SMART_OUTCOME_COLS = [
+    "edood_f", "edood_n", "edoodvas",
+    "ebero_f", "ebero_n", "ebero_s",
+    "emi_f",   "emi_n",  "emi_s",
+]
+
+
+def drop_rows_with_missing_smart_outcomes(df):
+    """Drop rows where any SMART outcome column is NaN (legacy preprocessing)."""
+    for col in [c for c in _SMART_OUTCOME_COLS if c in df.columns]:
+        df = df[~df[col].isna()]
+    return df
+
+
+def compute_legacy_targets(df):
+    """Compute first_event and cd_event using SMART-specific column names.
+
+    Mirrors the logic in compute_first_cd_event (dataset_utils/smart.py) but
+    operates directly on the original column names (edood_f, ebero_f, emi_f …)
+    without any column renaming.
+    """
+    def _compute_time(s):
+        t = max(s[c] for c in ["edood_f", "ebero_f", "emi_f"] if c in s.index)
+        times = []
+        if (s.get("edoodvas", 0) > 0) or (s.get("edood_n", 0) > 0):
+            times.append(s["edood_f"])
+        if s.get("ebero_n", 0) > 0:
+            times.append(s["ebero_f"])
+        if s.get("emi_n", 0) > 0:
+            times.append(s["emi_f"])
+        return min(times) if times else t
+
+    df = df.copy()
+    df["cd_event"] = df.apply(
+        lambda x: int(
+            (x.get("edoodvas", 0) > 0)
+            or (x.get("edood_n", 0) > 0)
+            or (x.get("ebero_n", 0) > 0)
+            or (x.get("emi_n", 0) > 0)
+        ),
+        axis=1,
+    )
+    df["first_event"] = df.apply(_compute_time, axis=1)
+    df = df.drop(columns=[c for c in _SMART_OUTCOME_COLS if c in df.columns])
+    return df
+
+
 def compute_first_event(row):
     """Compute first_event as the minimum non-negative value across all e*_f (endpoint time) columns."""
     min_value = float("inf")
@@ -55,6 +103,7 @@ def preprocess_smart_ehr(
     val_size=0.16,
     test_size=0.20,
     seed=42,
+    legacy=False,
 ):
     """
     Preprocess SmartEHR data to create a longitudinal dataset with train/val/test splits.
@@ -70,6 +119,9 @@ def preprocess_smart_ehr(
     - val_size: Fraction of data for validation.
     - test_size: Fraction of data for test.
     - seed: Random seed for splitting.
+    - legacy: If True, use SMART-specific outcome columns (edood_f, ebero_f, emi_f …)
+        with the logic from compute_first_cd_event and drop rows with missing outcomes
+        before computing targets.
 
     Returns:
     - dataset: List of all patient records.
@@ -80,19 +132,24 @@ def preprocess_smart_ehr(
     n_raw = len(smart_df)
 
     # Check if data has raw outcome columns (e*_f) or pre-computed first_event
-    has_endpoint_cols = any(c.startswith("e") and c.endswith("_f") for c in smart_df.columns)
-
-    if has_endpoint_cols:
-        # Compute survival targets from outcome columns
-        smart_df["first_event"] = smart_df.apply(compute_first_event, axis=1)
-        smart_df["cd_event"] = smart_df.apply(compute_cd_event, axis=1)
-        # Drop outcome columns from features (they must not leak into inputs)
-        smart_df = drop_outcomes(smart_df)
+    if legacy:
+        # Legacy mode: use SMART-specific column names, drop rows with missing outcomes
+        smart_df = drop_rows_with_missing_smart_outcomes(smart_df)
+        smart_df = compute_legacy_targets(smart_df)
     else:
-        # Data already has first_event; ensure cd_event exists
-        if "cd_event" not in smart_df.columns:
-            # Without explicit censoring info, assume all patients had an event
-            smart_df["cd_event"] = 1
+        has_endpoint_cols = any(c.startswith("e") and c.endswith("_f") for c in smart_df.columns)
+
+        if has_endpoint_cols:
+            # Compute survival targets from outcome columns
+            smart_df["first_event"] = smart_df.apply(compute_first_event, axis=1)
+            smart_df["cd_event"] = smart_df.apply(compute_cd_event, axis=1)
+            # Drop outcome columns from features (they must not leak into inputs)
+            smart_df = drop_outcomes(smart_df)
+        else:
+            # Data already has first_event; ensure cd_event exists
+            if "cd_event" not in smart_df.columns:
+                # Without explicit censoring info, assume all patients had an event
+                smart_df["cd_event"] = 1
 
     # Drop patients with no follow-up data or invalid IDs
     smart_df = smart_df[~smart_df["first_event"].isna()]
@@ -258,6 +315,14 @@ if __name__ == "__main__":
     parser.add_argument("--val_size", type=float, default=0.15, help="Validation set fraction.")
     parser.add_argument("--test_size", type=float, default=0.15, help="Test set fraction.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting.")
+    parser.add_argument(
+        "--legacy",
+        action="store_true",
+        default=False,
+        help="Use SMART-specific outcome columns (edood_f, ebero_f, emi_f …) with the "
+             "compute_first_cd_event logic. Rows with any missing outcome column are "
+             "dropped before target computation.",
+    )
 
     args = parser.parse_args()
 
@@ -274,6 +339,7 @@ if __name__ == "__main__":
         val_size=args.val_size,
         test_size=args.test_size,
         seed=args.seed,
+        legacy=args.legacy,
     )
 
     # Apply time windows (per split)
