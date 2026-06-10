@@ -10,7 +10,7 @@ import os
 
 
 def preprocess_and_save_smart_data(smart: pd.DataFrame, out_path: str):
-    smart = smart.drop(["M3LIFE_no"], axis=1)
+    #smart = smart.drop(["M3LIFE_no"], axis=1)
     to_remove = [
         i
         for i in range(smart.columns.get_loc("SmrtRisk") + 1, len(smart.columns))
@@ -34,18 +34,19 @@ def preprocess_and_save_smart_data(smart: pd.DataFrame, out_path: str):
     smart = compute_first_cd_event(smart)
     smart = smart.astype(float)
     train, test = train_test_split(smart, train_size=0.8, random_state=42)
-    train, val = train_test_split(smart, test_size=0.2, random_state=42)
+    train, val = train_test_split(train, test_size=0.2, random_state=42)
 
+    to_drop = ["cd_time", "cd_event", "SmrtRisk", "M3LIFE_no"]
     imp = KNNImputer(n_neighbors=5, weights="uniform")
-    imp.fit(train.drop(["cd_time", "cd_event", "SmrtRisk"], axis=1))
-    train.loc[:, [col for col in train.columns if col not in ["cd_time", "cd_event", "SmrtRisk"]]] = imp.transform(
-        train.drop(["cd_time", "cd_event", "SmrtRisk"], axis=1)
+    imp.fit(train.drop(to_drop, axis=1))
+    train.loc[:, [col for col in train.columns if col not in to_drop]] = imp.transform(
+        train.drop(to_drop, axis=1)
     )
-    val.loc[:, [col for col in val.columns if col not in ["cd_time", "cd_event", "SmrtRisk"]]] = imp.transform(
-        val.drop(["cd_time", "cd_event", "SmrtRisk"], axis=1)
+    val.loc[:, [col for col in val.columns if col not in to_drop]] = imp.transform(
+        val.drop(to_drop, axis=1)
     )
-    test.loc[:, [col for col in test.columns if col not in ["cd_time", "cd_event", "SmrtRisk"]]] = imp.transform(
-        test.drop(["cd_time", "cd_event", "SmrtRisk"], axis=1)
+    test.loc[:, [col for col in test.columns if col not in to_drop]] = imp.transform(
+        test.drop(to_drop, axis=1)
     )
 
     out_path = Path(out_path)
