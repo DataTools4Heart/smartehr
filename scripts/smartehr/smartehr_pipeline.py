@@ -23,35 +23,37 @@ def drop_rows_with_missing_smart_outcomes(df):
 
 
 def compute_legacy_targets(df):
-    """Compute first_event and cd_event using SMART-specific column names.
+    """Compute first_event and cd_event using SMART-specific Dutch column names.
 
     Mirrors the logic in compute_first_cd_event (dataset_utils/smart.py) but
-    operates directly on the original column names (edood_f, ebero_f, emi_f …)
+    operates directly on the original Dutch column names (edood_f, ebero_f, emi_f …)
     without any column renaming.
+
+    - death:  edoodvas > 0 (vascular death)
+    - stroke: ebero_n > 0 AND ebero_s in [11, 102]
+    - myo:    emi_n > 0   AND emi_s   in [41, 101]
+    - first_event: earliest time among endpoints that actually occurred
     """
-    def _compute_time(s):
-        t = max(s[c] for c in ["edood_f", "ebero_f", "emi_f"] if c in s.index)
-        times = []
-        if (s.get("edoodvas", 0) > 0) or (s.get("edood_n", 0) > 0):
-            times.append(s["edood_f"])
-        if s.get("ebero_n", 0) > 0:
-            times.append(s["ebero_f"])
-        if s.get("emi_n", 0) > 0:
-            times.append(s["emi_f"])
-        return min(times) if times else t
+    target_stroke_types = [11, 102]
+    target_myo_types = [41, 101]
 
     df = df.copy()
-    df["cd_event"] = df.apply(
-        lambda x: int(
-            (x.get("edoodvas", 0) > 0)
-            or (x.get("edood_n", 0) > 0)
-            or (x.get("ebero_n", 0) > 0)
-            or (x.get("emi_n", 0) > 0)
-        ),
-        axis=1,
+    df["_death"]  = df.apply(lambda x: x.get("edoodvas", 0) > 0, axis=1)
+    df["_stroke"] = df.apply(
+        lambda x: x.get("ebero_n", 0) > 0 and x.get("ebero_s") in target_stroke_types, axis=1
     )
+    df["_myo"] = df.apply(
+        lambda x: x.get("emi_n", 0) > 0 and x.get("emi_s") in target_myo_types, axis=1
+    )
+
+    def _compute_time(s):
+        t = max(s[c] for c in ["edood_f", "ebero_f", "emi_f"] if c in s.index)
+        times = [tf for tf, flag in [("edood_f", "_death"), ("ebero_f", "_stroke"), ("emi_f", "_myo")] if s[flag]]
+        return min(s[tf] for tf in times) if times else t
+
+    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"]), axis=1)
     df["first_event"] = df.apply(_compute_time, axis=1)
-    df = df.drop(columns=[c for c in _SMART_OUTCOME_COLS if c in df.columns])
+    df = df.drop(columns=["_death", "_stroke", "_myo"] + [c for c in _SMART_OUTCOME_COLS if c in df.columns])
     return df
 
 
