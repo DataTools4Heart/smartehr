@@ -51,7 +51,7 @@ def compute_legacy_targets(df):
         times = [tf for tf, flag in [("edood_f", "_death"), ("ebero_f", "_stroke"), ("emi_f", "_myo")] if s[flag]]
         return min(s[tf] for tf in times) if times else t
 
-    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"]), axis=1)
+    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"] in target_myo_types), axis=1)
     df["first_event"] = df.apply(_compute_time, axis=1)
     df = df.drop(columns=["_death", "_stroke", "_myo"] + [c for c in _SMART_OUTCOME_COLS if c in df.columns])
     return df

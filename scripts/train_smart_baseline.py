@@ -6,9 +6,52 @@ from pathlib import Path
 from lifelines import CoxPHFitter
 import pandas as pd
 import argparse
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
-def train_and_evaluate_smart(root_path: Path, smart_csv: Path, use_full_feature_set: bool, same_size_as_original: bool):
+def save_correlation_plots(out: dict, plot_dir: Path, use_full_feature_set: bool):
+    plot_dir.mkdir(parents=True, exist_ok=True)
+
+    def _scatter(x, y, xlabel, ylabel, r, p, filename):
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.scatter(x, y, alpha=0.4, s=10)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(f"Pearson r = {r:.3f}  (p = {p:.2e})")
+        fig.tight_layout()
+        fig.savefig(plot_dir / filename, dpi=150)
+        plt.close(fig)
+
+    _scatter(
+        out["smart_risk"], out["pred_ours"],
+        "SmrtRisk", "Our model  (1 − S(3650))",
+        out["pearson_r_ours_gt"], out["pearson_p_ours_gt"],
+        "corr_ours_vs_smartrisk.png",
+    )
+    if not use_full_feature_set:
+        _scatter(
+            out["smart_risk"], out["pred_smart"],
+            "SmrtRisk", "Original SMART",
+            out["pearson_r_smart_gt"], out["pearson_p_smart_gt"],
+            "corr_smart_vs_smartrisk.png",
+        )
+        _scatter(
+            out["pred_smart"], out["pred_ours"],
+            "Original SMART", "Our model",
+            out["pearson_r_ours_smart"], out["pearson_p_ours_smart"],
+            "corr_ours_vs_smart.png",
+        )
+
+
+def train_and_evaluate_smart(
+    root_path: Path,
+    smart_csv: Path,
+    use_full_feature_set: bool,
+    same_size_as_original: bool,
+    plot_dir: Path | None = None,
+):
     train, val, test = load_smart(root_path)
 
     # Load SmrtRisk from the original CSV and link by m3life_no
@@ -37,13 +80,17 @@ def train_and_evaluate_smart(root_path: Path, smart_csv: Path, use_full_feature_
 
     print("ROC AUC:", out["roc"][3650])
     print("CI:", out["ci"])
+    print(f"Pearson r (ours vs SmrtRisk): {out['pearson_r_ours_gt']:.4f}  (p = {out['pearson_p_ours_gt']:.2e})")
 
     if not use_full_feature_set:
         print("ROC AUC SMART:", out["roc_smart"][3650])
         print("CI SMART:", out["ci_smart"])
-        print("MAE (SMART ours - SMART):", out["mae_ours_smart"], "+-", out["mae_std_ours_smart"])
-        print("MAE (SMART - GT):", out["mae_smart_gt"], "+-", out["mae_std_smart_gt"])
-    print("MAE (SMART ours - GT):", out["mae_ours_gt"], "+-", out["mae_std_ours_gt"])
+        print(f"Pearson r (ours vs SMART):    {out['pearson_r_ours_smart']:.4f}  (p = {out['pearson_p_ours_smart']:.2e})")
+        print(f"Pearson r (SMART vs SmrtRisk):{out['pearson_r_smart_gt']:.4f}  (p = {out['pearson_p_smart_gt']:.2e})")
+
+    if plot_dir is not None:
+        save_correlation_plots(out, plot_dir, use_full_feature_set)
+        print(f"Correlation plots saved → {plot_dir}")
 
 
 if __name__ == "__main__":
@@ -59,5 +106,12 @@ if __name__ == "__main__":
         help="Use the same number of samples used in original SMART paper.",
         default=False,
     )
+    parser.add_argument(
+        "--plot-dir", type=Path, default=None,
+        help="Directory to save correlation scatter plots. Skipped if not set.",
+    )
     args = parser.parse_args()
-    train_and_evaluate_smart(args.root_path, args.smart_csv, args.use_full_feature_set, args.same_size_as_original)
+    train_and_evaluate_smart(
+        args.root_path, args.smart_csv, args.use_full_feature_set, args.same_size_as_original,
+        plot_dir=args.plot_dir,
+    )

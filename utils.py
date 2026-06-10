@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.metrics import roc_auc_score
+from scipy.stats import pearsonr
 import pandas as pd
 from lifelines import CoxPHFitter
 from lifelines.utils import concordance_index
@@ -37,27 +38,29 @@ def eval_smart(cpf: CoxPHFitter, test: pd.DataFrame, test_smart_risk_score: pd.S
     roc = time_dependent_roc_auc_score(event_observed.to_numpy(), surv.to_numpy(), event_times, surv.columns)
     nna_mask = ~test_smart_risk_score.isna()
     results = {}
-    abs_err_ours_gt = (test_smart_risk_score[nna_mask] - (1 - surv.loc[nna_mask, 3650])).abs().to_numpy()
-    results["mae_ours_gt"] = abs_err_ours_gt.mean()
-    results["mae_std_ours_gt"] = abs_err_ours_gt.std()
+    pred_ours_nna = (1 - surv.loc[nna_mask, 3650]).to_numpy()
+    smart_risk_nna = test_smart_risk_score[nna_mask].to_numpy()
+    r_ours_gt, p_ours_gt = pearsonr(smart_risk_nna, pred_ours_nna)
+    results["pearson_r_ours_gt"] = r_ours_gt
+    results["pearson_p_ours_gt"] = p_ours_gt
+    results["pred_ours"] = pred_ours_nna
+    results["smart_risk"] = smart_risk_nna
 
     if not use_full_feature_set:
         smart_surv = smart_survival_times(smart_weights, test).to_numpy()[..., None]
         evaluation_times = [3650.0]
         ci_smart = concordance_index(event_times=event_times, predicted_scores=smart_surv, event_observed=event_observed)
         roc_smart = time_dependent_roc_auc_score(event_observed.to_numpy(), smart_surv, event_times, evaluation_times)
-        abs_err_ours_smart = (
-            (original_smart_risk_score(smart_weights, test[nna_mask]) - (1 - surv.loc[nna_mask, 3650])).abs().to_numpy()
-        )
-        abs_err_smart_gt = (
-            (test_smart_risk_score[nna_mask] - original_smart_risk_score(smart_weights, test[nna_mask])).abs().to_numpy()
-        )
+        pred_smart_nna = np.asarray(original_smart_risk_score(smart_weights, test[nna_mask]))
+        r_ours_smart, p_ours_smart = pearsonr(pred_smart_nna, pred_ours_nna)
+        r_smart_gt, p_smart_gt = pearsonr(smart_risk_nna, pred_smart_nna)
         results["ci_smart"] = ci_smart
         results["roc_smart"] = roc_smart
-        results["mae_ours_smart"] = abs_err_ours_smart.mean()
-        results["mae_std_ours_smart"] = abs_err_ours_smart.std()
-        results["mae_smart_gt"] = abs_err_smart_gt.mean()
-        results["mae_std_smart_gt"] = abs_err_smart_gt.std()
+        results["pearson_r_ours_smart"] = r_ours_smart
+        results["pearson_p_ours_smart"] = p_ours_smart
+        results["pearson_r_smart_gt"] = r_smart_gt
+        results["pearson_p_smart_gt"] = p_smart_gt
+        results["pred_smart"] = pred_smart_nna
 
     results["roc"] = roc
     results["ci"] = ci
