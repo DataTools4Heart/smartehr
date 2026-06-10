@@ -99,9 +99,10 @@ def preprocess_smart_ehr(
     event_csvs,
     baseline_time,
     output_path,
+    split_json,
+    fix_test_split=False,
     exclusion_window=0,
     val_size=0.16,
-    test_size=0.20,
     seed=42,
     legacy=False,
 ):
@@ -113,12 +114,15 @@ def preprocess_smart_ehr(
     - event_csvs: Dictionary of event source names and their file paths.
     - baseline_time: Reference point; events with datediff < this are kept.
     - output_path: Path whose parent directory will contain the split JSONL files.
+    - split_json: Path to a JSON file mapping split names (train/val/test) to lists of m3life_no.
+    - fix_test_split: If False (default), use all three splits exactly as given in split_json.
+        If True, use only the test split from split_json and randomly resample train/validation
+        from the remaining patients (stratified by cd_event).
     - exclusion_window: Exclude events within this many days of first_event.
         E.g. 180 drops events whose temporal distance to the outcome is < 180 days.
         0 means no exclusion.
-    - val_size: Fraction of data for validation.
-    - test_size: Fraction of data for test.
-    - seed: Random seed for splitting.
+    - val_size: Fraction of non-test patients assigned to validation when fix_test_split=True.
+    - seed: Random seed for splitting (used only when fix_test_split=True).
     - legacy: If True, use SMART-specific outcome columns (edood_f, ebero_f, emi_f …)
         with the logic from compute_first_cd_event and drop rows with missing outcomes
         before computing targets.
@@ -214,19 +218,38 @@ def preprocess_smart_ehr(
         }
         dataset.append(record)
 
-    # Train/val/test split (stratified on cd_event)
-    events_for_stratify = [r["smart"]["cd_event"] for r in dataset]
-    indices = list(range(len(dataset)))
-    idx_trainval, idx_test = train_test_split(
-        indices, test_size=test_size, random_state=seed, stratify=events_for_stratify
-    )
-    events_trainval = [events_for_stratify[i] for i in idx_trainval]
-    adjusted_val = val_size / (1.0 - test_size)
-    idx_train, idx_val = train_test_split(
-        idx_trainval, test_size=adjusted_val, random_state=seed, stratify=events_trainval
-    )
+    # Load split assignments from JSON file
+    with open(split_json) as f:
+        split_pids = json.load(f)
+    # Normalize "val" key to "validation"
+    if "val" in split_pids and "validation" not in split_pids:
+        split_pids["validation"] = split_pids.pop("val")
 
-    splits = {"train": idx_train, "validation": idx_val, "test": idx_test}
+    pid_to_idx = {r["m3life_no"]: i for i, r in enumerate(dataset)}
+
+    if not fix_test_split:
+        # Use all splits exactly as provided in the JSON
+        splits = {}
+        for split_name, pids in split_pids.items():
+            idxs = [pid_to_idx[pid] for pid in pids if pid in pid_to_idx]
+            n_missing = len(pids) - len(idxs)
+            if n_missing:
+                print(f"  Warning: {n_missing} patients from '{split_name}' split not found in dataset (filtered out)")
+            splits[split_name] = idxs
+    else:
+        # Fix test set from JSON; randomly split remaining patients into train/validation
+        test_pids = set(int(p) for p in split_pids.get("test", []))
+        test_idxs = [pid_to_idx[pid] for pid in test_pids if pid in pid_to_idx]
+        n_missing = len(test_pids) - len(test_idxs)
+        if n_missing:
+            print(f"  Warning: {n_missing} test patients not found in dataset (filtered out)")
+
+        rest_idxs = [i for i in range(len(dataset)) if dataset[i]["m3life_no"] not in test_pids]
+        rest_events = [dataset[i]["smart"]["cd_event"] for i in rest_idxs]
+        idx_train, idx_val = train_test_split(
+            rest_idxs, test_size=val_size, random_state=seed, stratify=rest_events
+        )
+        splits = {"train": idx_train, "validation": idx_val, "test": test_idxs}
 
     # Save as split JSONL files
     output_dir = Path(output_path)
@@ -307,14 +330,19 @@ if __name__ == "__main__":
     parser.add_argument("--event_csv_folder", type=str, required=True, help="Path to the folder containing event CSV files.")
     parser.add_argument("--baseline_time", type=int, default=0, help="Reference point; events with datediff < this are kept.")
     parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the split JSONL files (train/val/test).")
+    parser.add_argument("--split_json", type=str, required=True,
+                        help="Path to a JSON file mapping split names (train/val/test) to lists of m3life_no.")
+    parser.add_argument("--fix_test_split", action="store_true", default=False,
+                        help="If set, use only the test split from --split_json and randomly resample "
+                             "train/validation from the remaining patients.")
     parser.add_argument("--window_size", type=int, default=10, help="Size of each time bucket (same unit as datediff).")
     parser.add_argument("--windowed_output_dir", type=str, required=True, help="Directory to save the windowed split JSONL files.")
     parser.add_argument("--exclusion_window", type=int, default=0,
                         help="Exclude events within this many days of first_event. "
                              "E.g. 180 drops events whose temporal distance to outcome is < 180 days. Default: 0.")
-    parser.add_argument("--val_size", type=float, default=0.15, help="Validation set fraction.")
-    parser.add_argument("--test_size", type=float, default=0.15, help="Test set fraction.")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting.")
+    parser.add_argument("--val_size", type=float, default=0.15,
+                        help="Fraction of non-test patients assigned to validation (used only with --fix_test_split).")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for splitting (used only with --fix_test_split).")
     parser.add_argument(
         "--legacy",
         action="store_true",
@@ -335,9 +363,10 @@ if __name__ == "__main__":
         event_csvs,
         args.baseline_time,
         args.output_dir,
+        split_json=args.split_json,
+        fix_test_split=args.fix_test_split,
         exclusion_window=args.exclusion_window,
         val_size=args.val_size,
-        test_size=args.test_size,
         seed=args.seed,
         legacy=args.legacy,
     )
