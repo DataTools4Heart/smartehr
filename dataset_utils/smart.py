@@ -79,11 +79,12 @@ def preprocess_smart(smart: pd.DataFrame):
     rename_dict = {k: v for k, v in inverse_smart_features_map.items() if k in smart.columns}
     keys = [v for v in rename_dict.values()] + ["cd_event", "cd_time"]
     smart = smart.rename(columns=rename_dict).loc[:, keys]
+    smart["egfr"] = smart.apply(lambda x: egfr(x["egfr"] * 0.0113, x["age"], x["gender"]), axis=1)
     for feature, (min_val, max_val) in numeric_feature_ranges.items():
         if feature in smart.columns:
             smart[feature] = smart[feature].clip(lower=min_val, upper=max_val)
 
-    smart["egfr"] = smart.apply(lambda x: egfr(x["egfr"] * 0.0113, x["age"], x["gender"]), axis=1)
+    #smart["egfr"] = smart.apply(lambda x: egfr(x["egfr"] * 0.0113, x["age"], x["gender"]), axis=1)
     smart["smoker"] = smart["smoker"].apply(lambda x: 1 if x > 0 else 0)  # assuming non smoker == 0
     smart["age2"] = smart["age"] ** 2
     smart["egfr2"] = smart["egfr"] ** 2
