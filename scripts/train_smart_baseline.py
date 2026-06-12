@@ -53,13 +53,13 @@ def analyze_smart_discordance(
     plot_dir: Path,
     outlier_pct: float = 0.10,
 ):
-    """Identify and characterise patients where SMART predictions diverge from SmrtRisk.
+    """Identify and characterise patients where SMART predictions diverge from — or best agree with — SmrtRisk.
 
     Produces:
-    - discordance_scatter.png  : scatter with over/under-estimators highlighted
+    - discordance_scatter.png  : scatter with over/under-estimators and best-concordant patients highlighted
     - discordance_residuals.png: histogram of (SMART − SmrtRisk) residuals
-    - discordance_cohens_d.png : top features distinguishing each outlier group vs inliers
-    - outliers_over.csv / outliers_under.csv: raw rows for manual inspection
+    - discordance_cohens_d.png : top features distinguishing each group
+    - outliers_over.csv / outliers_under.csv / best_concordant.csv: raw rows for manual inspection
     """
     plot_dir.mkdir(parents=True, exist_ok=True)
     nna_mask = ~test_smart_risk_score.isna()
@@ -70,22 +70,30 @@ def analyze_smart_discordance(
     residuals = pred_smart - smart_risk   # positive → SMART over-estimates vs SmrtRisk
 
     k = max(1, int(len(residuals) * outlier_pct))
-    over_idx  = np.argsort(residuals)[-k:]  # SMART predicts much higher than SmrtRisk
-    under_idx = np.argsort(residuals)[:k]   # SMART predicts much lower than SmrtRisk
+    over_idx  = np.argsort(residuals)[-k:]          # SMART predicts much higher than SmrtRisk
+    under_idx = np.argsort(residuals)[:k]           # SMART predicts much lower than SmrtRisk
+    best_idx  = np.argsort(np.abs(residuals))[:k]   # smallest |residual| → best concordance
     outlier_mask = np.zeros(len(residuals), dtype=bool)
     outlier_mask[np.concatenate([over_idx, under_idx])] = True
     inlier_mask = ~outlier_mask
 
     # --- 1. Scatter with highlighted groups ---
+    # best_idx may overlap with inlier_mask; show it on top with its own colour
+    background_mask = inlier_mask.copy()
+    background_mask[best_idx] = False   # remove best inliers from the grey cloud
+
     fig, ax = plt.subplots(figsize=(7, 7))
-    ax.scatter(smart_risk[inlier_mask],  pred_smart[inlier_mask],
-               alpha=0.3, s=10, color="steelblue", label="inliers")
+    ax.scatter(smart_risk[background_mask],  pred_smart[background_mask],
+               alpha=0.3, s=10, color="steelblue", label="other inliers")
     ax.scatter(smart_risk[over_idx],  pred_smart[over_idx],
                alpha=0.8, s=20, color="crimson",
                label=f"SMART over-estimates (top {int(outlier_pct*100)}%)")
     ax.scatter(smart_risk[under_idx], pred_smart[under_idx],
                alpha=0.8, s=20, color="darkorange",
                label=f"SMART under-estimates (top {int(outlier_pct*100)}%)")
+    ax.scatter(smart_risk[best_idx],  pred_smart[best_idx],
+               alpha=0.9, s=25, color="seagreen",
+               label=f"best concordant (top {int(outlier_pct*100)}%)")
     ax.set_xlabel("SmrtRisk")
     ax.set_ylabel("Original SMART")
     ax.legend(fontsize=8)
@@ -104,7 +112,7 @@ def analyze_smart_discordance(
     fig.savefig(plot_dir / "discordance_residuals.png", dpi=150)
     plt.close(fig)
 
-    # --- 3. Cohen's d: outlier groups vs inliers (top 20 features) ---
+    # --- 3. Cohen's d: three groups vs the complementary set (top 20 features) ---
     feature_cols = [c for c in test_nna.columns if c not in ["cd_time", "cd_event"]]
 
     def cohens_d(a, b):
@@ -114,21 +122,25 @@ def analyze_smart_discordance(
         pooled = np.sqrt(((len(a)-1)*a.std()**2 + (len(b)-1)*b.std()**2) / (len(a)+len(b)-2))
         return float((a.mean() - b.mean()) / (pooled + 1e-10))
 
-    inlier_df = test_nna.iloc[inlier_mask]
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
-    for ax, group_idx, label, color in [
-        (axes[0], over_idx,  f"over-estimates (top {int(outlier_pct*100)}%)",  "crimson"),
-        (axes[1], under_idx, f"under-estimates (top {int(outlier_pct*100)}%)", "darkorange"),
+    inlier_df  = test_nna.iloc[inlier_mask]
+    outlier_idx = np.concatenate([over_idx, under_idx])
+    outlier_df  = test_nna.iloc[outlier_idx]
+
+    fig, axes = plt.subplots(1, 3, figsize=(22, 7))
+    for ax, group_idx, ref_df, label, color in [
+        (axes[0], over_idx,  inlier_df,  f"over-estimates (top {int(outlier_pct*100)}%) vs inliers",       "crimson"),
+        (axes[1], under_idx, inlier_df,  f"under-estimates (top {int(outlier_pct*100)}%) vs inliers",      "darkorange"),
+        (axes[2], best_idx,  outlier_df, f"best concordant (top {int(outlier_pct*100)}%) vs outliers",     "seagreen"),
     ]:
         group_df = test_nna.iloc[group_idx]
-        ds = {col: cohens_d(group_df[col], inlier_df[col]) for col in feature_cols}
+        ds = {col: cohens_d(group_df[col], ref_df[col]) for col in feature_cols}
         top = sorted(ds.items(), key=lambda x: abs(x[1]), reverse=True)[:20]
         cols, vals = zip(*top)
         bar_colors = [color if v > 0 else "steelblue" for v in vals]
         ax.barh(cols, vals, color=bar_colors)
         ax.axvline(0, color="black", linewidth=0.8)
-        ax.set_xlabel("Cohen's d  (outlier − inlier)")
-        ax.set_title(f"SMART {label}\nvs inliers")
+        ax.set_xlabel("Cohen's d")
+        ax.set_title(label)
     fig.tight_layout()
     fig.savefig(plot_dir / "discordance_cohens_d.png", dpi=150)
     plt.close(fig)
@@ -143,7 +155,8 @@ def analyze_smart_discordance(
 
     _save_group(over_idx,  "outliers_over.csv")
     _save_group(under_idx, "outliers_under.csv")
-    print(f"  Discordance: {k} over-estimators, {k} under-estimators  (threshold = {outlier_pct*100:.0f}th pct)")
+    _save_group(best_idx,  "best_concordant.csv")
+    print(f"  Discordance: {k} over-estimators, {k} under-estimators, {k} best concordant  (threshold = {outlier_pct*100:.0f}th pct)")
 
 
 def train_and_evaluate_smart(
