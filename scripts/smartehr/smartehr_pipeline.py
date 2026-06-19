@@ -120,8 +120,10 @@ def preprocess_smart_ehr(
     - fix_test_split: If False (default), use all three splits exactly as given in split_json.
         If True, use only the test split from split_json and randomly resample train/validation
         from the remaining patients (stratified by cd_event).
-    - exclusion_window: Exclude events within this many days of first_event.
-        E.g. 180 drops events whose temporal distance to the outcome is < 180 days.
+    - exclusion_window: Apply a washout window of this many days.
+        Patients whose first_event < exclusion_window are dropped entirely.
+        For the remaining patients, longitudinal events within this many days of
+        first_event are also dropped (i.e. events where first_event - datediff < exclusion_window).
         0 means no exclusion.
     - val_size: Fraction of non-test patients assigned to validation when fix_test_split=True.
     - seed: Random seed for splitting (used only when fix_test_split=True).
@@ -163,6 +165,16 @@ def preprocess_smart_ehr(
 
     # Deduplicate: keep the row with the minimum first_event per patient
     smart_df = smart_df.loc[smart_df.groupby("m3life_no")["first_event"].idxmin()]
+
+    # Apply exclusion window at the patient level: drop patients whose outcome
+    # is within the window (i.e. first_event < exclusion_window days from baseline)
+    if exclusion_window > 0:
+        n_before = len(smart_df)
+        smart_df = smart_df[smart_df["first_event"] >= exclusion_window]
+        n_excluded = n_before - len(smart_df)
+        if n_excluded:
+            print(f"  Excluded {n_excluded:,} patients with first_event < {exclusion_window} days")
+
     n_total = len(smart_df)
     smart_df = smart_df.reset_index(drop=True)
     print(f"Patients: {n_raw:,} raw rows → {n_total:,} unique patients")
