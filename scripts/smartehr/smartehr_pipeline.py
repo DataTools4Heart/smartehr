@@ -22,17 +22,22 @@ def drop_rows_with_missing_smart_outcomes(df):
     return df
 
 
-def compute_legacy_targets(df):
+def compute_legacy_targets(df, censoring_time=None):
     """Compute first_event and cd_event using SMART-specific Dutch column names.
 
-    Mirrors the logic in compute_first_cd_event (dataset_utils/smart.py) but
-    operates directly on the original Dutch column names (edood_f, ebero_f, emi_f …)
-    without any column renaming.
+    Indicator values per endpoint:
+      1 = event occurred  → cd_event=1, time from e*_f column
+      0 = censored        → cd_event=0, time from e*_f column
+      2 = lost to FU      → cd_event=0, time = censoring_time
 
-    - death:  edoodvas > 0 (vascular death)
-    - stroke: ebero_n > 0 AND ebero_s in [11, 102]
-    - myo:    emi_n > 0   AND emi_s   in [41, 101]
-    - first_event: earliest time among endpoints that actually occurred
+    Priority across the three endpoints when computing first_event: 1 > 0 > 2.
+    That is: if any endpoint has status 1, use the earliest of those times;
+    otherwise if any has status 0, use the earliest of those times;
+    otherwise all are lost-to-FU and censoring_time is used.
+
+    - death:  edoodvas == 1 (vascular death); edoodvas == 2 → lost to FU
+    - stroke: ebero_n == 1 AND ebero_s in [11, 102]; ebero_n == 2 → lost to FU
+    - myo:    emi_n == 1   AND emi_s   in [41, 101]; emi_n == 2 → lost to FU
     """
     target_stroke_types = [11, 102]
     target_myo_types = [41, 101]
@@ -45,15 +50,42 @@ def compute_legacy_targets(df):
     df["_myo"] = df.apply(
         lambda x: x.get("emi_n", 0) == 1 and x.get("emi_s") in target_myo_types, axis=1
     )
+    df["_death_ltfu"]  = df.apply(lambda x: x.get("edoodvas", 0) == 2, axis=1)
+    df["_stroke_ltfu"] = df.apply(lambda x: x.get("ebero_n", 0) == 2, axis=1)
+    df["_myo_ltfu"]    = df.apply(lambda x: x.get("emi_n", 0) == 2, axis=1)
 
-    def _compute_time(s):
-        t = max(s[c] for c in ["edood_f", "ebero_f", "emi_f"] if c in s.index)
-        times = [tf for tf, flag in [("edood_f", "_death"), ("ebero_f", "_stroke"), ("emi_f", "_myo")] if s[flag]]
-        return min(s[tf] for tf in times) if times else t
+    _ENDPOINTS = [
+        ("edood_f", "_death",  "_death_ltfu"),
+        ("ebero_f", "_stroke", "_stroke_ltfu"),
+        ("emi_f",   "_myo",    "_myo_ltfu"),
+    ]
 
-    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"]), axis=1)
-    df["first_event"] = df.apply(_compute_time, axis=1)
-    df = df.drop(columns=["_death", "_stroke", "_myo"] + [c for c in _SMART_OUTCOME_COLS if c in df.columns])
+    def _compute_time_and_event(s):
+        # Build (time, priority) pairs: priority 1=event, 0=censored, 2=lost-to-FU
+        entries = []
+        for time_col, evt_flag, ltfu_flag in _ENDPOINTS:
+            if time_col not in s.index:
+                continue
+            if s[evt_flag]:
+                entries.append((s[time_col], 1))
+            elif s[ltfu_flag]:
+                entries.append((censoring_time, 2))
+            else:
+                entries.append((s[time_col], 0))
+
+        for priority in [1, 0, 2]:
+            candidates = [t for t, p in entries if p == priority]
+            if candidates:
+                return min(candidates), int(priority == 1)
+
+        return censoring_time, 0
+
+    results = df.apply(_compute_time_and_event, axis=1, result_type="expand")
+    df["first_event"] = results[0]
+    df["cd_event"]    = results[1]
+
+    _tmp_cols = ["_death", "_stroke", "_myo", "_death_ltfu", "_stroke_ltfu", "_myo_ltfu"]
+    df = df.drop(columns=_tmp_cols + [c for c in _SMART_OUTCOME_COLS if c in df.columns])
     return df
 
 
@@ -107,6 +139,7 @@ def preprocess_smart_ehr(
     val_size=0.16,
     seed=42,
     legacy=False,
+    censoring_time=None,
 ):
     """
     Preprocess SmartEHR data to create a longitudinal dataset with train/val/test splits.
@@ -130,6 +163,9 @@ def preprocess_smart_ehr(
     - legacy: If True, use SMART-specific outcome columns (edood_f, ebero_f, emi_f …)
         with the logic from compute_first_cd_event and drop rows with missing outcomes
         before computing targets.
+    - censoring_time: Used only when legacy=True. Time assigned to patients/endpoints
+        whose indicator is 2 (lost to follow-up). Required when any patient has a
+        lost-to-FU indicator.
 
     Returns:
     - dataset: List of all patient records.
@@ -143,7 +179,15 @@ def preprocess_smart_ehr(
     if legacy:
         # Legacy mode: use SMART-specific column names, drop rows with missing outcomes
         smart_df = drop_rows_with_missing_smart_outcomes(smart_df)
-        smart_df = compute_legacy_targets(smart_df)
+        if censoring_time is None:
+            ltfu_cols = [c for c in ["edoodvas", "ebero_n", "emi_n"] if c in smart_df.columns]
+            n_ltfu = smart_df[ltfu_cols].isin([2]).any(axis=1).sum()
+            if n_ltfu > 0:
+                print(
+                    f"  Warning: {n_ltfu:,} patients have at least one lost-to-FU indicator (value 2) "
+                    f"but --censoring_time is not set. These patients will be dropped (first_event=None)."
+                )
+        smart_df = compute_legacy_targets(smart_df, censoring_time=censoring_time)
     else:
         has_endpoint_cols = any(c.startswith("e") and c.endswith("_f") for c in smart_df.columns)
 
@@ -365,6 +409,13 @@ if __name__ == "__main__":
              "compute_first_cd_event logic. Rows with any missing outcome column are "
              "dropped before target computation.",
     )
+    parser.add_argument(
+        "--censoring_time",
+        type=int,
+        default=None,
+        help="Time (in days) assigned to patients lost to follow-up (indicator == 2). "
+             "Required when --legacy is set and any patient has a lost-to-FU indicator.",
+    )
 
     args = parser.parse_args()
 
@@ -383,6 +434,7 @@ if __name__ == "__main__":
         val_size=args.val_size,
         seed=args.seed,
         legacy=args.legacy,
+        censoring_time=args.censoring_time,
     )
 
     # Apply time windows (per split)
