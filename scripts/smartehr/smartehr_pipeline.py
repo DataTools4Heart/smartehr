@@ -38,12 +38,12 @@ def compute_legacy_targets(df):
     target_myo_types = [41, 101]
 
     df = df.copy()
-    df["_death"]  = df.apply(lambda x: x.get("edoodvas", 0) > 0, axis=1)
+    df["_death"]  = df.apply(lambda x: x.get("edoodvas", 0) == 1, axis=1)
     df["_stroke"] = df.apply(
-        lambda x: x.get("ebero_n", 0) > 0 and x.get("ebero_s") in target_stroke_types, axis=1
+        lambda x: x.get("ebero_n", 0) == 1 and x.get("ebero_s") in target_stroke_types, axis=1
     )
     df["_myo"] = df.apply(
-        lambda x: x.get("emi_n", 0) > 0 and x.get("emi_s") in target_myo_types, axis=1
+        lambda x: x.get("emi_n", 0) == 1 and x.get("emi_s") in target_myo_types, axis=1
     )
 
     def _compute_time(s):
@@ -51,7 +51,7 @@ def compute_legacy_targets(df):
         times = [tf for tf, flag in [("edood_f", "_death"), ("ebero_f", "_stroke"), ("emi_f", "_myo")] if s[flag]]
         return min(s[tf] for tf in times) if times else t
 
-    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"] in target_myo_types), axis=1)
+    df["cd_event"] = df.apply(lambda x: int(x["_death"] or x["_stroke"] or x["_myo"]), axis=1)
     df["first_event"] = df.apply(_compute_time, axis=1)
     df = df.drop(columns=["_death", "_stroke", "_myo"] + [c for c in _SMART_OUTCOME_COLS if c in df.columns])
     return df
@@ -177,7 +177,7 @@ def preprocess_smart_ehr(
         df = df[df["datediff"] < baseline_time].copy()
         df["_source"] = source
         event_frames.append(df)
-
+        
     all_events = pd.concat(event_frames, ignore_index=True, sort=False)
 
     # Merge events that share the same (m3life_no, datediff)

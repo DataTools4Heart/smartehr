@@ -54,7 +54,7 @@ def load_smart(root_path: Path):
         df = pd.DataFrame(records)
         if "first_event" in df.columns:
             df = df.rename(columns={"first_event": "cd_time"})
-        df["cd_event"] = ((df["cd_time"] > 0) & (df["cd_time"] <= 3650)).astype(int)
+        #df["cd_event"] = ((df["cd_time"] > 0) & (df["cd_time"] <= 3650)).astype(int)
         splits[split_name] = df
 
     train, val, test = splits["train"], splits["validation"], splits["test"]
@@ -72,6 +72,9 @@ def load_smart(root_path: Path):
         if "vz_t2d" in df.columns:
             df.loc[df["vz_t2d"] == "LIMA LAD-Y graft FRima D1-Mo", "vz_t2d"] = np.nan
             df["vz_t2d"] = df["vz_t2d"].astype(float)
+        df["geslacht"] = 1 - (df["geslacht"] - 1)
+        df["roken"] = df["roken"].apply(lambda x: 0 if x in [0, 1] else 1)
+
     if "AlbCr" in train.columns:
         train, val, test = train.drop("AlbCr", axis=1), val.drop("AlbCr", axis=1), test.drop("AlbCr", axis=1)
 

@@ -65,10 +65,10 @@ def compute_first_cd_event(smart: pd.DataFrame):
 
     target_stroke_types = [11, 102]
     target_myo_types = [41, 101]
-    smart["death"] = smart.apply(lambda x: x["death_vascular"] > 0, axis=1)
-    smart["stroke"] = smart.apply(lambda x: x["stroke_yesno"] > 0 and x["stroke_type"] in target_stroke_types, axis=1)
-    smart["myo"] = smart.apply(lambda x: x["myo_yesno"] > 0 and x["myo_type"] in target_myo_types, axis=1)
-    smart["cd_event"] = smart.apply(lambda x: x["death"] or x["stroke"] or x["myo"] in target_myo_types, axis=1)
+    smart["death"] = smart.apply(lambda x: x["death_vascular"] == 1, axis=1)
+    smart["stroke"] = smart.apply(lambda x: x["stroke_yesno"] == 1 and x["stroke_type"] in target_stroke_types, axis=1)
+    smart["myo"] = smart.apply(lambda x: x["myo_yesno"] == 1 and x["myo_type"] in target_myo_types, axis=1)
+    smart["cd_event"] = smart.apply(lambda x: x["death"] or x["stroke"] or x["myo"], axis=1)
     smart["cd_time"] = smart.apply(compute_time, axis=1)
     smart = smart.drop([k for k in smart_outcomes_map.keys()] + ["death", "stroke", "myo"], axis=1)
     return smart
@@ -84,7 +84,6 @@ def preprocess_smart(smart: pd.DataFrame):
         if feature in smart.columns:
             smart[feature] = smart[feature].clip(lower=min_val, upper=max_val)
 
-    #smart["egfr"] = smart.apply(lambda x: egfr(x["egfr"] * 0.0113, x["age"], x["gender"]), axis=1)
     smart["smoker"] = smart["smoker"].apply(lambda x: 1 if x > 0 else 0)  # assuming non smoker == 0
     smart["age2"] = smart["age"] ** 2
     smart["egfr2"] = smart["egfr"] ** 2
