@@ -1,10 +1,8 @@
-import init
 import json
 import argparse
 import os
 from pathlib import Path
 
-import numpy as np
 from datasets import Dataset
 from transformers import AutoTokenizer
 
