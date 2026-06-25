@@ -61,7 +61,7 @@ def apply_censoring(first_event: float, cd_event: int, horizon: int) -> tuple[fl
             return (float(horizon), 0)
 
 
-def preprocess_dummy_smart_survival(
+def preprocess_smart_survival(
     jsonl_dir: str,
     out_dir: str,
     tokenizer_name: str = "meta-llama/Llama-3.2-1B",
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Prepare SMART longitudinal data for survival analysis with administrative censoring."
     )
-    parser.add_argument("--jsonl-dir", type=str, default="data/dummy_data/smartehr",
+    parser.add_argument("--jsonl-dir", type=str, required=True,
                         help="Directory containing train.jsonl, validation.jsonl, test.jsonl (output of smartehr_pipeline.py).")
     parser.add_argument("--out-dir", type=str, default="data/dummy_data/longitudinal_dummy_smart_survival")
     parser.add_argument("--tokenizer-name", type=str, default="meta-llama/Llama-3.2-1B")
@@ -174,7 +174,7 @@ if __name__ == "__main__":
                              "Patients with first_event > horizon are censored at horizon (Y=0, T=horizon).")
     args = parser.parse_args()
 
-    preprocess_dummy_smart_survival(
+    preprocess_smart_survival(
         jsonl_dir=args.jsonl_dir,
         out_dir=args.out_dir,
         tokenizer_name=args.tokenizer_name,

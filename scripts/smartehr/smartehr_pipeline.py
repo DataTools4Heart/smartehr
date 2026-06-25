@@ -69,13 +69,12 @@ def compute_legacy_targets(df, censoring_time=None):
             if s[evt_flag]:
                 entries.append((s[time_col], 1))
             elif s[ltfu_flag]:
-                entries.append((censoring_time, 2))
+                t = censoring_time if censoring_time is not None else s[time_col]
+                entries.append((t, 2))
             else:
                 entries.append((s[time_col], 0))
 
         for priority in [1, 0, 2]:
-            if priority == 2 and censoring_time is None:
-                continue
             candidates = [t for t, p in entries if p == priority]
             if candidates:
                 return min(candidates), int(priority == 1)
