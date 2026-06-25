@@ -185,8 +185,8 @@ def preprocess_smart_ehr(
             n_ltfu = smart_df[ltfu_cols].isin([2]).any(axis=1).sum()
             if n_ltfu > 0:
                 print(
-                    f"  Warning: {n_ltfu:,} patients have at least one lost-to-FU indicator (value 2) "
-                    f"but --censoring_time is not set. These patients will be dropped (first_event=None)."
+                    f"  Note: {n_ltfu:,} patients have lost-to-FU indicator (value 2); "
+                    f"using their recorded e*_f time as censoring time (--censoring_time not set)."
                 )
         smart_df = compute_legacy_targets(smart_df, censoring_time=censoring_time)
     else:
