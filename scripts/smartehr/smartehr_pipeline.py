@@ -74,11 +74,13 @@ def compute_legacy_targets(df, censoring_time=None):
                 entries.append((s[time_col], 0))
 
         for priority in [1, 0, 2]:
+            if priority == 2 and censoring_time is None:
+                continue
             candidates = [t for t, p in entries if p == priority]
             if candidates:
                 return min(candidates), int(priority == 1)
 
-        return censoring_time, 0
+        return None, 0
 
     results = df.apply(_compute_time_and_event, axis=1, result_type="expand")
     df["first_event"] = results[0]
