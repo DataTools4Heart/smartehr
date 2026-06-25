@@ -224,6 +224,18 @@ def preprocess_smart_ehr(
     smart_df = smart_df.reset_index(drop=True)
     print(f"Patients: {n_raw:,} raw rows → {n_total:,} unique patients")
 
+    # Drop SmrtRisk and every column that follows it in the original CSV order.
+    # first_event and cd_event are computed targets appended after the raw columns,
+    # so they must be explicitly preserved even though they sit beyond SmrtRisk.
+    if "SmrtRisk" in smart_df.columns:
+        always_keep = {"first_event", "cd_event", "m3life_no"}
+        smrtrisk_idx = smart_df.columns.get_loc("SmrtRisk")
+        cols_before = list(smart_df.columns[:smrtrisk_idx])
+        cols_keep_after = [c for c in smart_df.columns[smrtrisk_idx:] if c in always_keep]
+        n_dropped = len(smart_df.columns) - len(cols_before) - len(cols_keep_after)
+        print(f"  Dropped {n_dropped} columns from SmrtRisk onwards (outcome-adjacent)")
+        smart_df = smart_df[cols_before + cols_keep_after]
+
     # Columns that belong to smart (everything except m3life_no)
     smart_feature_cols = [c for c in smart_df.columns if c != "m3life_no"]
 

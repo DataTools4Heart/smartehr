@@ -59,6 +59,19 @@ def load_smart(root_path: Path):
 
     train, val, test = splits["train"], splits["validation"], splits["test"]
 
+    # Drop SmrtRisk and all subsequent columns (outcome-adjacent)
+    always_keep = {"m3life_no", "cd_time", "cd_event"}
+    for name, df in [("train", train), ("val", val), ("test", test)]:
+        if "SmrtRisk" in df.columns:
+            idx = df.columns.get_loc("SmrtRisk")
+            keep = list(df.columns[:idx]) + [c for c in df.columns[idx:] if c in always_keep]
+            if name == "train":
+                train = df[keep]
+            elif name == "val":
+                val = df[keep]
+            else:
+                test = df[keep]
+
     # Keep columns with <=10% missing or in smart_features_map values
     protected_cols = set(smart_features_map.values()) | {"m3life_no", "cd_time", "cd_event"}
     columns_to_keep = [
