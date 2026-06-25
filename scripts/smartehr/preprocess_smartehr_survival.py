@@ -15,7 +15,12 @@ def serialize_patient(record: dict) -> str:
     """
     smart = record["smart"]
     parts = ["[PATIENT]"]
+    past_smrtrisk = False
     for k, v in smart.items():
+        if k == "SmrtRisk":
+            past_smrtrisk = True
+        if past_smrtrisk:
+            continue  # SmrtRisk and all subsequent columns are outcome-adjacent
         if k in ("first_event", "cd_event"):
             continue  # target variables, must not be in the input
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
