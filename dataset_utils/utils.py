@@ -265,6 +265,10 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
                     split = split.select(np.where(valid_mask)[0].tolist())
                     durations = durations[valid_mask]
                     events = events[valid_mask]
+                # Clip to last cut so the open-ended tail bin (index num_time_intervals-1)
+                # stays empty — without this, administratively censored patients pile up
+                # there with no events, making AUC=0 and CI degenerate at that time point.
+                durations = np.clip(durations, 0, cuts[-1])
                 # Discretize durations into bin indices using searchsorted
                 disc_durations = np.searchsorted(cuts, durations).astype(np.int64)
                 disc_events = events.astype(np.float32)
