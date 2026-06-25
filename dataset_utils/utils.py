@@ -234,7 +234,7 @@ def load_for_lightning(dataset_params: DatasetParams, task_params: TaskParams):
             # Discretize continuous durations using equidistant cuts spanning the horizon
             durations_raw = [d for d in train["duration"] if d is not None]
             max_duration = float(max(durations_raw))
-            cuts = np.linspace(0, max_duration, task_params.num_time_intervals + 1)[1:]
+            cuts = np.linspace(0, max_duration, task_params.num_time_intervals + 1)[1:-1]
 
             def discretize_split(split):
                 # Convert to numpy, replacing None with NaN
