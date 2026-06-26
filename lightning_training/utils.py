@@ -36,6 +36,7 @@ from omegaconf import OmegaConf
 from peft import get_peft_model, LoraConfig
 import yaml
 import os
+import math
 
 
 def load_tokenizer(tokenizer_path: str):
@@ -54,6 +55,50 @@ def load_tokenizer(tokenizer_path: str):
     return tokenizer
 
 
+def build_pmf_time_grid(
+    horizon_days: float,
+    interval_width_days: float | None = None,
+    num_time_intervals: int | None = None,
+) -> tuple[int, list[float]]:
+    """Build a discrete-time grid for pycox's PMF loss.
+
+    `nll_pmf` pads the open-ended tail internally, so `num_time_intervals`
+    equals the number of finite cut points / model outputs. The final cut is the
+    prediction horizon itself.
+    """
+    if (interval_width_days is None) == (num_time_intervals is None):
+        raise ValueError("Provide exactly one of interval_width_days or num_time_intervals.")
+    if horizon_days <= 0:
+        raise ValueError("horizon_days must be positive.")
+
+    if interval_width_days is not None:
+        if interval_width_days <= 0:
+            raise ValueError("interval_width_days must be positive.")
+        raw_intervals = horizon_days / interval_width_days
+        rounded_intervals = round(raw_intervals)
+        if not math.isclose(raw_intervals, rounded_intervals, rel_tol=1e-9, abs_tol=1e-9):
+            raise ValueError(
+                "interval_width_days must divide horizon_days exactly to place the horizon on a cut point."
+            )
+        num_time_intervals = int(rounded_intervals)
+
+    assert num_time_intervals is not None
+    if num_time_intervals <= 0:
+        raise ValueError("num_time_intervals must be positive.")
+
+    step = horizon_days / num_time_intervals
+    cuts = [step * (idx + 1) for idx in range(num_time_intervals)]
+    return num_time_intervals, cuts
+
+
+def evaluation_time_index_for_day(target_day: float, cuts: list[float]) -> int:
+    """Return the PMF evaluation index whose cut point matches `target_day`."""
+    for idx, cut in enumerate(cuts):
+        if math.isclose(cut, target_day, rel_tol=1e-9, abs_tol=1e-6):
+            return idx
+    raise ValueError(f"target_day={target_day} does not fall exactly on any cut point.")
+
+
 def load_lightning_model(model_params: ModelParams, train_params: LightningTrainingParams):
     task_name = train_params.task.name
     model_name = model_params.name
@@ -61,10 +106,9 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
     if task_name == "survival_analysis":
         task_params = SurvivalAnalysisParams(**task_params)
         num_outputs = task_params.num_time_intervals
-        # The last valid evaluation index is num_time_intervals - 2: index
-        # num_time_intervals - 1 is the open-ended tail bin, which only ever
-        # contains administratively censored patients (no events → AUC = 0).
-        max_eval_time = num_outputs - 2
+        # pycox's PMF loss pads the open-ended tail internally, so every model
+        # output index is a valid finite evaluation time.
+        max_eval_time = num_outputs - 1
         raw_times = task_params.evaluation_times
         clamped = [min(t, max_eval_time) for t in raw_times]
         if clamped != raw_times:
