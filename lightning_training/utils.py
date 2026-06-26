@@ -61,7 +61,17 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
     if task_name == "survival_analysis":
         task_params = SurvivalAnalysisParams(**task_params)
         num_outputs = task_params.num_time_intervals
-        module_cls = partial(SurvivalAnalysisModule, evaluation_times=task_params.evaluation_times)
+        # The last valid evaluation index is num_time_intervals - 2: index
+        # num_time_intervals - 1 is the open-ended tail bin, which only ever
+        # contains administratively censored patients (no events → AUC = 0).
+        max_eval_time = num_outputs - 2
+        raw_times = task_params.evaluation_times
+        clamped = [min(t, max_eval_time) for t in raw_times]
+        if clamped != raw_times:
+            adjusted = {r: c for r, c in zip(raw_times, clamped) if r != c}
+            print(f"  evaluation_times: clamped {adjusted} to last valid bin (max={max_eval_time})")
+        evaluation_times = sorted(set(clamped))
+        module_cls = partial(SurvivalAnalysisModule, evaluation_times=evaluation_times)
     elif task_name == "binary_classification":
         task_params = BinaryClassificationParams(**task_params)
         num_outputs = 1
