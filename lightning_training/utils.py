@@ -109,10 +109,13 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
         # dataset_utils.utils.load_for_lightning clips durations to cuts[-1] before
         # np.searchsorted, so bin index num_outputs-1 never receives any sample
         # (event or censored) — it's structurally empty regardless of the data.
-        # Evaluating there gives a degenerate ROC-AUC (no positive or negative
-        # class) and an unstable CI, so the last valid evaluation index is
-        # num_outputs-2, not num_outputs-1.
-        max_eval_time = num_outputs - 2
+        # bin num_outputs-2 IS reachable (it absorbs everything clipped to cuts[-1],
+        # often a large administrative-censoring pileup at the horizon), but it is
+        # also the maximum value any sample can take. time_dependent_roc_auc_score
+        # (utils.py) defines controls as durations > time, so evaluating exactly at
+        # the max value always yields zero controls — degenerate regardless of data.
+        # The first evaluation index that can have nonzero controls is num_outputs-3.
+        max_eval_time = num_outputs - 3
         raw_times = task_params.evaluation_times
         clamped = [min(t, max_eval_time) for t in raw_times]
         if clamped != raw_times:
