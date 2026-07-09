@@ -59,7 +59,8 @@ class LLM(nn.Module):
         last_idx = (attention_mask.sum(dim=1) - 1).clamp(min=0).long()  # [B]
         return hidden[torch.arange(hidden.size(0), device=hidden.device), last_idx]  # [B, H]
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+    def embed(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        """Pool the backbone's hidden states into a single [B, H] embedding per sample."""
         B, L = input_ids.shape
 
         if self.chunk_size is not None and L > self.chunk_size:
@@ -84,8 +85,10 @@ class LLM(nn.Module):
             embs = torch.stack(chunk_embs, dim=1)        # [B, C, H]
             weights = torch.stack(chunk_weights, dim=1)  # [B, C]
             weights = weights / weights.sum(dim=1, keepdim=True).clamp(min=1)
-            hidden_states = (embs * weights.unsqueeze(-1)).sum(dim=1)  # [B, H]
-        else:
-            hidden_states = self._last_token_embedding(input_ids, attention_mask)  # [B, H]
+            return (embs * weights.unsqueeze(-1)).sum(dim=1)  # [B, H]
 
+        return self._last_token_embedding(input_ids, attention_mask)  # [B, H]
+
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
+        hidden_states = self.embed(input_ids, attention_mask)
         return self.cls(hidden_states)

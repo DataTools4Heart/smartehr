@@ -124,13 +124,19 @@ def collate_fn_llm(batch, pad_value: int = 0, max_tokens: int | None = None):
 
 def collate_fn_mlp(batch):
     inputs = [b["inputs"] for b in batch]
-    outcomes = [b["labels"] for b in batch]
     inputs = torch.tensor(inputs)
-    outcomes = torch.tensor(outcomes)
-    return {
-        "inputs": {"inputs": inputs},
-        "multiclass_cls_labels": outcomes,
-    }
+    result = {"inputs": {"inputs": inputs}}
+
+    # Support both classification (labels) and survival (duration + event) targets
+    if "duration" in batch[0] and "event" in batch[0]:
+        result["survival_labels"] = {
+            "duration": torch.tensor([b["duration"] for b in batch]),
+            "event": torch.tensor([b["event"] for b in batch]),
+        }
+    else:
+        result["multiclass_cls_labels"] = torch.tensor([b["labels"] for b in batch])
+
+    return result
 
 
 def collate_fn_tr_mlp(batch):
