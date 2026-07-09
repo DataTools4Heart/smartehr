@@ -106,9 +106,13 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
     if task_name == "survival_analysis":
         task_params = SurvivalAnalysisParams(**task_params)
         num_outputs = task_params.num_time_intervals
-        # pycox's PMF loss pads the open-ended tail internally, so every model
-        # output index is a valid finite evaluation time.
-        max_eval_time = num_outputs - 1
+        # dataset_utils.utils.load_for_lightning clips durations to cuts[-1] before
+        # np.searchsorted, so bin index num_outputs-1 never receives any sample
+        # (event or censored) — it's structurally empty regardless of the data.
+        # Evaluating there gives a degenerate ROC-AUC (no positive or negative
+        # class) and an unstable CI, so the last valid evaluation index is
+        # num_outputs-2, not num_outputs-1.
+        max_eval_time = num_outputs - 2
         raw_times = task_params.evaluation_times
         clamped = [min(t, max_eval_time) for t in raw_times]
         if clamped != raw_times:
