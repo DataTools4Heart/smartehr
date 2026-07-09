@@ -7,11 +7,13 @@ from datasets import Dataset
 from transformers import AutoTokenizer
 
 
-def serialize_patient(record: dict) -> str:
+def serialize_patient(record: dict, include_events: bool = True) -> str:
     """Serialize a patient record to a natural-language text string.
 
     Args:
         record: Patient record dict with 'smart' and 'events' keys.
+        include_events: If False, omit the longitudinal 'events' section and
+            serialize only the SMART baseline features.
     """
     smart = record["smart"]
     parts = ["[PATIENT]"]
@@ -25,13 +27,14 @@ def serialize_patient(record: dict) -> str:
             continue  # target variables, must not be in the input
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
 
-    for event in record.get("events", []):
-        event_parts = [f"[EVENT datediff={event['datediff']}]"]
-        for k, v in event.items():
-            if k == "datediff":
-                continue
-            event_parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
-        parts.append(" ".join(event_parts))
+    if include_events:
+        for event in record.get("events", []):
+            event_parts = [f"[EVENT datediff={event['datediff']}]"]
+            for k, v in event.items():
+                if k == "datediff":
+                    continue
+                event_parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
+            parts.append(" ".join(event_parts))
 
     return " | ".join(parts)
 
@@ -70,10 +73,13 @@ def preprocess_smart_survival(
     tokenizer_name: str = "meta-llama/Llama-3.2-1B",
     max_length: int = 512,
     horizon_days: int = 1825,
+    include_events: bool = True,
 ):
     jsonl_dir = Path(jsonl_dir)
     print(f"Loading split JSONL files from {jsonl_dir} ...")
     print(f"Applying administrative censoring at {horizon_days} days ({horizon_days / 365:.1f} years)")
+    if not include_events:
+        print("Excluding longitudinal event information — serializing SMART features only")
     print(f"Tokenising with {tokenizer_name} ...")
 
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
@@ -109,7 +115,7 @@ def preprocess_smart_survival(
             cd_event_raw = rec["smart"].get("cd_event")
             cd_event = int(cd_event_raw) if cd_event_raw is not None else 1
 
-            text = serialize_patient(rec)
+            text = serialize_patient(rec, include_events=include_events)
             if truncate:
                 enc = tokenizer(text, truncation=True, max_length=max_length, add_special_tokens=True)
             else:
@@ -149,6 +155,7 @@ def preprocess_smart_survival(
         "horizon_days": horizon_days,
         "tokenizer_name": tokenizer_name,
         "max_length": max_length,
+        "include_events": include_events,
         "n_patients": total_n,
         "n_events": total_events,
         "n_censored": total_n - total_events,
@@ -175,6 +182,9 @@ if __name__ == "__main__":
     parser.add_argument("--horizon-days", type=int, default=1825,
                         help="Administrative censoring horizon in days. Default: 1825 (5 years). "
                              "Patients with first_event > horizon are censored at horizon (Y=0, T=horizon).")
+    parser.add_argument("--exclude-events", action="store_true",
+                        help="Omit longitudinal event information from the serialized text, "
+                             "keeping only SMART baseline features.")
     args = parser.parse_args()
 
     preprocess_smart_survival(
@@ -183,4 +193,5 @@ if __name__ == "__main__":
         tokenizer_name=args.tokenizer_name,
         max_length=args.max_length,
         horizon_days=args.horizon_days,
+        include_events=not args.exclude_events,
     )
