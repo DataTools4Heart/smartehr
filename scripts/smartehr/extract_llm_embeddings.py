@@ -2,6 +2,8 @@ import argparse
 import json
 from pathlib import Path
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import torch
 from datasets import Dataset, load_dataset
 from transformers import AutoTokenizer
@@ -15,22 +17,41 @@ def extract_split_embeddings(
     split: Dataset,
     batch_size: int,
     device: str,
-) -> Dataset:
-    embeddings = []
-    for start in range(0, len(split), batch_size):
-        batch = split[start : start + batch_size]
-        input_ids = [torch.tensor(ids) for ids in batch["input_ids"]]
-        attention_mask = [torch.ones_like(ids) for ids in input_ids]
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
-        ).to(device)
-        attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0).to(device)
+    out_path: Path,
+) -> int:
+    """Stream embeddings to `out_path` one batch at a time, so at most one batch's
+    tensors/embeddings are ever held in memory — needed on low-RAM machines, since
+    the alternative (accumulate the whole split, then write once) requires the
+    entire split's embeddings resident at once."""
+    writer = None
+    n_rows = 0
+    try:
+        for start in range(0, len(split), batch_size):
+            batch = split[start : start + batch_size]
+            input_ids = [torch.tensor(ids) for ids in batch["input_ids"]]
+            attention_mask = [torch.ones_like(ids) for ids in input_ids]
+            input_ids = torch.nn.utils.rnn.pad_sequence(
+                input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
+            ).to(device)
+            attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0).to(device)
 
-        with torch.no_grad():
-            emb = model.embed(input_ids=input_ids, attention_mask=attention_mask)
-        embeddings.extend(emb.cpu().tolist())
+            with torch.no_grad():
+                emb = model.embed(input_ids=input_ids, attention_mask=attention_mask)
+            embeddings = emb.cpu().tolist()
 
-    return split.remove_columns(["input_ids"]).add_column("inputs", embeddings)
+            table = pa.table({"duration": batch["duration"], "event": batch["event"], "inputs": embeddings})
+            if writer is None:
+                writer = pq.ParquetWriter(out_path, table.schema)
+            writer.write_table(table)
+            n_rows += table.num_rows
+
+            del batch, input_ids, attention_mask, emb, embeddings, table
+            if device.startswith("cuda"):
+                torch.cuda.empty_cache()
+    finally:
+        if writer is not None:
+            writer.close()
+    return n_rows
 
 
 def main(
@@ -58,11 +79,12 @@ def main(
 
     for split_name in ["train", "validation", "test"]:
         split_file = parquet_dir / f"{split_name}.parquet"
+        out_path = out_dir / f"{split_name}.parquet"
         print(f"Extracting embeddings for {split_name} ({split_file}) ...")
         split = load_dataset("parquet", data_files=str(split_file), split="train")
-        split = extract_split_embeddings(model, tokenizer, split, batch_size, device)
-        split.to_parquet(out_dir / f"{split_name}.parquet")
-        print(f"  {split_name:12s}: {len(split):,} rows -> {out_dir / f'{split_name}.parquet'}")
+        n_rows = extract_split_embeddings(model, tokenizer, split, batch_size, device, out_path)
+        del split
+        print(f"  {split_name:12s}: {n_rows:,} rows -> {out_path}")
 
     metadata_path = parquet_dir / "metadata.json"
     metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
