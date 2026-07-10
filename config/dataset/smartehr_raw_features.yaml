@@ -1,0 +1,5 @@
+defaults:
+  - base_smartehr
+
+name: smartehr
+root_path: data/dummy_data/longitudinal_dummy_smart_survival_raw_features

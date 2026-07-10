@@ -1,6 +1,9 @@
 import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.append(".")  # run from repo root so `models` is importable, matching scripts/init.py
 
 import pyarrow as pa
 import pyarrow.parquet as pq
