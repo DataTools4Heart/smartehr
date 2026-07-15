@@ -33,8 +33,11 @@ def extract_split_embeddings(
     n_rows = 0
     n_batches = (len(split) + batch_size - 1) // batch_size
     start_time = time.monotonic()
-    # Per-stage cumulative timings, for diagnosing where batch time actually goes.
+    # Per-stage timings since the last print (NOT lifetime-cumulative — a running average
+    # would let a one-time cost, e.g. CUDA warm-up, stay visible for many prints after it's
+    # actually over, diluting slowly instead of disappearing once it's not recurring).
     timings = {"data_prep": 0.0, "forward": 0.0, "transfer": 0.0, "write": 0.0}
+    batches_since_print = 0
     try:
         for batch_idx, start in enumerate(range(0, len(split), batch_size)):
             t0 = time.monotonic()
@@ -78,15 +81,18 @@ def extract_split_embeddings(
             if device.startswith("cuda") and (batch_idx + 1) % 50 == 0:
                 torch.cuda.empty_cache()
 
+            batches_since_print += 1
             if batch_idx == 0 or (batch_idx + 1) % 10 == 0 or batch_idx + 1 == n_batches:
                 elapsed = time.monotonic() - start_time
                 rate = n_rows / elapsed if elapsed > 0 else 0.0
-                n = batch_idx + 1
-                print(f"    batch {n}/{n_batches}  ({n_rows} rows, {rate:.1f} rows/s, {elapsed:.0f}s elapsed)"
-                      f"  |  avg/batch: data_prep={timings['data_prep']/n:.2f}s"
+                n = batches_since_print
+                print(f"    batch {batch_idx + 1}/{n_batches}  ({n_rows} rows, {rate:.1f} rows/s, {elapsed:.0f}s elapsed)"
+                      f"  |  last {n} batch(es) avg: data_prep={timings['data_prep']/n:.2f}s"
                       f" forward={timings['forward']/n:.2f}s"
                       f" transfer={timings['transfer']/n:.2f}s"
                       f" write={timings['write']/n:.2f}s")
+                timings = {k: 0.0 for k in timings}
+                batches_since_print = 0
     finally:
         if writer is not None:
             writer.close()
