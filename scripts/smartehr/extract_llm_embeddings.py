@@ -33,8 +33,11 @@ def extract_split_embeddings(
     n_rows = 0
     n_batches = (len(split) + batch_size - 1) // batch_size
     start_time = time.monotonic()
+    # Per-stage cumulative timings, for diagnosing where batch time actually goes.
+    timings = {"data_prep": 0.0, "forward": 0.0, "write": 0.0}
     try:
         for batch_idx, start in enumerate(range(0, len(split), batch_size)):
+            t0 = time.monotonic()
             batch = split[start : start + batch_size]
             input_ids = [torch.tensor(ids) for ids in batch["input_ids"]]
             attention_mask = [torch.ones_like(ids) for ids in input_ids]
@@ -42,25 +45,40 @@ def extract_split_embeddings(
                 input_ids, batch_first=True, padding_value=tokenizer.pad_token_id
             ).to(device)
             attention_mask = torch.nn.utils.rnn.pad_sequence(attention_mask, batch_first=True, padding_value=0).to(device)
+            t1 = time.monotonic()
+            timings["data_prep"] += t1 - t0
 
             with torch.no_grad():
                 emb = model.embed(input_ids=input_ids, attention_mask=attention_mask)
+            # .cpu() blocks until the GPU kernels launched above actually finish (CUDA calls
+            # are async otherwise), so this is where true compute time is measurable.
             embeddings = emb.cpu().tolist()
+            t2 = time.monotonic()
+            timings["forward"] += t2 - t1
 
             table = pa.table({"duration": batch["duration"], "event": batch["event"], "inputs": embeddings})
             if writer is None:
                 writer = pq.ParquetWriter(out_path, table.schema)
             writer.write_table(table)
             n_rows += table.num_rows
+            t3 = time.monotonic()
+            timings["write"] += t3 - t2
 
             del batch, input_ids, attention_mask, emb, embeddings, table
-            if device.startswith("cuda"):
+            # empty_cache() forces a CUDA sync + full allocator reset — real overhead if done
+            # every batch. Only do it periodically; PyTorch's caching allocator already reuses
+            # freed blocks between batches without this.
+            if device.startswith("cuda") and (batch_idx + 1) % 50 == 0:
                 torch.cuda.empty_cache()
 
             if batch_idx == 0 or (batch_idx + 1) % 10 == 0 or batch_idx + 1 == n_batches:
                 elapsed = time.monotonic() - start_time
                 rate = n_rows / elapsed if elapsed > 0 else 0.0
-                print(f"    batch {batch_idx + 1}/{n_batches}  ({n_rows} rows, {rate:.1f} rows/s, {elapsed:.0f}s elapsed)")
+                n = batch_idx + 1
+                print(f"    batch {n}/{n_batches}  ({n_rows} rows, {rate:.1f} rows/s, {elapsed:.0f}s elapsed)"
+                      f"  |  avg/batch: data_prep={timings['data_prep']/n:.2f}s"
+                      f" forward(+sync)={timings['forward']/n:.2f}s"
+                      f" write={timings['write']/n:.2f}s")
     finally:
         if writer is not None:
             writer.close()
