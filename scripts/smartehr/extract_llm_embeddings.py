@@ -34,7 +34,7 @@ def extract_split_embeddings(
     n_batches = (len(split) + batch_size - 1) // batch_size
     start_time = time.monotonic()
     # Per-stage cumulative timings, for diagnosing where batch time actually goes.
-    timings = {"data_prep": 0.0, "forward": 0.0, "write": 0.0}
+    timings = {"data_prep": 0.0, "forward": 0.0, "transfer": 0.0, "write": 0.0}
     try:
         for batch_idx, start in enumerate(range(0, len(split), batch_size)):
             t0 = time.monotonic()
@@ -50,11 +50,18 @@ def extract_split_embeddings(
 
             with torch.no_grad():
                 emb = model.embed(input_ids=input_ids, attention_mask=attention_mask)
-            # .cpu() blocks until the GPU kernels launched above actually finish (CUDA calls
-            # are async otherwise), so this is where true compute time is measurable.
+            # CUDA calls are async — without an explicit sync, this "forward" timing would
+            # only capture kernel-launch overhead, not actual compute. Sync here so "forward"
+            # and "transfer" measure genuinely different things instead of both being
+            # inflated/deflated by wherever the implicit sync happens to land.
+            if device.startswith("cuda"):
+                torch.cuda.synchronize()
+            t_fwd = time.monotonic()
+            timings["forward"] += t_fwd - t1
+
             embeddings = emb.cpu().tolist()
             t2 = time.monotonic()
-            timings["forward"] += t2 - t1
+            timings["transfer"] += t2 - t_fwd
 
             table = pa.table({"duration": batch["duration"], "event": batch["event"], "inputs": embeddings})
             if writer is None:
@@ -77,7 +84,8 @@ def extract_split_embeddings(
                 n = batch_idx + 1
                 print(f"    batch {n}/{n_batches}  ({n_rows} rows, {rate:.1f} rows/s, {elapsed:.0f}s elapsed)"
                       f"  |  avg/batch: data_prep={timings['data_prep']/n:.2f}s"
-                      f" forward(+sync)={timings['forward']/n:.2f}s"
+                      f" forward={timings['forward']/n:.2f}s"
+                      f" transfer={timings['transfer']/n:.2f}s"
                       f" write={timings['write']/n:.2f}s")
     finally:
         if writer is not None:
