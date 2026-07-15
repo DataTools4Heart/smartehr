@@ -13,6 +13,7 @@ class LLM(nn.Module):
         gradient_checkpointing: bool = False,
         chunk_size: int | None = None,
         quantization_config: BitsAndBytesConfig = None,
+        torch_dtype: torch.dtype | None = None,
     ):
         super().__init__()
         self.num_outputs = num_outputs
@@ -25,10 +26,10 @@ class LLM(nn.Module):
                 model_config = AutoConfig.from_pretrained(llm_name)
                 for k, v in llm_config_overrides.items():
                     setattr(model_config, k, v)
-                self.model = AutoModel.from_config(model_config)
+                self.model = AutoModel.from_config(model_config, torch_dtype=torch_dtype)
             else:
                 # No overrides → load the original pretrained weights.
-                self.model = AutoModel.from_pretrained(llm_name)
+                self.model = AutoModel.from_pretrained(llm_name, torch_dtype=torch_dtype)
                 model_config = self.model.config
         else:
             self.model = AutoModelForCausalLM.from_pretrained(llm_name, quantization_config=quantization_config)
