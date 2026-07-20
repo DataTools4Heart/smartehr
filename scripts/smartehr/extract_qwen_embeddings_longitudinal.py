@@ -1,0 +1,264 @@
+"""Offline per-time-point embedding extraction with Qwen3-Embedding-4B.
+
+Consumes the per-time-point text parquet from
+``preprocess_smartehr_longitudinal_survival.py`` and produces, per patient, a
+SEQUENCE of embeddings — one vector per time point — which a time-aware LSTM
+(``TemporalRecurrentEmbeddings``) then aggregates into a discrete-time PMF
+survival prediction.
+
+Design notes
+------------
+* Encoder: Qwen/Qwen3-Embedding-4B (frozen, instruction-aware, last-token
+  pooling, L2-normalized, output dim 2560). Run via sentence-transformers, which
+  handles pooling + normalization + the instruction ``prompt`` for us.
+* Tesla T4 supports fp16 but NOT bf16: load the backbone in fp16 (fast path), but
+  sentence-transformers returns fp32 numpy embeddings, and we store fp32 — the
+  LSTM downstream trains in fp32. A per-batch NaN guard catches fp16 overflow.
+* No chunking: Qwen3-Embedding-4B's context (8k-32k) covers any single time point,
+  so we drop the chunk-mean-pool hack used for the per-patient single-text path.
+* The instruction is FROZEN and stored in metadata.json so train/val/test never
+  diverge. Qwen recommends English instructions even for multilingual input.
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+sys.path.append(".")  # run from repo root, matching the other extraction scripts
+
+import numpy as np
+import pyarrow as pa
+import pyarrow.parquet as pq
+import torch
+from datasets import load_dataset
+
+_DTYPES = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
+
+# Frozen task instruction (English, per Qwen guidance). Applied identically to every
+# time point and every split. Qwen3-Embedding query template is: "Instruct: {task}\nQuery:{text}".
+DEFAULT_TASK = (
+    "Represent this cardiovascular patient's clinical encounter — diagnoses, lab and vital "
+    "measurements, medications, imaging findings, and clinical notes — for predicting the risk "
+    "of a future cardiovascular event (vascular death, stroke, or myocardial infarction)."
+)
+
+
+def load_encoder(model_name: str, device: str, dtype: str, max_seq_length: int | None):
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError as e:
+        raise SystemExit(
+            "sentence-transformers is required for this script.\n"
+            "  pip install -U sentence-transformers transformers\n"
+            "Qwen3-Embedding also needs transformers >= 4.51 (the Qwen3 architecture). "
+            "The repo currently pins transformers==4.45.1, so upgrade in the extraction env."
+        ) from e
+
+    model = SentenceTransformer(
+        model_name,
+        device=device,
+        model_kwargs={"torch_dtype": _DTYPES[dtype]},
+    )
+    if max_seq_length is not None:
+        model.max_seq_length = max_seq_length
+    return model
+
+
+def extract_split(
+    model,
+    split,
+    prompt: str,
+    encode_batch_size: int,
+    patient_flush: int,
+    truncate_dim: int | None,
+    out_path: Path,
+) -> tuple[int, int]:
+    """Encode each patient's time points and stream per-patient embedding sequences to parquet.
+
+    Buffers up to ``patient_flush`` patients, flattens their time points into one big list,
+    encodes it in one sentence-transformers call (which batches internally at
+    ``encode_batch_size``), then splits the result back into per-patient [L, E] sequences.
+    """
+    writer = None
+    n_rows = 0
+    n_tps = 0
+
+    buf_texts: list[str] = []
+    buf_lengths: list[int] = []
+    buf_deltas: list[list[float]] = []
+    buf_dur: list[float] = []
+    buf_evt: list[float] = []
+
+    def flush():
+        nonlocal writer, n_rows, n_tps
+        if not buf_lengths:
+            return
+        emb = model.encode(
+            buf_texts,
+            prompt=prompt,
+            batch_size=encode_batch_size,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+        emb = np.asarray(emb, dtype=np.float32)
+        # NaN guard — fp16 overflow in the backbone shows up here as non-finite values.
+        if not np.isfinite(emb).all():
+            raise RuntimeError(
+                "Non-finite embeddings detected (likely fp16 overflow on the backbone). "
+                "Retry with --dtype float32, or load the model in 8-bit."
+            )
+        if truncate_dim is not None:
+            # Matryoshka (MRL) truncation + renormalize.
+            emb = emb[:, :truncate_dim]
+            norms = np.linalg.norm(emb, axis=1, keepdims=True)
+            norms[norms == 0] = 1.0
+            emb = emb / norms
+
+        # Split the flat [sum(L), E] matrix back into per-patient [L, E] sequences.
+        seqs = []
+        offset = 0
+        for length in buf_lengths:
+            seqs.append(emb[offset : offset + length].tolist())
+            offset += length
+
+        table = pa.table(
+            {
+                "embeddings": seqs,
+                "time_deltas_list": buf_deltas,
+                "duration": buf_dur,
+                "event": buf_evt,
+            }
+        )
+        if writer is None:
+            writer = pq.ParquetWriter(out_path, table.schema)
+        writer.write_table(table)
+        n_rows += len(buf_lengths)
+        n_tps += offset
+
+        buf_texts.clear()
+        buf_lengths.clear()
+        buf_deltas.clear()
+        buf_dur.clear()
+        buf_evt.clear()
+
+    try:
+        for i, rec in enumerate(split):
+            texts = rec["texts"]
+            buf_texts.extend(texts)
+            buf_lengths.append(len(texts))
+            buf_deltas.append([float(d) for d in rec["time_deltas_list"]])
+            buf_dur.append(float(rec["duration"]))
+            buf_evt.append(float(rec["event"]))
+
+            if len(buf_lengths) >= patient_flush:
+                flush()
+                print(f"    ...{n_rows:,} patients / {n_tps:,} time points -> {out_path.name}")
+        flush()
+    finally:
+        if writer is not None:
+            writer.close()
+    return n_rows, n_tps
+
+
+def main(
+    parquet_dir: str,
+    out_dir: str,
+    model_name: str,
+    task: str,
+    device: str,
+    dtype: str,
+    encode_batch_size: int,
+    patient_flush: int,
+    max_seq_length: int | None,
+    truncate_dim: int | None,
+):
+    parquet_dir = Path(parquet_dir)
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    prompt = f"Instruct: {task}\nQuery:"  # Qwen3 template; text is appended by sentence-transformers.
+
+    print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}")
+    if dtype == "bfloat16":
+        print("  WARNING: Tesla T4 does not support bf16 — use --dtype float16 on a T4.")
+    print(f"Loading frozen encoder ...")
+    model = load_encoder(model_name, device, dtype, max_seq_length)
+    model.eval()
+
+    embedding_dim = model.get_sentence_embedding_dimension()
+    if truncate_dim is not None:
+        embedding_dim = truncate_dim
+    print(f"Embedding dim: {embedding_dim}" + (f" (MRL-truncated to {truncate_dim})" if truncate_dim else ""))
+    print(f"Instruction prompt: {prompt!r}")
+
+    for split_name in ["train", "validation", "test"]:
+        split_file = parquet_dir / f"{split_name}.parquet"
+        out_path = out_dir / f"{split_name}.parquet"
+        split = load_dataset("parquet", data_files=str(split_file), split="train")
+        print(f"Extracting {split_name} ({split_file}): {len(split):,} patients ...")
+        with torch.no_grad():
+            n_rows, n_tps = extract_split(
+                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path
+            )
+        del split
+        print(f"  {split_name:12s}: {n_rows:,} patients / {n_tps:,} time points -> {out_path}")
+
+    metadata_path = parquet_dir / "metadata.json"
+    metadata = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+    metadata.update(
+        {
+            "encoder": model_name,
+            "embedding_dim": embedding_dim,
+            "normalized": True,
+            "instruction": task,
+            "prompt_template": prompt,
+        }
+    )
+    with open(out_dir / "metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    print(f"\nSaved embeddings to {out_dir}")
+    print(f"Set model.embedding_dim={embedding_dim} in config/model/temporal_recurrent_embeddings.yaml.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Extract per-time-point Qwen3-Embedding vectors from the text parquet produced by "
+        "preprocess_smartehr_longitudinal_survival.py, writing per-patient embedding sequences for the "
+        "temporal_recurrent_embeddings survival model."
+    )
+    parser.add_argument("--parquet-dir", type=str, required=True,
+                        help="Directory with train/validation/test.parquet (output of the longitudinal builder).")
+    parser.add_argument("--out-dir", type=str, required=True)
+    parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Embedding-4B",
+                        help="Encoder. Use a small sentence-transformers model to smoke-test the pipeline first.")
+    parser.add_argument("--task", type=str, default=DEFAULT_TASK,
+                        help="Instruction task description (English). Frozen into metadata.json.")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--dtype", type=str, default="float16", choices=list(_DTYPES),
+                        help="Backbone precision. Use float16 on a Tesla T4 (no bf16). "
+                             "Fall back to float32 if you hit non-finite embeddings.")
+    parser.add_argument("--encode-batch-size", type=int, default=16,
+                        help="sentence-transformers internal batch size (time points per forward).")
+    parser.add_argument("--patient-flush", type=int, default=256,
+                        help="Encode + write after buffering this many patients (streaming granularity).")
+    parser.add_argument("--max-seq-length", type=int, default=None,
+                        help="Override the encoder max token length per time point. Default: model default.")
+    parser.add_argument("--truncate-dim", type=int, default=None,
+                        help="MRL: truncate embeddings to this dim and renormalize (Qwen3-Embedding-4B supports 32..2560).")
+    args = parser.parse_args()
+
+    main(
+        parquet_dir=args.parquet_dir,
+        out_dir=args.out_dir,
+        model_name=args.model_name,
+        task=args.task,
+        device=args.device,
+        dtype=args.dtype,
+        encode_batch_size=args.encode_batch_size,
+        patient_flush=args.patient_flush,
+        max_seq_length=args.max_seq_length,
+        truncate_dim=args.truncate_dim,
+    )

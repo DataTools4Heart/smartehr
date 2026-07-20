@@ -2,5 +2,7 @@ defaults:
   - base_temporal_recurrent_embeddings
 
 name: temporal_recurrent_embeddings
-embedding_dim: 1024
+# Must equal the extractor's output dim. Qwen3-Embedding-4B = 2560
+# (or the --truncate-dim value if MRL-truncated at extraction time).
+embedding_dim: 2560
 dropout: 0.3

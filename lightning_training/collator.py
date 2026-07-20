@@ -202,9 +202,20 @@ def collate_fn_tr_embedding(batch):
     embeddings = [torch.tensor(sequence) for sequence in embeddings]
     time_deltas_list = [b["time_deltas_list"] for b in batch]
     time_deltas_list = [torch.tensor(deltas) for deltas in time_deltas_list]
-    outcomes = torch.tensor([b["labels"] for b in batch])
     embeddings = torch.nn.utils.rnn.pad_sequence(embeddings, batch_first=True, padding_value=0)
-    return {"inputs": {"embeddings": embeddings, "time_deltas_list": time_deltas_list}, "multiclass_cls_labels": outcomes}
+
+    result = {"inputs": {"embeddings": embeddings, "time_deltas_list": time_deltas_list}}
+
+    # Support both classification (labels) and survival (duration + event) targets
+    if "duration" in batch[0] and "event" in batch[0]:
+        result["survival_labels"] = {
+            "duration": torch.tensor([b["duration"] for b in batch]),
+            "event": torch.tensor([b["event"] for b in batch]),
+        }
+    else:
+        result["multiclass_cls_labels"] = torch.tensor([b["labels"] for b in batch])
+
+    return result
 
 
 def collate_fn_smart_poc(batch: DatasetBatch, tokenizer: ByteLevelBPETokenizer):

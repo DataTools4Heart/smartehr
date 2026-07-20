@@ -1,0 +1,10 @@
+defaults:
+  - base_smartehr
+
+# Per-time-point Qwen3-Embedding sequences for the longitudinal survival model.
+# Reuses the `smartehr` loader (identical duration discretization to the baselines);
+# only the root_path differs. Produced by:
+#   scripts/smartehr/preprocess_smartehr_longitudinal_survival.py  (JSONL -> text sequences)
+#   scripts/smartehr/extract_qwen_embeddings_longitudinal.py       (text -> embedding sequences)
+name: smartehr
+root_path: data/dummy_data/longitudinal_dummy_smart_survival_longitudinal_embeddings
