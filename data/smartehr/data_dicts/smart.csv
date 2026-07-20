@@ -1,0 +1,1255 @@
+Position,Var Name,Variable Label,VaR lab English,Value,Value Label,VaL lab English,Missing Values
+1,studienr,SMART Studienummer, ,    ., , , 
+2,geslacht,Geslacht, ,    1,Man, ,9
+2,geslacht,Geslacht, ,    2,Vrouw, ,9
+2,geslacht,Geslacht, ,    9,Missend, ,9
+3,IncDatum,Date of inclusion screening, ,    ., , , 
+4,leeftijd,Leeftijd (aantal voltooide jaren), ,  999,Missend, ,999.0
+5,opleiding,Hoogste opleiding, ,   -1,Vraag niet gesteld voor november 2004, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    1,Lager onderwijs, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    2,MAVO, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    3,HAVO/VWO, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    4,LBO, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    5,MBO, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    6,HBO, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    7,Wetenschappelijk onderwijs, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    8,Overige, ,"-1, 9"
+5,opleiding,Hoogste opleiding, ,    9,Onbeantwoord, ,"-1, 9"
+6,RespLand,Geboorteland; respondent, ,   -1,Vraag niet gesteld voor november 2004, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    1,Afghanistan, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    2,Algerije, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    3,Angola, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    4,Argentinië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    5,Australië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    6,België, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    7,Brazilië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    8,Bulgarije, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,    9,Canada, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   10,Chili, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   11,China, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   12,Colombia, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   13,Congo (Democratische Republiek), ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   14,Denemarken, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   15,Dominicaanse Republiek, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   16,Duitsland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   17,Egypte, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   18,Ethiopië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   19,Filippijnen, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   20,Finland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   21,Frankrijk, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   22,Ghana, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   23,Griekenland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   24,Guinee, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   25,Guyana, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   26,Hongarije, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   27,Hongkong, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   28,Ierland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   29,India, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   30,Indonesië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   31,Irak, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   32,Iran, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   33,Italië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   34,Japan, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   35,Joegoslavië (voormalig), ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   36,Kaapverdië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   37,Kenia, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   38,Libanon, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   39,Liberia, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   40,Maleisië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   41,Marokko, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   42,Mexico, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   43,Nederland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   44,Nederlandse Antillen - Aruba, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   45,Nieuw-Zeeland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   46,Nigeria, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   47,Noorwegen, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   48,Oostenrijk, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   49,Pakistan, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   50,Peru, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   51,Polen, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   52,Portugal, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   53,Roemenië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   54,Sierra Leone, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   55,Singapore, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   56,Soedan, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   57,Somalië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   58,Sovjet-Unie (voormalig), ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   59,Spanje, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   60,Sri Lanka, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   61,Suriname, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   62,Syrië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   63,Thailand, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   64,Tsjecho-Slowakije (voormalig), ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   65,Tunesië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   66,Turkije, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   67,Venezuela, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   68,Verenigd Koninkrijk, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   69,Verenigde Staten van Amerika, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   70,Voormalig Joegoslavië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   71,Voormalig Sovjet-Unie, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   72,Voormalig Tsjecho-Slowakije, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   73,Vietnam, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   74,Zuid-Afrika, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   75,Zuid-Korea, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   76,Zweden, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   77,Zwitserland, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   78,Overig Afrika, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   79,Overig Amerika, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   80,Overig Azië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   81,Overig Europa, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   82,Overig Oceanië, ,"-1, 99"
+6,RespLand,Geboorteland; respondent, ,   99,Missend, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   -1,Vraag niet gesteld voor november 2004, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    1,Afghanistan, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    2,Algerije, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    3,Angola, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    4,Argentinië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    5,Australië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    6,België, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    7,Brazilië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    8,Bulgarije, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,    9,Canada, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   10,Chili, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   11,China, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   12,Colombia, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   13,Congo (Democratische Republiek), ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   14,Denemarken, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   15,Dominicaanse Republiek, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   16,Duitsland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   17,Egypte, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   18,Ethiopië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   19,Filippijnen, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   20,Finland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   21,Frankrijk, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   22,Ghana, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   23,Griekenland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   24,Guinee, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   25,Guyana, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   26,Hongarije, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   27,Hongkong, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   28,Ierland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   29,India, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   30,Indonesië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   31,Irak, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   32,Iran, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   33,Italië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   34,Japan, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   35,Joegoslavië (voormalig), ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   36,Kaapverdië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   37,Kenia, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   38,Libanon, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   39,Liberia, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   40,Maleisië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   41,Marokko, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   42,Mexico, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   43,Nederland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   44,Nederlandse Antillen - Aruba, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   45,Nieuw-Zeeland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   46,Nigeria, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   47,Noorwegen, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   48,Oostenrijk, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   49,Pakistan, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   50,Peru, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   51,Polen, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   52,Portugal, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   53,Roemenië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   54,Sierra Leone, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   55,Singapore, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   56,Soedan, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   57,Somalië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   58,Sovjet-Unie (voormalig), ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   59,Spanje, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   60,Sri Lanka, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   61,Suriname, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   62,Syrië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   63,Thailand, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   64,Tsjecho-Slowakije (voormalig), ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   65,Tunesië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   66,Turkije, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   67,Venezuela, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   68,Verenigd Koninkrijk, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   69,Verenigde Staten van Amerika, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   70,Voormalig Joegoslavië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   71,Voormalig Sovjet-Unie, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   72,Voormalig Tsjecho-Slowakije, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   73,Vietnam, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   74,Zuid-Afrika, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   75,Zuid-Korea, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   76,Zweden, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   77,Zwitserland, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   78,Overig Afrika, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   79,Overig Amerika, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   80,Overig Azië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   81,Overig Europa, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   82,Overig Oceanië, ,"-1, 99"
+7,PaLand,Geboorteland; vader, ,   99,Missend, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   -1,Vraag niet gesteld voor november 2004, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    1,Afghanistan, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    2,Algerije, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    3,Angola, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    4,Argentinië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    5,Australië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    6,België, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    7,Brazilië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    8,Bulgarije, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,    9,Canada, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   10,Chili, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   11,China, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   12,Colombia, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   13,Congo (Democratische Republiek), ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   14,Denemarken, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   15,Dominicaanse Republiek, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   16,Duitsland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   17,Egypte, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   18,Ethiopië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   19,Filippijnen, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   20,Finland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   21,Frankrijk, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   22,Ghana, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   23,Griekenland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   24,Guinee, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   25,Guyana, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   26,Hongarije, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   27,Hongkong, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   28,Ierland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   29,India, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   30,Indonesië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   31,Irak, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   32,Iran, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   33,Italië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   34,Japan, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   35,Joegoslavië (voormalig), ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   36,Kaapverdië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   37,Kenia, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   38,Libanon, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   39,Liberia, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   40,Maleisië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   41,Marokko, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   42,Mexico, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   43,Nederland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   44,Nederlandse Antillen - Aruba, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   45,Nieuw-Zeeland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   46,Nigeria, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   47,Noorwegen, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   48,Oostenrijk, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   49,Pakistan, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   50,Peru, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   51,Polen, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   52,Portugal, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   53,Roemenië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   54,Sierra Leone, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   55,Singapore, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   56,Soedan, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   57,Somalië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   58,Sovjet-Unie (voormalig), ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   59,Spanje, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   60,Sri Lanka, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   61,Suriname, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   62,Syrië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   63,Thailand, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   64,Tsjecho-Slowakije (voormalig), ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   65,Tunesië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   66,Turkije, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   67,Venezuela, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   68,Verenigd Koninkrijk, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   69,Verenigde Staten van Amerika, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   70,Voormalig Joegoslavië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   71,Voormalig Sovjet-Unie, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   72,Voormalig Tsjecho-Slowakije, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   73,Vietnam, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   74,Zuid-Afrika, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   75,Zuid-Korea, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   76,Zweden, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   77,Zwitserland, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   78,Overig Afrika, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   79,Overig Amerika, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   80,Overig Azië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   81,Overig Europa, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   82,Overig Oceanië, ,"-1, 99"
+8,MaLand,Geboorteland; moeder, ,   99,Missend, ,"-1, 99"
+9,WereldDl,Herkomst-regio; voorouders, ,   -1,Vraag niet gesteld voor november 2004, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    1,"Europa, Noord-Afrika, Midden-Oosten", ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    2,Afrika ten zuiden van de Sahara, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    3,Zuid-Azië, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    4,Zuid-Oost-Azië, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    5,Oost-Azië, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    6,Overige, ,"-1, 9"
+9,WereldDl,Herkomst-regio; voorouders, ,    9,Missend, ,"-1, 9"
+10,diagnsco,Diagnose 1e vaatziekte, ,    1,Diabetes mellitus type 1, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    2,Diabetes mellitus type 2, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    3,Diabetische voet, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    4,Hyperlipidemie, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    5,Hypertensie, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    6,Myocard infarct, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    7,Angina pectoris, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    8,Asymptomatische carotis stenose, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,    9,TIA, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   10,Herseninfarct, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   11,Cerebrale ischemie [oud], ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   12,Hersenbloeding, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   13,Amaurosis fugax, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   14,Retina infarct, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   15,Nierarterie stenose, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   16,Nierinsufficiëntie, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   17,Been claudicatio (Font. 2), ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   18,Been-rustpijn / ulcus (Font. 3 en 4), ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   19,Aneurysma abdominale aorta, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   20,Subarachnoïdale bloeding, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   21,Familiaire belasting, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   22,1-taks coronair lijden, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   23,2-taks coronair lijden, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   24,3-taks coronair lijden, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   25,Stabiel coronair lijden, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   26,<none>, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   31,<none>, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   32,<none>, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   33,<none>, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   34,HIV, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   35,CABG, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   36,PTCA, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   37,Ischaemische retina syndromen, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   38,STEMI, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   39,NSTEMI, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   44,fout !, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   45,fout !, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   65,Overige vasculair, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   66,Overige niet-vasculair, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   71,Hypertensieve zwangerschapscomplicatie, ,99
+10,diagnsco,Diagnose 1e vaatziekte, ,   99,Missend, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    1,Cerebraal vaatlijden, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    2,Perifeer vaatlijden, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    3,Cardiaal vaatlijden (OUD), ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    4,Ischemisch nierlijden, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    5,Diabetische voet, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    6,Aneurysma abdominale aorta, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    7,Hyperlipidemie, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    8,Hypertensie, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,    9,Diabetes mellitus, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   10,Cardiaal vaatlijden (PTCA), ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   11,Cardiaal vaatlijden (CABG), ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   12,Cardiaal vaatlijden (overig), ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   13,HIV, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   14,Zwangerschapscomplicatie, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   66,Overige, ,99
+11,vaatzkt1,Vaatziekte bij inclusie, ,   99,Missend, ,99
+12,DiagSide,Zijde aandoening, ,    1,rechts, ,9
+12,DiagSide,Zijde aandoening, ,    2,links, ,9
+12,DiagSide,Zijde aandoening, ,    3,beiderzijds, ,9
+12,DiagSide,Zijde aandoening, ,    9,Missend, ,9
+13,IncInt_p,Vaatinterventie bij inclusie gepland, ,    0,Nee, ,9
+13,IncInt_p,Vaatinterventie bij inclusie gepland, ,    1,Ja, ,9
+13,IncInt_p,Vaatinterventie bij inclusie gepland, ,    9,Missend, ,9
+14,IncInt_v,Vaatinterventie bij inclusie verricht, ,    0,Nee, ,9
+14,IncInt_v,Vaatinterventie bij inclusie verricht, ,    1,Ja, ,9
+14,IncInt_v,Vaatinterventie bij inclusie verricht, ,    9,Missend, ,9
+15,IncInt_d,Datum vaatinterventie bij inclusie, ,*****,Missend, , 
+16,V0402,Beschrijving plotselinge uitvalsverschijnselen, ,    ., , , 
+17,V0405,Uitvalsverschijnselen: blind aan één oog, ,    0,Nooit, ,5 through Highest
+17,V0405,Uitvalsverschijnselen: blind aan één oog, ,    1,Ooit, ,5 through Highest
+17,V0405,Uitvalsverschijnselen: blind aan één oog, ,    5,Onbeantwoord, ,5 through Highest
+17,V0405,Uitvalsverschijnselen: blind aan één oog, ,    9,Missend, ,5 through Highest
+18,vg_0410,Ooit beroerte; vraag 4.10, ,    0,Nooit, ,9
+18,vg_0410,Ooit beroerte; vraag 4.10, ,    1,Ooit, ,9
+19,vgok_car,Voorgeschiedenis; carotis-operatie, ,    0,Nooit, ,9
+19,vgok_car,Voorgeschiedenis; carotis-operatie, ,    1,Ooit, ,9
+20,vgt_kop,Voorgeschiedenis totaal; kop, ,    0,Nooit, ,9
+20,vgt_kop,Voorgeschiedenis totaal; kop, ,    1,Ooit, ,9
+20,vgt_kop,Voorgeschiedenis totaal; kop, ,    9,Missend, ,9
+21,vz_kop,Ooit cerebraal vaatlijden (inclusief voorgeschiedenis), ,    0,Nooit, ,9
+21,vz_kop,Ooit cerebraal vaatlijden (inclusief voorgeschiedenis), ,    1,Ooit, ,9
+21,vz_kop,Ooit cerebraal vaatlijden (inclusief voorgeschiedenis), ,    9,Missend, ,9
+22,vg_0321,Ooit hartinfarct; vraag 3.21, ,    0,Nooit, ,9
+22,vg_0321,Ooit hartinfarct; vraag 3.21, ,    1,Ooit, ,9
+22,vg_0321,Ooit hartinfarct; vraag 3.21, ,    8,weet niet, ,9
+23,vg_0323,Ooit hartstilstand; vraag 3.23, ,    0,Nooit, ,9
+23,vg_0323,Ooit hartstilstand; vraag 3.23, ,    1,Ooit, ,9
+24,vgok_har,Voorgeschiedenis; hart-operatie, ,    0,Nooit, ,9
+24,vgok_har,Voorgeschiedenis; hart-operatie, ,    1,Ooit, ,9
+25,vgt_hart,Voorgeschiedenis totaal; hart, ,    0,Nooit, ,9
+25,vgt_hart,Voorgeschiedenis totaal; hart, ,    1,Ooit, ,9
+25,vgt_hart,Voorgeschiedenis totaal; hart, ,    9,Missend, ,9
+26,vz_hart,Ooit cardiaal vaatlijden (inclusief voorgeschiedenis), ,    0,Nooit, ,9
+26,vz_hart,Ooit cardiaal vaatlijden (inclusief voorgeschiedenis), ,    1,Ooit, ,9
+26,vz_hart,Ooit cardiaal vaatlijden (inclusief voorgeschiedenis), ,    9,Missend, ,9
+27,vg_0325,Ooit AAA; vraag 3.25, ,    0,Nooit, ,9
+27,vg_0325,Ooit AAA; vraag 3.25, ,    1,Ooit, ,9
+28,vgok_aaa,Voorgeschiedenis; AAA-operatie, ,    0,Nooit, ,9
+28,vgok_aaa,Voorgeschiedenis; AAA-operatie, ,    1,Ooit, ,9
+29,vgt_aaa,Voorgeschiedenis totaal; AAA, ,    0,Nooit, ,9
+29,vgt_aaa,Voorgeschiedenis totaal; AAA, ,    1,Ooit, ,9
+29,vgt_aaa,Voorgeschiedenis totaal; AAA, ,    9,Missend, ,9
+30,vz_aaa,Ooit AAA-vaatlijden (inclusief voorgeschiedenis), ,    0,Nooit, ,9
+30,vz_aaa,Ooit AAA-vaatlijden (inclusief voorgeschiedenis), ,    1,Ooit, ,9
+30,vz_aaa,Ooit AAA-vaatlijden (inclusief voorgeschiedenis), ,    9,Missend, ,9
+31,vg_0606c,Ooit nierangiogram; vraag 6.06c, ,    0,Nooit, ,9
+31,vg_0606c,Ooit nierangiogram; vraag 6.06c, ,    1,Ooit, ,9
+32,vgok_nie,Voorgeschiedenis; nier-operatie, ,    0,Nooit, ,9
+32,vgok_nie,Voorgeschiedenis; nier-operatie, ,    1,Ooit, ,9
+33,vgt_nier,Voorgeschiedenis totaal; nier, ,    0,Nooit, ,9
+33,vgt_nier,Voorgeschiedenis totaal; nier, ,    1,Ooit, ,9
+33,vgt_nier,Voorgeschiedenis totaal; nier, ,    9,Missend, ,9
+34,vz_nier,Ooit ischemisch vaatlijden (voorgeschiedenis of inclusie), ,    0,Nooit, ,9
+34,vz_nier,Ooit ischemisch vaatlijden (voorgeschiedenis of inclusie), ,    1,Ooit, ,9
+34,vz_nier,Ooit ischemisch vaatlijden (voorgeschiedenis of inclusie), ,    9,Missend, ,9
+35,vg_0519,Ooit amputatie; vraag 5.19, ,    0,Nooit, ,9
+35,vg_0519,Ooit amputatie; vraag 5.19, ,    1,Ooit, ,9
+36,vgok_bee,Voorgeschiedenis; been-operatie, ,    0,Nooit, ,9
+36,vgok_bee,Voorgeschiedenis; been-operatie, ,    1,Ooit, ,9
+37,vgt_been,Voorgeschiedenis totaal; been, ,    0,Nooit, ,9
+37,vgt_been,Voorgeschiedenis totaal; been, ,    1,Ooit, ,9
+37,vgt_been,Voorgeschiedenis totaal; been, ,    9,Missend, ,9
+38,vz_been,Ooit perifeer vaatlijden (inclusief voorgeschiedenis), ,    0,Nooit, ,9
+38,vz_been,Ooit perifeer vaatlijden (inclusief voorgeschiedenis), ,    1,Ooit, ,9
+38,vz_been,Ooit perifeer vaatlijden (inclusief voorgeschiedenis), ,    9,Missend, ,9
+39,bdsys,"Gemiddelde syst. bloeddruk (mm.Hg. handmatig, autom. of van EAi)", ,    ., , ,999.00
+40,bddia,"Gemiddelde diast. bloeddruk (mm.Hg. handmatig, autom. of van EAi)", ,    ., , ,999.00
+41,hyptns_n,Niet/wel hypertensie, ,    0,Nee, ,9
+41,hyptns_n,Niet/wel hypertensie, ,    1,Ja, ,9
+41,hyptns_n,Niet/wel hypertensie, ,    9,Missend, ,9
+42,hyptns_b,Niet/wel behandeling hypertensie; vraag 6.03, ,    0,Nee, ,9
+42,hyptns_b,Niet/wel behandeling hypertensie; vraag 6.03, ,    1,Ja, ,9
+42,hyptns_b,Niet/wel behandeling hypertensie; vraag 6.03, ,    5,Onbeantwoord, ,9
+42,hyptns_b,Niet/wel behandeling hypertensie; vraag 6.03, ,    8,Niet van toepassing (oud), ,9
+42,hyptns_b,Niet/wel behandeling hypertensie; vraag 6.03, ,    9,Missend, ,9
+43,vz_hypt,Ooit hypertensie (inclusief screening en behandeling), ,    0,Nooit, ,9
+43,vz_hypt,Ooit hypertensie (inclusief screening en behandeling), ,    1,Ooit, ,9
+43,vz_hypt,Ooit hypertensie (inclusief screening en behandeling), ,    9,Missend, ,9
+44,labgluc,Glucose (mmol/l.), ,   84,Onbetrouwbaar, ,"84.0, 97.0, 99.0"
+44,labgluc,Glucose (mmol/l.), ,   97,Buiten 'time frame', ,"84.0, 97.0, 99.0"
+44,labgluc,Glucose (mmol/l.), ,   99,Missend, ,"84.0, 97.0, 99.0"
+45,hypgly_n,Niet/wel nu hyperglykemie, ,    0,Nee, ,9
+45,hypgly_n,Niet/wel nu hyperglykemie, ,    1,Ja, ,9
+45,hypgly_n,Niet/wel nu hyperglykemie, ,    9,Missend, ,9
+46,hypgly_b,Niet/wel behandeling hyperglykemie; vraag 6.09, ,    0,Nee, ,5 through Highest
+46,hypgly_b,Niet/wel behandeling hyperglykemie; vraag 6.09, ,    1,Ja, ,5 through Highest
+46,hypgly_b,Niet/wel behandeling hyperglykemie; vraag 6.09, ,    5,Onbeantwoord, ,5 through Highest
+46,hypgly_b,Niet/wel behandeling hyperglykemie; vraag 6.09, ,    8,Niet van toepassing (oud), ,5 through Highest
+46,hypgly_b,Niet/wel behandeling hyperglykemie; vraag 6.09, ,    9,Missend, ,5 through Highest
+47,vz_DM,Diab. bij incl. (diag 1e vaatziekte of vrg 6.07 of 6.09 of correctie eindpunt of medicatie ZIS of glucose > 11.1), ,    0,Nee, ,9
+47,vz_DM,Diab. bij incl. (diag 1e vaatziekte of vrg 6.07 of 6.09 of correctie eindpunt of medicatie ZIS of glucose > 11.1), ,    1,Ja, ,9
+47,vz_DM,Diab. bij incl. (diag 1e vaatziekte of vrg 6.07 of 6.09 of correctie eindpunt of medicatie ZIS of glucose > 11.1), ,    9,Missend, ,9
+48,vz_t1d,Diab type 1 bij inclusie (diag <= 30 jaar en injecties), ,    0,Nee, ,9
+48,vz_t1d,Diab type 1 bij inclusie (diag <= 30 jaar en injecties), ,    1,Ja, ,9
+48,vz_t1d,Diab type 1 bij inclusie (diag <= 30 jaar en injecties), ,    9,Missend, ,9
+49,vz_t2d,Diab type 2 bij inclusie (vz_DM en niet type 1), ,    0,Nee, ,9
+49,vz_t2d,Diab type 2 bij inclusie (vz_DM en niet type 1), ,    1,Ja, ,9
+49,vz_t2d,Diab type 2 bij inclusie (vz_DM en niet type 1), ,    9,Missend, ,9
+50,klinman,Ooit klinisch manifest vaatlijden (inclusief voorgeschiedenis), ,    0,Nooit, ,"6, 9"
+50,klinman,Ooit klinisch manifest vaatlijden (inclusief voorgeschiedenis), ,    1,Ooit, ,"6, 9"
+50,klinman,Ooit klinisch manifest vaatlijden (inclusief voorgeschiedenis), ,    6,Restgroep, ,"6, 9"
+50,klinman,Ooit klinisch manifest vaatlijden (inclusief voorgeschiedenis), ,    9,Missend, ,"6, 9"
+51,gewicht,Gewicht (kg.), ,  999,Missend, ,999
+52,lengte,Lengte (m.), ,    9,Missend, ,9.00
+53,bm_indx,Body mass index (kg./m.^2), ,   99,Missend, ,99.00
+54,bmi_30,"Niet/wel obesitas (BMI>=30,00)", ,    0,Nee, ,9
+54,bmi_30,"Niet/wel obesitas (BMI>=30,00)", ,    1,Ja, ,9
+54,bmi_30,"Niet/wel obesitas (BMI>=30,00)", ,    9,Missend, ,9
+55,tail_gm,Gemiddelde taille-omvang (cm.), ,   -1,Niet standaard voor 1-1-1999, ,"-1, 999"
+55,tail_gm,Gemiddelde taille-omvang (cm.), ,  999,Missend, ,"-1, 999"
+56,heup_gm,Gemiddelde heup-omvang (cm.), ,   -1,Niet standaard voor 1-1-1999, ,"-1, 999"
+56,heup_gm,Gemiddelde heup-omvang (cm.), ,  999,Missend, ,"-1, 999"
+57,tlhp_rat,Taille/heup-ratio, ,    9,Missend, ,9.00
+58,vet_subc,Subcutaan midlijn (cm.), ,   -1,Niet standaard voor 1-7-2003, ,"-1.0, 99.0"
+58,vet_subc,Subcutaan midlijn (cm.), ,   99,Missend, ,"-1.0, 99.0"
+59,vet_gm,Gemiddelde buikvet (cm.), ,   -1,Niet standaard voor 1-7-2003, ,"-1.0, 99.0"
+59,vet_gm,Gemiddelde buikvet (cm.), ,   99,Missend, ,"-1.0, 99.0"
+60,plsprs,Pulse pressure (mm.Hg.), ,  999,Missend, ,999
+61,abidatum,Datum ABI test, ,*****,Missend, , 
+62,abi_lg,Laagste ABI (in rust), ,    9,Missend, ,9.00
+63,abi_gm,Gemiddelde ABI (in rust), ,    9,Missend, ,9.00
+64,abivrl_n,"Niet/wel verlaagde ABI (in rust) (<= 0,90)", ,    0,Nee, ,9
+64,abivrl_n,"Niet/wel verlaagde ABI (in rust) (<= 0,90)", ,    1,Ja, ,9
+64,abivrl_n,"Niet/wel verlaagde ABI (in rust) (<= 0,90)", ,    9,Missend, ,9
+65,ABiRe,ABI rechts in rust, ,    9,Missend, ,9.00
+66,ABiLi,ABI links in rust, ,    9,Missend, ,9.00
+67,imt_gm,Gemiddelde IMT (mm.), ,   99,Missend, ,99.00
+68,stenACIr,Stenosegraad ACI rechts, ,    0,Geen stenose of plaque, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    1,<= 29% stenose, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    2,30% - 49% stenose, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    3,50% - 69% stenose, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    4,>= 70% stenose, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    5,Subtotale stenose, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    6,Occlusie, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    7,Pre-occlusief, ,9
+68,stenACIr,Stenosegraad ACI rechts, ,    9,Missend, ,9
+69,stenACIl,Stenosegraad ACI links, ,    0,Geen stenose of plaque, ,9
+69,stenACIl,Stenosegraad ACI links, ,    1,<= 29% stenose, ,9
+69,stenACIl,Stenosegraad ACI links, ,    2,30% - 49% stenose, ,9
+69,stenACIl,Stenosegraad ACI links, ,    3,50% - 69% stenose, ,9
+69,stenACIl,Stenosegraad ACI links, ,    4,>= 70% stenose, ,9
+69,stenACIl,Stenosegraad ACI links, ,    5,Subtotale stenose, ,9
+69,stenACIl,Stenosegraad ACI links, ,    6,Occlusie, ,9
+69,stenACIl,Stenosegraad ACI links, ,    7,Pre-occlusief, ,9
+69,stenACIl,Stenosegraad ACI links, ,    9,Missend, ,9
+70,csten_50,Niet/wel carotis stenose >= 50% (duplex), ,    0,Nee, ,9
+70,csten_50,Niet/wel carotis stenose >= 50% (duplex), ,    1,Ja, ,9
+70,csten_50,Niet/wel carotis stenose >= 50% (duplex), ,    9,Missend, ,9
+71,csten_70,Niet/wel carotis stenose >= 70% (duplex), ,    0,Nee, ,9
+71,csten_70,Niet/wel carotis stenose >= 70% (duplex), ,    1,Ja, ,9
+71,csten_70,Niet/wel carotis stenose >= 70% (duplex), ,    9,Missend, ,9
+72,AortProx,Diameter proximale aorta (cm.), ,   99,Missend, ,99.0
+73,AortDist,Diameter distale aorta (cm.), ,   99,Missend, ,99.0
+74,aorta_hg,Grootste diameter aorta (cm.) (echo), ,   99,Missend, ,99.0
+75,aorta_gm,Gemiddelde diameter aorta (cm.) (echo), ,   99,Missend, ,99.0
+76,aaaech_n,Niet/wel AAA (echo), ,    0,Nee, ,9
+76,aaaech_n,Niet/wel AAA (echo), ,    1,Ja, ,9
+76,aaaech_n,Niet/wel AAA (echo), ,    9,Missend, ,9
+77,nrlng_re,Lengte rechter nier (cm.), ,   99,Missend, ,99.0
+78,nrlng_li,Lengte linker nier (cm.), ,   99,Missend, ,99.0
+79,nrlng_gm,Gemiddelde nierlengte (cm.) (echo), ,   99,Missend, ,99.0
+80,nratrof,Niet/wel nieratrofie (echo), ,    0,Nee, ,9
+80,nratrof,Niet/wel nieratrofie (echo), ,    1,Ja, ,9
+80,nratrof,Niet/wel nieratrofie (echo), ,    9,Missend, ,9
+81,nrvol_re,Volume rechter nier (cc.), , 9999,Missend, ,9999.0
+82,nrvol_li,Volume linker nier in (cc.), , 9999,Missend, ,9999.0
+83,nrvol_gm,Gemiddelde niervolume (cc.) (echo), , 9999,Missend, ,9999.0
+84,labhb,Hb (mmol/l.), ,   84,Onbetrouwbaar, ,"84.0, 97.0, 99.0"
+84,labhb,Hb (mmol/l.), ,   97,Buiten 'time frame', ,"84.0, 97.0, 99.0"
+84,labhb,Hb (mmol/l.), ,   99,Missend, ,"84.0, 97.0, 99.0"
+85,labht,Ht fractie, ,    7,Buiten 'time frame', ,"7.00, 8.00, 9.00"
+85,labht,Ht fractie, ,    8,Onbetrouwbaar, ,"7.00, 8.00, 9.00"
+85,labht,Ht fractie, ,    9,Missend, ,"7.00, 8.00, 9.00"
+86,labchol,Cholesterol (mmol/l.), ,   84,Onbetrouwbaar, ,"84.0, 97.0, 99.0"
+86,labchol,Cholesterol (mmol/l.), ,   97,Buiten 'time frame', ,"84.0, 97.0, 99.0"
+86,labchol,Cholesterol (mmol/l.), ,   99,Missend, ,"84.0, 97.0, 99.0"
+87,labtrig,Triglyceriden (mmol/l.), ,  884,Onbetrouwbaar, ,"884.00, 977.00, 999.00"
+87,labtrig,Triglyceriden (mmol/l.), ,  977,Buiten 'time frame', ,"884.00, 977.00, 999.00"
+87,labtrig,Triglyceriden (mmol/l.), ,  999,Missend, ,"884.00, 977.00, 999.00"
+88,labhdl,HDL-cholesterol (mmol/l.), ,    7,Buiten 'time frame', ,"7.00, 8.00, 9.00"
+88,labhdl,HDL-cholesterol (mmol/l.), ,    8,Onbetrouwbaar, ,"7.00, 8.00, 9.00"
+88,labhdl,HDL-cholesterol (mmol/l.), ,    9,Missend, ,"7.00, 8.00, 9.00"
+89,ldlchol,LDL cholesterol (mmol/l.), ,   83,Onrealistisch laag, ,"83.00, 84.00, 99.00"
+89,ldlchol,LDL cholesterol (mmol/l.), ,   84,Onbetrouwbaar, ,"83.00, 84.00, 99.00"
+89,ldlchol,LDL cholesterol (mmol/l.), ,   99,Missend, ,"83.00, 84.00, 99.00"
+90,VgBh_HpL,Voorgeschiedenis: ooit behandeld voor verhoogde bloedvetten, ,    0,Nee, ,9
+90,VgBh_HpL,Voorgeschiedenis: ooit behandeld voor verhoogde bloedvetten, ,    1,Ja, ,9
+91,hyplip_n,"Niet/wel hyperlipidemie (tot.chol>5 of LDL>3,2)", ,    0,Nee, ,9
+91,hyplip_n,"Niet/wel hyperlipidemie (tot.chol>5 of LDL>3,2)", ,    1,Ja, ,9
+91,hyplip_n,"Niet/wel hyperlipidemie (tot.chol>5 of LDL>3,2)", ,    9,Missend, ,9
+92,hyplip_b,Niet/wel behandeling hyperlipidemie; vraag 6.16, ,    0,Nee, ,5 through Highest
+92,hyplip_b,Niet/wel behandeling hyperlipidemie; vraag 6.16, ,    1,Ja, ,5 through Highest
+92,hyplip_b,Niet/wel behandeling hyperlipidemie; vraag 6.16, ,    5,Onbeantwoord, ,5 through Highest
+92,hyplip_b,Niet/wel behandeling hyperlipidemie; vraag 6.16, ,    8,Niet van toepassing (oud), ,5 through Highest
+92,hyplip_b,Niet/wel behandeling hyperlipidemie; vraag 6.16, ,    9,Missend, ,5 through Highest
+93,vz_HypLp,Ooit hyperlipidemie (chol/incl.diagn./medicatie/vr.lijst), ,    0,Nooit, ,9
+93,vz_HypLp,Ooit hyperlipidemie (chol/incl.diagn./medicatie/vr.lijst), ,    1,Ooit, ,9
+93,vz_HypLp,Ooit hyperlipidemie (chol/incl.diagn./medicatie/vr.lijst), ,    9,Missend, ,9
+94,labkrea,Kreatinine bloed (µmol/l.), , 8884,Onbetrouwbaar, ,"8884, 9777, 9999"
+94,labkrea,Kreatinine bloed (µmol/l.), , 9777,Buiten 'time frame', ,"8884, 9777, 9999"
+94,labkrea,Kreatinine bloed (µmol/l.), , 9999,Missend, ,"8884, 9777, 9999"
+95,labmalb,Micro-albumine (mg./l.), ,   -8,lage waarde (<8), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -7,Lage waarde (<7), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -6,Lage waarde (<6), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -5,Lage waarde (<5), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -3,Lage waarde (<3), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -2,Lage waarde (<2), ,"Lowest through .0, and 9999.0"
+95,labmalb,Micro-albumine (mg./l.), ,   -1,Lage waarde (<0.5), ,"Lowest through .0, and 9999.0"
+96,labkrur,Kreatinine urine (mmol/l.), ,  884,Onbetrouwbaar, ,"884.0, 999.0"
+96,labkrur,Kreatinine urine (mmol/l.), ,  999,Missend, ,"884.0, 999.0"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -8,ratio niet exact berekend (alb<8), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -7,ratio niet exact berekend (alb<7), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -6,ratio niet exact berekend (alb<6), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -5,ratio niet exact berekend (alb<5), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -3,ratio niet exact berekend (alb<3), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -2,ratio niet exact berekend (alb<2), ,"Lowest through .00, and 9999.00"
+97,mpkr_rat,Microproteine/kreatinine-ratio (mg./mmol), ,   -1,ratio niet exact berekend (alb<0.5), ,"Lowest through .00, and 9999.00"
+98,AlbCr,Albumine / Creatinine ratio als tekst, ,    ., , , 
+99,albminur,Albuminurie (KDIGO richtlijn: ACR <3 / <30 / >=30), ,    0,Geen, ,9
+99,albminur,Albuminurie (KDIGO richtlijn: ACR <3 / <30 / >=30), ,    1,Micro, ,9
+99,albminur,Albuminurie (KDIGO richtlijn: ACR <3 / <30 / >=30), ,    2,Macro, ,9
+99,albminur,Albuminurie (KDIGO richtlijn: ACR <3 / <30 / >=30), ,    9,Missend, ,9
+100,nrfaln_n,Niet/wel nierfalen, ,    0,Nee, ,9
+100,nrfaln_n,Niet/wel nierfalen, ,    1,Ja, ,9
+100,nrfaln_n,Niet/wel nierfalen, ,    9,Missend, ,9
+101,klar_coc,Kreatinine (bloed) klaring (Cockroft), ,99999,Missend, ,99999.0
+102,klar_gst,Beoordeling kreat. klaring (Cockroft), ,    1,"Ernstig gestoord (<50,0)", ,9
+102,klar_gst,Beoordeling kreat. klaring (Cockroft), ,    2,"Matig gestoord (>=50,0; <80,0)", ,9
+102,klar_gst,Beoordeling kreat. klaring (Cockroft), ,    3,"Normaal (>=80,0)", ,9
+102,klar_gst,Beoordeling kreat. klaring (Cockroft), ,    9,Missend, ,9
+103,MDRD,MDRD (modification of dietin renal diseases)-klaring, , 9999,Missend, ,9999.0
+104,labhcyst,Homocysteïne voor belasting (µmol/l.), ,   -1,Buiten standaard afname periode, ,"-1.0, 8884.0, 9999.0"
+104,labhcyst,Homocysteïne voor belasting (µmol/l.), , 8884,Onbetrouwbaar, ,"-1.0, 8884.0, 9999.0"
+104,labhcyst,Homocysteïne voor belasting (µmol/l.), , 9999,Missend, ,"-1.0, 8884.0, 9999.0"
+105,hyphmc_n,Niet/wel hyperhomocysteinemie, ,   -1,Buiten standaard afname periode, ,"-1, 9"
+105,hyphmc_n,Niet/wel hyperhomocysteinemie, ,    0,Nee, ,"-1, 9"
+105,hyphmc_n,Niet/wel hyperhomocysteinemie, ,    1,Ja, ,"-1, 9"
+105,hyphmc_n,Niet/wel hyperhomocysteinemie, ,    9,Missend, ,"-1, 9"
+106,labins,Insuline (mU/l.), ,   -1,Niet standaard voor 1-7-2003, ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  772,Lage waarde (<=5), ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  773,"Lage waarde (<0,2)", ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  775,"Lage waarde (<0,5)", ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  777,Lage waarde (<2), ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  884,Onbetrouwbaar, ,"772.0 through 999.0, and -1.0"
+106,labins,Insuline (mU/l.), ,  999,Missend, ,"772.0 through 999.0, and -1.0"
+107,labtsh,TSH (mU/l.), ,   -1,Niet standaard voor 1-7-2003, ,"772.00 through 999.00, and -1.00"
+107,labtsh,TSH (mU/l.), ,  772,"Lage waarde (<0,02)", ,"772.00 through 999.00, and -1.00"
+107,labtsh,TSH (mU/l.), ,  773,"Lage waarde   (<=0,01)", ,"772.00 through 999.00, and -1.00"
+107,labtsh,TSH (mU/l.), ,  884,Onbetrouwbaar, ,"772.00 through 999.00, and -1.00"
+107,labtsh,TSH (mU/l.), ,  999,Missend, ,"772.00 through 999.00, and -1.00"
+108,labcrp,HsCRP (mg./l.), ,   -1,Niet standaard voor 1-7-2003, ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  772,"Lage waarde (lager dan 10,0)", ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  773,"Lage waarde (<=0,2)", ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  774,"Lage waarde (<0,1)", ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  775,"Lage waarde (<0,5)", ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  884,Onbetrouwbaar, ,"772.0 through 999.0, and -1.0"
+108,labcrp,HsCRP (mg./l.), ,  999,Missend, ,"772.0 through 999.0, and -1.0"
+109,labhba1c,HbA1c (%), ,   -1,Niet standaard voor 1-1-2006, ,"-1.0, 84.0, 99.0"
+109,labhba1c,HbA1c (%), ,   84,Onbetrouwbaar, ,"-1.0, 84.0, 99.0"
+109,labhba1c,HbA1c (%), ,   99,Missend, ,"-1.0, 84.0, 99.0"
+110,labapob,Apo-B (g./l.), ,   -1,Niet standaard voor 1-1-2006, ,"8.00 through 776.00, and -1.00"
+110,labapob,Apo-B (g./l.), ,    8,Onbetrouwbaar, ,"8.00 through 776.00, and -1.00"
+110,labapob,Apo-B (g./l.), ,    9,Missend, ,"8.00 through 776.00, and -1.00"
+110,labapob,Apo-B (g./l.), ,  776,"Lage waarde (<0,3)", ,"8.00 through 776.00, and -1.00"
+111,roken,Status roken, ,    0,Nooit gerookt, ,9
+111,roken,Status roken, ,    1,Vroeger gerookt, ,9
+111,roken,Status roken, ,    3,Rookt momenteel, ,9
+111,roken,Status roken, ,    9,Missend, ,9
+112,packyrs,Aantal pakjes sig./shag (van 20) per dag keer aantal jaren gerookt, ,  999,Missend, ,999.0
+113,alcohol,Status alcohol-drinken, ,    0,Nooit alcohol gedronken, ,9
+113,alcohol,Status alcohol-drinken, ,    1,Vroeger alcohol gedronken, ,9
+113,alcohol,Status alcohol-drinken, ,    2,Recent gestopt / nog steeds, ,9
+113,alcohol,Status alcohol-drinken, ,    3,Alcohol-drinken momenteel, ,9
+113,alcohol,Status alcohol-drinken, ,    9,Missend, ,9
+114,AlchlGlz,Alcohol: glazen per week, ,    0,ik drink geen alcohol, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    1,<1, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    2,1 - 10, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    3,11 - 20, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    4,21 - 30, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    5,31 - 40, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,    6,>40, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,   95,Onbeantwoord, ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,   98,Niet van toepassing (oud), ,95 through Highest
+114,AlchlGlz,Alcohol: glazen per week, ,   99,Missend, ,95 through Highest
+115,V0821,Ooit vegetarier, ,    0,Nooit, ,5 through Highest
+115,V0821,Ooit vegetarier, ,    1,Ooit, ,5 through Highest
+115,V0821,Ooit vegetarier, ,    5,Onbeantwoord, ,5 through Highest
+115,V0821,Ooit vegetarier, ,    9,Missend, ,5 through Highest
+116,V082201,Vegetariër: startjaar, ,   -1,not asked after november 2019, ,"-1, 9999"
+116,V082201,Vegetariër: startjaar, , 9999,Missend, ,"-1, 9999"
+117,V082202,Vegetariër: eindjaar, ,   -1,not asked after november 2019, ,"-1, 9999"
+117,V082202,Vegetariër: eindjaar, , 9999,Missend, ,"-1, 9999"
+118,V0823,Melkproducten/eieren niet/wel, ,    0,Nee, ,5 through Highest
+118,V0823,Melkproducten/eieren niet/wel, ,    1,Ja, ,5 through Highest
+118,V0823,Melkproducten/eieren niet/wel, ,    5,Onbeantwoord, ,5 through Highest
+118,V0823,Melkproducten/eieren niet/wel, ,    8,Niet van toepassing (oud), ,5 through Highest
+118,V0823,Melkproducten/eieren niet/wel, ,    9,Missend, ,5 through Highest
+119,MBSc,Aantal metabool syndroom criteria, ,  999,missing, , 
+120,MBS,Metabool syndroom nee/ja, ,    0,no, ,999
+120,MBS,Metabool syndroom nee/ja, ,    1,yes, ,999
+120,MBS,Metabool syndroom nee/ja, ,  999,missing, ,999
+121,MBSc_mis,"Aantal metabool syndroom criteria, met missings aangegeven", ,    ., , ,999
+122,MBScgr,Categorieen aantal metabool syndroom componenten, ,    0,0-1Metabool syndroom componenten, ,999
+122,MBScgr,Categorieen aantal metabool syndroom componenten, ,    1,2-3Metabool syndroom componenten, ,999
+122,MBScgr,Categorieen aantal metabool syndroom componenten, ,    2,4-5 Metabool syndroom componenten, ,999
+123,kl1fysfc,KvL: fysiek functioneren, ,  999,Missend, ,999.000000
+124,kl2socfc,KvL: sociaal functioneren, ,  999,Missend, ,999.000000
+125,kl3rolfy,KvL: rolbeperkingen fysiek probleem, ,  999,Missend, ,999.000000
+126,kl4rolem,KvL: rolbeperkingen emotioneel probleem, ,  999,Missend, ,999.000000
+127,kl5mengz,KvL: mentale gezondheid, ,  999,Missend, ,999.000000
+128,kl6vital,KvL: vitaliteit, ,  999,Missend, ,999.000000
+129,kl7pijn,KvL: pijn, ,  999,Missend, ,999.000000
+130,kl8alggz,KvL: algemene gezondheidsbeleving, ,  999,Missend, ,999.000000
+131,kl9gezva,KvL: gezondheidsverandering, ,  999,Missend, ,999.000000
+132,mht01,Niet/wel L10 med. (beta-rec.-blokk. sympathicolytica), ,    0,Nee, ,9
+132,mht01,Niet/wel L10 med. (beta-rec.-blokk. sympathicolytica), ,    1,Ja, ,9
+132,mht01,Niet/wel L10 med. (beta-rec.-blokk. sympathicolytica), ,    9,Missend, ,9
+133,mht02,Niet/wel L20 med. (diuretica), ,    0,Nee, ,9
+133,mht02,Niet/wel L20 med. (diuretica), ,    1,Ja, ,9
+133,mht02,Niet/wel L20 med. (diuretica), ,    9,Missend, ,9
+134,mht02a,Niet/wel lisdiuretica (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+134,mht02a,Niet/wel lisdiuretica (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+134,mht02a,Niet/wel lisdiuretica (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+134,mht02a,Niet/wel lisdiuretica (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+135,mht02b,Niet/wel thiazide diuretica (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+135,mht02b,Niet/wel thiazide diuretica (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+135,mht02b,Niet/wel thiazide diuretica (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+135,mht02b,Niet/wel thiazide diuretica (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+136,mht02c,Niet/wel kaliumsparende diuretica (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+136,mht02c,Niet/wel kaliumsparende diuretica (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+136,mht02c,Niet/wel kaliumsparende diuretica (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+136,mht02c,Niet/wel kaliumsparende diuretica (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+137,mht02d,Niet/wel aldosteronantagonisten (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+137,mht02d,Niet/wel aldosteronantagonisten (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+137,mht02d,Niet/wel aldosteronantagonisten (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+137,mht02d,Niet/wel aldosteronantagonisten (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+138,mht03,Niet/wel L30 med. (ACE-remmers), ,    0,Nee, ,9
+138,mht03,Niet/wel L30 med. (ACE-remmers), ,    1,Ja, ,9
+138,mht03,Niet/wel L30 med. (ACE-remmers), ,    9,Missend, ,9
+139,mht04,Niet/wel L40 med. (calciumantagonisten), ,    0,Nee, ,9
+139,mht04,Niet/wel L40 med. (calciumantagonisten), ,    1,Ja, ,9
+139,mht04,Niet/wel L40 med. (calciumantagonisten), ,    9,Missend, ,9
+140,mht05,Niet/wel L50 med. (sel. alpha1-rec.-blokk. sympathicolytica), ,    0,Nee, ,9
+140,mht05,Niet/wel L50 med. (sel. alpha1-rec.-blokk. sympathicolytica), ,    1,Ja, ,9
+140,mht05,Niet/wel L50 med. (sel. alpha1-rec.-blokk. sympathicolytica), ,    9,Missend, ,9
+141,mht06,Niet/wel L60 med. (combinatiepreparaten), ,    0,Nee, ,9
+141,mht06,Niet/wel L60 med. (combinatiepreparaten), ,    1,Ja, ,9
+141,mht06,Niet/wel L60 med. (combinatiepreparaten), ,    9,Missend, ,9
+142,mht07,Niet/wel L70 med. (centraal aangrijpende antihypertensiva), ,    0,Nee, ,9
+142,mht07,Niet/wel L70 med. (centraal aangrijpende antihypertensiva), ,    1,Ja, ,9
+142,mht07,Niet/wel L70 med. (centraal aangrijpende antihypertensiva), ,    9,Missend, ,9
+143,mht12,Niet/wel D20 med. (angiotensine II (AT1)-antagonisten), ,    0,Nee, ,9
+143,mht12,Niet/wel D20 med. (angiotensine II (AT1)-antagonisten), ,    1,Ja, ,9
+143,mht12,Niet/wel D20 med. (angiotensine II (AT1)-antagonisten), ,    9,Missend, ,9
+144,mht33,Niet/wel restgroep hypertensie-medicatie, ,    0,Nee, ,9
+144,mht33,Niet/wel restgroep hypertensie-medicatie, ,    1,Ja, ,9
+144,mht33,Niet/wel restgroep hypertensie-medicatie, ,    9,Missend, ,9
+145,mht41,Niet/wel direct-acting vasodilator, ,    0,Nee, ,9
+145,mht41,Niet/wel direct-acting vasodilator, ,    1,Ja, ,9
+145,mht41,Niet/wel direct-acting vasodilator, ,    9,Missend, ,9
+146,mliphoop,Niet/wel lipidenverlagers niet gespecificeerd, ,    0,Nee, ,9
+146,mliphoop,Niet/wel lipidenverlagers niet gespecificeerd, ,    1,Ja, ,9
+146,mliphoop,Niet/wel lipidenverlagers niet gespecificeerd, ,    9,Missend, ,9
+147,mli01,Niet/wel statines (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+147,mli01,Niet/wel statines (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+147,mli01,Niet/wel statines (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+147,mli01,Niet/wel statines (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+148,mli02,Niet/wel fibraten (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+148,mli02,Niet/wel fibraten (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+148,mli02,Niet/wel fibraten (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+148,mli02,Niet/wel fibraten (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+149,mli03,Niet/wel galzuurbindende harsen (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+149,mli03,Niet/wel galzuurbindende harsen (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+149,mli03,Niet/wel galzuurbindende harsen (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+149,mli03,Niet/wel galzuurbindende harsen (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+150,mli04,Niet/wel cholesterolabsorptie-remmers (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+150,mli04,Niet/wel cholesterolabsorptie-remmers (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+150,mli04,Niet/wel cholesterolabsorptie-remmers (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+150,mli04,Niet/wel cholesterolabsorptie-remmers (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+151,mas01,Niet/wel plaatjes-remmers, ,    0,Nee, ,9
+151,mas01,Niet/wel plaatjes-remmers, ,    1,Ja, ,9
+151,mas01,Niet/wel plaatjes-remmers, ,    9,Missend, ,9
+152,mas01a,"Niet/wel aspirine, medicatie AS01 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+152,mas01a,"Niet/wel aspirine, medicatie AS01 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+152,mas01a,"Niet/wel aspirine, medicatie AS01 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+152,mas01a,"Niet/wel aspirine, medicatie AS01 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+153,mas01b,"Niet/wel clopidogrel, medicatie AS01 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+153,mas01b,"Niet/wel clopidogrel, medicatie AS01 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+153,mas01b,"Niet/wel clopidogrel, medicatie AS01 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+153,mas01b,"Niet/wel clopidogrel, medicatie AS01 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+154,mas01c,"Niet/wel dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+154,mas01c,"Niet/wel dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+154,mas01c,"Niet/wel dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+154,mas01c,"Niet/wel dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+155,mas01d,"Niet/wel aspirine+dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+155,mas01d,"Niet/wel aspirine+dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+155,mas01d,"Niet/wel aspirine+dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+155,mas01d,"Niet/wel aspirine+dipyridamol, medicatie AS01 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+156,mas02,Niet/wel orale anticoagulantia, ,    0,Nee, ,9
+156,mas02,Niet/wel orale anticoagulantia, ,    1,Ja, ,9
+156,mas02,Niet/wel orale anticoagulantia, ,    9,Missend, ,9
+157,mas02a,"Niet/wel acenocoumarol, medicatie AS02 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+157,mas02a,"Niet/wel acenocoumarol, medicatie AS02 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+157,mas02a,"Niet/wel acenocoumarol, medicatie AS02 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+157,mas02a,"Niet/wel acenocoumarol, medicatie AS02 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+158,mas02b,"Niet/wel fenprocoumon, medicatie AS02 (vanaf juli 2001)", ,    0,Nee, ,"8, 9"
+158,mas02b,"Niet/wel fenprocoumon, medicatie AS02 (vanaf juli 2001)", ,    1,Ja, ,"8, 9"
+158,mas02b,"Niet/wel fenprocoumon, medicatie AS02 (vanaf juli 2001)", ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+158,mas02b,"Niet/wel fenprocoumon, medicatie AS02 (vanaf juli 2001)", ,    9,Missend, ,"8, 9"
+159,mas02c,Niet/wel laag moleculair gewicht heparine, ,    0,Nee, , 
+159,mas02c,Niet/wel laag moleculair gewicht heparine, ,    1,Ja, , 
+159,mas02c,Niet/wel laag moleculair gewicht heparine, ,    9,Missend, , 
+160,mas03,Niet/wel DOAC (specifieke stollingseiwit remmer), ,    0,Nee, , 
+160,mas03,Niet/wel DOAC (specifieke stollingseiwit remmer), ,    1,Ja, , 
+160,mas03,Niet/wel DOAC (specifieke stollingseiwit remmer), ,    9,Missend, , 
+161,mmpr,Niet/wel medicatie bij microprote?nurie, ,    0,Nee, ,9
+161,mmpr,Niet/wel medicatie bij microprote?nurie, ,    1,Ja, ,9
+161,mmpr,Niet/wel medicatie bij microprote?nurie, ,    9,Missend, ,9
+162,mhmc,Niet/wel medicatie bij hyperhomocyste?nemie, ,    0,Nee, ,9
+162,mhmc,Niet/wel medicatie bij hyperhomocyste?nemie, ,    1,Ja, ,9
+162,mhmc,Niet/wel medicatie bij hyperhomocyste?nemie, ,    9,Missend, ,9
+163,mgl01,Niet/wel glucoseverlagende middelen, ,    0,Nee, ,9
+163,mgl01,Niet/wel glucoseverlagende middelen, ,    1,Ja, ,9
+163,mgl01,Niet/wel glucoseverlagende middelen, ,    9,Missend, ,9
+164,mgl02,Niet/wel insulines, ,    0,Nee, ,9
+164,mgl02,Niet/wel insulines, ,    1,Ja, ,9
+164,mgl02,Niet/wel insulines, ,    9,Missend, ,9
+165,mgl03,GLP-1-agonist, ,    0,Nee, ,9
+165,mgl03,GLP-1-agonist, ,    1,Ja, ,9
+165,mgl03,GLP-1-agonist, ,    9,Missend, ,9
+166,TCA,Niet/wel tricyclic antidepressants (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+166,TCA,Niet/wel tricyclic antidepressants (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+166,TCA,Niet/wel tricyclic antidepressants (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+166,TCA,Niet/wel tricyclic antidepressants (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+167,SSRI,Niet/wel serotonin reuptake inhibitors (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+167,SSRI,Niet/wel serotonin reuptake inhibitors (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+167,SSRI,Niet/wel serotonin reuptake inhibitors (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+167,SSRI,Niet/wel serotonin reuptake inhibitors (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+168,MAO,Niet/wel monoamine oxidase inhibitors (not-selective) (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+168,MAO,Niet/wel monoamine oxidase inhibitors (not-selective) (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+168,MAO,Niet/wel monoamine oxidase inhibitors (not-selective) (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+168,MAO,Niet/wel monoamine oxidase inhibitors (not-selective) (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+169,OthADep,Niet/wel other anti-depressants, ,    0,Nee, ,9
+169,OthADep,Niet/wel other anti-depressants, ,    1,Ja, ,9
+169,OthADep,Niet/wel other anti-depressants, ,    9,Missend, ,9
+170,Benzo,Niet/wel benzodiazepines (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+170,Benzo,Niet/wel benzodiazepines (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+170,Benzo,Niet/wel benzodiazepines (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+170,Benzo,Niet/wel benzodiazepines (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+171,BenzoDer,Niet/wel benzodiazepine derivatives (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+171,BenzoDer,Niet/wel benzodiazepine derivatives (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+171,BenzoDer,Niet/wel benzodiazepine derivatives (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+171,BenzoDer,Niet/wel benzodiazepine derivatives (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+172,BenzoRel,Niet/wel benzodiazepine related medication (vanaf juli 2001), ,    0,Nee, ,"8, 9"
+172,BenzoRel,Niet/wel benzodiazepine related medication (vanaf juli 2001), ,    1,Ja, ,"8, 9"
+172,BenzoRel,Niet/wel benzodiazepine related medication (vanaf juli 2001), ,    8,niet geregistreerd voor 1-7-2001, ,"8, 9"
+172,BenzoRel,Niet/wel benzodiazepine related medication (vanaf juli 2001), ,    9,Missend, ,"8, 9"
+173,Thyr,Niet/wel schildklier-medicatie (thyreomimetica en thyreostatica), ,    0,Nee, ,9
+173,Thyr,Niet/wel schildklier-medicatie (thyreomimetica en thyreostatica), ,    1,Ja, ,9
+173,Thyr,Niet/wel schildklier-medicatie (thyreomimetica en thyreostatica), ,    9,Missend, ,9
+174,Amiodar,Niet/wel Amiodaron, ,    0,Nee, ,9
+174,Amiodar,Niet/wel Amiodaron, ,    1,Ja, ,9
+174,Amiodar,Niet/wel Amiodaron, ,    9,Missend, ,9
+175,Lithium,Niet/wel Lithium, ,    0,Nee, ,9
+175,Lithium,Niet/wel Lithium, ,    1,Ja, ,9
+175,Lithium,Niet/wel Lithium, ,    9,Missend, ,9
+176,mht_alln,Aantal verschillende groepen antihypertensiva, ,    ., , , 
+177,mht_all,Gebruik van antihypertensiva, ,    0,Nee, ,999
+177,mht_all,Gebruik van antihypertensiva, ,    1,Ja, ,999
+178,lipmid,Gebruik lipidenverlagende middelen, ,    0,Nee, ,999
+178,lipmid,Gebruik lipidenverlagende middelen, ,    1,Ja, ,999
+179,statine,Gebruik statine (NB voor 01-07-2001 geen onderscheid verschillende lipidenverlagende middelen), ,    0,Nee, ,999
+179,statine,Gebruik statine (NB voor 01-07-2001 geen onderscheid verschillende lipidenverlagende middelen), ,    1,Ja, ,999
+180,pamid,Gebruik plaatjesaggregatie remmers, ,    0,Nee, ,999
+180,pamid,Gebruik plaatjesaggregatie remmers, ,    1,Ja, ,999
+181,aspirine,Gebruik aspirine (NB voor 01-07-2001 geen onderscheid verschillende plaatjesaggregatie remmers), ,    0,Nee, ,999
+181,aspirine,Gebruik aspirine (NB voor 01-07-2001 geen onderscheid verschillende plaatjesaggregatie remmers), ,    1,Ja, ,999
+182,pa_stolmid,Gebruik plaatjesaggregatie remmer of orale anticoagulantia, ,    0,Nee, ,999
+182,pa_stolmid,Gebruik plaatjesaggregatie remmer of orale anticoagulantia, ,    1,Ja, ,999
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,    0,geen klin.man.vaatlijden, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,    1,Inclusie: Cerebraal vaatlijden, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,    2,Inclusie: Perifeer vaatlijden, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,    6,Inclusie: Aneurysma abdominale aorta, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,   10,Inclusie: Cardiaal vaatlijden (PTCA), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,   11,Inclusie: Cardiaal vaatlijden (CABG), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,   12,Inclusie: Cardiaal vaatlijden (overig), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  102,vraag 1.02 'Geopereerd?'=Aneurysma aorta, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  118,vraag 1.02 'Geopereerd?'=Operatie halsslagader, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  119,vraag 1.02 'Geopereerd?'=Desobstructie intracraniele vaten, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  121,vraag 1.02 'Geopereerd?'=Dotter(hart), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  127,vraag 1.02 'Geopereerd?'=Bypass(hart), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  145,vraag 1.02 'Geopereerd?'=Amputatie voorvoet, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  168,vraag 1.02 'Geopereerd?'=Vaatoperatie onderste extremiteit, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  169,vraag 1.02 'Geopereerd?'=Voetamputatie, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  172,vraag 1.02 'Geopereerd?'=Aneurysma Aorta: buikoperatie: verwijding/vernauwing aorta, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  173,vraag 1.02 'Geopereerd?'=Aneurysma Aorta: endovasculaire behandeling via de lies, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  175,vraag 1.02 'Geopereerd?'=Teenamputatie, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  176,vraag 1.02 'Geopereerd?'=Amputatie been/voet (conversie SMART), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  177,vraag 1.02 'Geopereerd?'=Amputatie bovenbeen, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  178,vraag 1.02 'Geopereerd?'=Amputatie anders, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  179,vraag 1.02 'Geopereerd?'=Amputatie onderbeen, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  180,vraag 1.02 'Geopereerd?'=Aorta broekprothese, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  181,vraag 1.02 'Geopereerd?'=Stent in de benen, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  182,vraag 1.02 'Geopereerd?'=Beenvaten operatie, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  183,vraag 1.02 'Geopereerd?'=Dotter of stent in halsslagader, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  190,vraag 1.02 'Geopereerd?'=Hart: CABG/PTCA (conversie SMART), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  191,vraag 1.02 'Geopereerd?'=dotter/stenting coronairen, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  200,vraag 1.02 'Geopereerd?'=Beenvaten operaties/PTA (conversie SMART), , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  321,vraag 3.21 'Ooit hartinfarct?'=Ja, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  323,vraag 3.23 'Ooit hartstilstand?'=Ja, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  325,vraag 3.25 'Ooit aneurysma van de aorta?'=Ja, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  410,vraag 4.10 'Ooit beroerte?'=Ja, , 
+183,KliMaC,Soort uiting eerste klin.manifest vaatlijden, ,  519,vraag 5.19 'Ooit amputatie voet/been?'=Ja, , 
+184,KliMaYr,Jaar eerste uiting klin.manifest vaatlijden, , 9997,startjaar klacht mist, ,"9997, 9998, 9999"
+184,KliMaYr,Jaar eerste uiting klin.manifest vaatlijden, , 9998,operatiejaar mist, ,"9997, 9998, 9999"
+184,KliMaYr,Jaar eerste uiting klin.manifest vaatlijden, , 9999,n.v.t., ,"9997, 9998, 9999"
+185,KliMaDur,Duur vaatlijden in jaren bij inclusie, ,    ., , ,99
+186,KliMaDrD,Duur vaatlijden >= 1 jaar bij inclusie, ,    9,n.v.t., ,9
+187,spMEThw,Sport in METs * uren / week, ,    0,sport niet (Vr.9.01=Nee), ,"666.00, 999.00"
+187,spMEThw,Sport in METs * uren / week, ,  666,overige sport zonder MET waarde, ,"666.00, 999.00"
+187,spMEThw,Sport in METs * uren / week, ,  999,missend, ,"666.00, 999.00"
+188,acMEThw,Anders actief (naast sport) in METs * uren / week (vnl. wandelen/fietsen/tuinieren), ,    ., , ,999.00
+189,bwMEThw,Totaal bewegen (sport+anders) in METs * uren / week, ,    ., , ,999.00
+190,SmrtRisk,Risk of next event in 10 years, ,    ., , , 
+191,afkapdat,Afkapdatum i.v.m. registratie-bias 1-1-2022, ,    ., , , 
+192,edood_d,Datum overlijden, ,    ., , , 
+193,edood_f,FU-duur tot overlijden (in dagen), ,    ., , , 
+194,edood_n,Niet/wel overlijden, ,    0,In leven, , 
+194,edood_n,Niet/wel overlijden, ,    1,Overleden, , 
+194,edood_n,Niet/wel overlijden, ,    2,Lost to FU, , 
+195,edood_s,Doodsoorzaak, ,    0,Niet overleden, , 
+195,edood_s,Doodsoorzaak, ,  101,Fataal myocard infarct, , 
+195,edood_s,Doodsoorzaak, ,  102,Fataal herseninfarct, , 
+195,edood_s,Doodsoorzaak, ,  103,Fatale hersenbloeding, , 
+195,edood_s,Doodsoorzaak, ,  104,"Fatale beroerte, aard niet vastgesteld", , 
+195,edood_s,Doodsoorzaak, ,  105,Zekere plotselinge dood, , 
+195,edood_s,Doodsoorzaak, ,  106,Waarschijnlijke plotselinge dood, , 
+195,edood_s,Doodsoorzaak, ,  107,Terminale decompensatio cordis, , 
+195,edood_s,Doodsoorzaak, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+195,edood_s,Doodsoorzaak, ,  109,Overige vasculaire dood, , 
+195,edood_s,Doodsoorzaak, ,  110,Fatale infectie, , 
+195,edood_s,Doodsoorzaak, ,  111,Fatale maligniteit, , 
+195,edood_s,Doodsoorzaak, ,  112,Onnatuurlijke dood, , 
+195,edood_s,Doodsoorzaak, ,  113,Overige niet-vasculaire dood, , 
+195,edood_s,Doodsoorzaak, ,  125,Ernstige extracraniele bloeding: met als gevolg overlijden, , 
+195,edood_s,Doodsoorzaak, ,  221,Nog geen classificatie, , 
+196,edoodvas,Niet/wel overleden met vasculaire doodsoorzaak, ,    0,Nee, , 
+196,edoodvas,Niet/wel overleden met vasculaire doodsoorzaak, ,    1,Ja, , 
+196,edoodvas,Niet/wel overleden met vasculaire doodsoorzaak, ,    2,Lost to FU, , 
+197,edoodnon,Niet/wel overleden met non-vasculaire doodsoorzaak, ,    0,Nee, , 
+197,edoodnon,Niet/wel overleden met non-vasculaire doodsoorzaak, ,    1,Ja, , 
+197,edoodnon,Niet/wel overleden met non-vasculaire doodsoorzaak, ,    2,Lost to FU, , 
+198,ehers_d,Datum herseninfarct EP, ,    ., , , 
+199,ehers_f,FU-duur tot herseninfarct EP (in dagen), ,    ., , , 
+200,ehers_n,Niet/wel herseninfarct EP, ,    0,FU afgekapt, , 
+200,ehers_n,Niet/wel herseninfarct EP, ,    1,Herseninfarct EP, , 
+200,ehers_n,Niet/wel herseninfarct EP, ,    2,Lost to FU, , 
+200,ehers_n,Niet/wel herseninfarct EP, ,    3,Overleden (anderszins), , 
+201,ehers_s,Soort herseninfarct EP, ,    0,Geen herseninfarct EP, , 
+201,ehers_s,Soort herseninfarct EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+201,ehers_s,Soort herseninfarct EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+201,ehers_s,Soort herseninfarct EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+201,ehers_s,Soort herseninfarct EP, ,  102,Fataal herseninfarct, , 
+202,ebero_d,Datum beroerte EP, ,    ., , , 
+203,ebero_f,FU-duur tot beroerte EP (in dagen), ,    ., , , 
+204,ebero_n,Niet/wel beroerte EP, ,    0,FU afgekapt, , 
+204,ebero_n,Niet/wel beroerte EP, ,    1,Beroerte EP, , 
+204,ebero_n,Niet/wel beroerte EP, ,    2,Lost to FU, , 
+204,ebero_n,Niet/wel beroerte EP, ,    3,Overleden (anderszins), , 
+205,ebero_s,Soort beroerte EP, ,    0,Geen beroerte EP, , 
+205,ebero_s,Soort beroerte EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+205,ebero_s,Soort beroerte EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+205,ebero_s,Soort beroerte EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+205,ebero_s,Soort beroerte EP, ,   14,"Zekere beroerte, zekere hersenbloeding", , 
+205,ebero_s,Soort beroerte EP, ,   15,"Zekere beroerte, geen CT-scan gemaakt", , 
+205,ebero_s,Soort beroerte EP, ,   20,Subarachnoidale bloeding, , 
+205,ebero_s,Soort beroerte EP, ,  102,Fataal herseninfarct, , 
+205,ebero_s,Soort beroerte EP, ,  103,Fatale hersenbloeding, , 
+205,ebero_s,Soort beroerte EP, ,  104,"Fatale beroerte, aard niet vastgesteld", , 
+206,ecard_d,Datum ischemische cardiale complicatie EP, ,    ., , , 
+207,ecard_f,FU-duur tot ischemische cardiale complicatie EP (in dagen), ,    ., , , 
+208,ecard_n,Niet/wel ischemische cardiale complicatie EP, ,    0,FU afgekapt, , 
+208,ecard_n,Niet/wel ischemische cardiale complicatie EP, ,    1,Ischemische cardiale complicatie EP, , 
+208,ecard_n,Niet/wel ischemische cardiale complicatie EP, ,    2,Lost to FU, , 
+208,ecard_n,Niet/wel ischemische cardiale complicatie EP, ,    3,Overleden (anderszins), , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,    0,Geen ischemische cardiale complicatie EP, , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,   41,Zeker myocard infarct, , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,   42,Waarschijnlijk myocard infarct, , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,  101,Fataal myocard infarct, , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,  105,Zekere plotselinge dood, , 
+209,ecard_s,Soort ischemische cardiale complicatie EP, ,  106,Waarschijnlijke plotselinge dood, , 
+210,ebloe_d,Datum ernstige bloeding EP, ,    ., , , 
+211,ebloe_f,FU-duur tot ernstige bloeding EP (in dagen), ,    ., , , 
+212,ebloe_n,Niet/wel ernstige bloeding EP, ,    0,FU afgekapt, , 
+212,ebloe_n,Niet/wel ernstige bloeding EP, ,    1,Ernstige bloeding EP, , 
+212,ebloe_n,Niet/wel ernstige bloeding EP, ,    2,Lost to FU, , 
+212,ebloe_n,Niet/wel ernstige bloeding EP, ,    3,Overleden (anderszins), , 
+213,ebloe_s,Soort ernstige bloeding EP, ,    0,Geen ernstige bloeding EP, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   14,"Zekere beroerte, zekere hersenbloeding", , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   18,Epidurale bloeding, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   19,Subdurale bloeding, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   20,Subarachnoidale bloeding, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   35,Zekere retina bloeding, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   52,Niet-fatale ruptuur aneurysma abdominale aorta, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   53,Onbekend - ruptuur aneurysma abdominale aorta, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   91,Ernstige extracraniele bloeding: opname, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,   92,Ernstige extracraniele bloeding: interventie-gerelateerd, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,  103,Fatale hersenbloeding, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+213,ebloe_s,Soort ernstige bloeding EP, ,  125,Ernstige extracraniele bloeding: met als gevolg overlijden, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3021,Ernstige bloeding retroperitoneaal, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3022,Ernstige bloeding subduraal, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3023,Ernstige bloeding tractus digestivus, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3024,Ernstige bloeding tractus respiratorius, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3025,Ernstige bloeding retroperitoneaal tractus urogenitalis, , 
+213,ebloe_s,Soort ernstige bloeding EP, , 3026,Ernstige bloeding elders, , 
+214,evcom_d,Datum vasculaire complicatie (klinisch) EP, ,    ., , , 
+215,evcom_f,FU-duur tot vasculaire complicatie (klinisch) EP (in dagen), ,    ., , , 
+216,evcom_n,Niet/wel vasculaire complicatie (klinisch) EP, ,    0,FU afgekapt, , 
+216,evcom_n,Niet/wel vasculaire complicatie (klinisch) EP, ,    1,Vasculaire complicatie (klinisch) EP, , 
+216,evcom_n,Niet/wel vasculaire complicatie (klinisch) EP, ,    2,Lost to FU, , 
+216,evcom_n,Niet/wel vasculaire complicatie (klinisch) EP, ,    3,Overleden (anderszins), , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,    0,Geen vasculaire complicatie (klinisch) EP, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   14,"Zekere beroerte, zekere hersenbloeding", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   15,"Zekere beroerte, geen CT-scan gemaakt", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   20,Subarachnoidale bloeding, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   31,Zeker retina infarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   32,Waarschijnlijk retina infarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   35,Zekere retina bloeding, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   41,Zeker myocard infarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,   42,Waarschijnlijk myocard infarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  101,Fataal myocard infarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  102,Fataal herseninfarct, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  103,Fatale hersenbloeding, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  104,"Fatale beroerte, aard niet vastgesteld", , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  105,Zekere plotselinge dood, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  106,Waarschijnlijke plotselinge dood, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  107,Terminale decompensatio cordis, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+217,evcom_s,Soort vasculaire complicatie (klinisch) EP, ,  109,Overige vasculaire dood, , 
+218,evint_d,Datum vasculaire complicatie of interventie EP, ,    ., , , 
+219,evint_f,FU-duur tot vasculaire complicatie of interventie EP (in dagen), ,    ., , , 
+220,evint_n,Niet/wel vasculaire complicatie of interventie EP, ,    0,FU afgekapt, , 
+220,evint_n,Niet/wel vasculaire complicatie of interventie EP, ,    1,Vasculaire complicatie of interventie EP, , 
+220,evint_n,Niet/wel vasculaire complicatie of interventie EP, ,    2,Lost to FU, , 
+220,evint_n,Niet/wel vasculaire complicatie of interventie EP, ,    3,Overleden (anderszins), , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,    0,Geen vasculaire complicatie of interventie EP, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   14,"Zekere beroerte, zekere hersenbloeding", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   15,"Zekere beroerte, geen CT-scan gemaakt", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   20,Subarachnoidale bloeding, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   31,Zeker retina infarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   32,Waarschijnlijk retina infarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   35,Zekere retina bloeding, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   41,Zeker myocard infarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   42,Waarschijnlijk myocard infarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   72,Amputatie teen, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   73,Amputatie voet, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   74,Amputatie onder de knie, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   75,Amputatie door de knie, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   76,Amputatie boven de knie, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   82,Vaatinterventie - operatie, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   83,Vaatinterventie - dotter of stentplaatsing, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   84,Vaatinterventie - anderszins, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,   85,Vaatinterventie - niet gespecificeerd, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  101,Fataal myocard infarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  102,Fataal herseninfarct, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  103,Fatale hersenbloeding, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  104,"Fatale beroerte, aard niet vastgesteld", , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  105,Zekere plotselinge dood, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  106,Waarschijnlijke plotselinge dood, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  107,Terminale decompensatio cordis, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+221,evint_s,Soort vasculaire complicatie of interventie EP, ,  109,Overige vasculaire dood, , 
+222,vintloca,Locatie vaatinterventie EP, ,    1,Hals, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    2,Hart, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    3,Aorta, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    4,Nieren, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    5,Illiaca, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    6,Benen, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,    7,Aorta / Illiaca, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,   66,Overige, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,   98,Niet van toepassing, ,"98, 99"
+222,vintloca,Locatie vaatinterventie EP, ,   99,Missend, ,"98, 99"
+223,vintaard,Aard vaatinterventie EP, ,    1,Endovasculair, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    2,Operatief, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    4,PTCA, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    5,CABG, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    6,Klepvervanging, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    8,Niet van toepassing, ,"8, 9"
+223,vintaard,Aard vaatinterventie EP, ,    9,Missend, ,"8, 9"
+224,vinttoel,Toelichting vaatinterventie EP, ,    ., , , 
+225,ebrei_d,Datum brein EP, ,    ., , , 
+226,ebrei_f,FU-duur tot brein EP (in dagen), ,    ., , , 
+227,ebrei_n,Niet/wel brein EP, ,    0,FU afgekapt, , 
+227,ebrei_n,Niet/wel brein EP, ,    1,Brein EP, , 
+227,ebrei_n,Niet/wel brein EP, ,    2,Lost to FU, , 
+227,ebrei_n,Niet/wel brein EP, ,    3,Overleden (anderszins), , 
+228,ebrei_s,Soort brein EP, ,    0,Geen brein EP, , 
+228,ebrei_s,Soort brein EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+228,ebrei_s,Soort brein EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+228,ebrei_s,Soort brein EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+228,ebrei_s,Soort brein EP, ,   20,Subarachnoidale bloeding, , 
+228,ebrei_s,Soort brein EP, ,   82,Operatie / hals, , 
+228,ebrei_s,Soort brein EP, ,   83,Dotter of stentplaatsing / hals, , 
+228,ebrei_s,Soort brein EP, ,  102,Fataal herseninfarct, , 
+229,ehart_d,Datum hart EP, ,    ., , , 
+230,ehart_f,FU-duur tot hart EP (in dagen), ,    ., , , 
+231,ehart_n,Niet/wel hart EP, ,    0,FU afgekapt, , 
+231,ehart_n,Niet/wel hart EP, ,    1,Hart EP, , 
+231,ehart_n,Niet/wel hart EP, ,    2,Lost to FU, , 
+231,ehart_n,Niet/wel hart EP, ,    3,Overleden (anderszins), , 
+232,ehart_s,Soort hart EP, ,    0,Geen hart EP, , 
+232,ehart_s,Soort hart EP, ,   41,Zeker myocard infarct, , 
+232,ehart_s,Soort hart EP, ,   42,Waarschijnlijk myocard infarct, , 
+232,ehart_s,Soort hart EP, ,   82,CABG / hart, , 
+232,ehart_s,Soort hart EP, ,   83,PTCA / hart, , 
+232,ehart_s,Soort hart EP, ,  101,Fataal myocard infarct, , 
+232,ehart_s,Soort hart EP, ,  105,Zekere plotselinge dood, , 
+232,ehart_s,Soort hart EP, ,  106,Waarschijnlijke plotselinge dood, , 
+232,ehart_s,Soort hart EP, ,  107,Terminale decompensatio cordis, , 
+233,eaort_d,Datum aorta EP, ,    ., , , 
+234,eaort_f,FU-duur tot aorta EP (in dagen), ,    ., , , 
+235,eaort_n,Niet/wel aorta EP, ,    0,FU afgekapt, , 
+235,eaort_n,Niet/wel aorta EP, ,    1,Aorta EP, , 
+235,eaort_n,Niet/wel aorta EP, ,    2,Lost to FU, , 
+235,eaort_n,Niet/wel aorta EP, ,    3,Overleden (anderszins), , 
+236,eaort_s,Soort aorta EP, ,    0,Geen aorta EP, , 
+236,eaort_s,Soort aorta EP, ,   52,Niet-fatale ruptuur aneurysma abdominale aorta, , 
+236,eaort_s,Soort aorta EP, ,   82,Operatie / aorta, , 
+236,eaort_s,Soort aorta EP, ,   83,Dotter of stentplaatsing / aorta, , 
+236,eaort_s,Soort aorta EP, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+237,enier_d,Datum nier EP, ,    ., , , 
+238,enier_f,FU-duur tot nier EP (in dagen), ,    ., , , 
+239,enier_n,Niet/wel nier EP, ,    0,FU afgekapt, , 
+239,enier_n,Niet/wel nier EP, ,    1,Nier EP, , 
+239,enier_n,Niet/wel nier EP, ,    2,Lost to FU, , 
+239,enier_n,Niet/wel nier EP, ,    3,Overleden, , 
+240,enier_s,Soort nier EP, ,    0,Geen nier EP, , 
+240,enier_s,Soort nier EP, ,   61,Terminale nierinsufficientie - chronisch dialyse, , 
+240,enier_s,Soort nier EP, ,   62,Nierinsufficientie - tijdelijke dialyse, , 
+240,enier_s,Soort nier EP, ,   63,Nierinsufficientie - geen dialyse, , 
+240,enier_s,Soort nier EP, ,   82,Operatie / nier, , 
+240,enier_s,Soort nier EP, ,   83,Dotter of stentplaatsing / nier, , 
+241,eilia_d,Datum iliaca EP, ,    ., , , 
+242,eilia_f,FU-duur tot iliaca EP (in dagen), ,    ., , , 
+243,eilia_n,Niet/wel iliaca EP, ,    0,FU afgekapt, , 
+243,eilia_n,Niet/wel iliaca EP, ,    1,Iliaca EP, , 
+243,eilia_n,Niet/wel iliaca EP, ,    2,Lost to FU, , 
+243,eilia_n,Niet/wel iliaca EP, ,    3,Overleden, , 
+244,eilia_s,Soort iliaca EP, ,    0,Geen iliaca EP, , 
+244,eilia_s,Soort iliaca EP, ,   82,Operatie / iliaca, , 
+244,eilia_s,Soort iliaca EP, ,   83,Dotter of stentplaatsing / iliaca, , 
+245,ebeen_d,Datum been EP, ,    ., , , 
+246,ebeen_f,FU-duur tot been EP (in dagen), ,    ., , , 
+247,ebeen_n,Niet/wel been EP, ,    0,FU afgekapt, , 
+247,ebeen_n,Niet/wel been EP, ,    1,Been EP, , 
+247,ebeen_n,Niet/wel been EP, ,    2,Lost to FU, , 
+247,ebeen_n,Niet/wel been EP, ,    3,Overleden, , 
+248,ebeen_s,Soort been EP, ,    0,Geen been EP, , 
+248,ebeen_s,Soort been EP, ,   72,Amputatie teen, , 
+248,ebeen_s,Soort been EP, ,   73,Amputatie voet, , 
+248,ebeen_s,Soort been EP, ,   74,Amputatie onder de knie, , 
+248,ebeen_s,Soort been EP, ,   75,Amputatie door de knie, , 
+248,ebeen_s,Soort been EP, ,   76,Amputatie boven de knie, , 
+248,ebeen_s,Soort been EP, ,   82,Operatie / been, , 
+248,ebeen_s,Soort been EP, ,   83,Dotter of stentplaatsing / been, , 
+249,elaag_d,Datum 'laag deel' EP, ,    ., , , 
+250,elaag_f,FU-duur tot 'laag deel' EP (in dagen), ,    ., , , 
+251,elaag_n,Niet/wel 'laag deel' EP, ,    0,FU afgekapt, , 
+251,elaag_n,Niet/wel 'laag deel' EP, ,    1,'Laag deel' EP, , 
+251,elaag_n,Niet/wel 'laag deel' EP, ,    2,Lost to FU, , 
+251,elaag_n,Niet/wel 'laag deel' EP, ,    3,Overleden, , 
+252,elaag_s,Soort 'laag deel' EP, ,    0,Geen 'laag deel' EP, , 
+252,elaag_s,Soort 'laag deel' EP, ,   72,Amputatie teen, , 
+252,elaag_s,Soort 'laag deel' EP, ,   73,Amputatie voet, , 
+252,elaag_s,Soort 'laag deel' EP, ,   74,Amputatie onder de knie, , 
+252,elaag_s,Soort 'laag deel' EP, ,   75,Amputatie door de knie, , 
+252,elaag_s,Soort 'laag deel' EP, ,   76,Amputatie boven de knie, , 
+252,elaag_s,Soort 'laag deel' EP, ,   82,Operatie / iliaca of been, , 
+252,elaag_s,Soort 'laag deel' EP, ,   83,Dotter of stentplaatsing / iliaca of been, , 
+253,eamp_d,Datum amputatie EP, ,    ., , , 
+254,eamp_f,FU-duur tot amputatie EP (in dagen), ,    ., , , 
+255,eamp_n,Niet/wel amputatie EP, ,    0,FU afgekapt, , 
+255,eamp_n,Niet/wel amputatie EP, ,    1,amputatie EP, , 
+255,eamp_n,Niet/wel amputatie EP, ,    2,Lost to FU, , 
+255,eamp_n,Niet/wel amputatie EP, ,    3,Overleden, , 
+256,eamp_s,Soort amputatie EP, ,    0,Geen amputatie EP, , 
+256,eamp_s,Soort amputatie EP, ,   72,Amputatie teen, , 
+256,eamp_s,Soort amputatie EP, ,   73,Amputatie voet, , 
+256,eamp_s,Soort amputatie EP, ,   74,Amputatie onder de knie, , 
+256,eamp_s,Soort amputatie EP, ,   75,Amputatie door de knie, , 
+256,eamp_s,Soort amputatie EP, ,   76,Amputatie boven de knie, , 
+257,emi_d,Datum myocardial infarction  EP, ,    ., , , 
+258,emi_f,FU-duur tot myocardial infarction EP (in dagen), ,    ., , , 
+259,emi_n,Niet/wel myocardial infarction  EP, ,    0,FU afgekapt, , 
+259,emi_n,Niet/wel myocardial infarction  EP, ,    1,Myocardial infarction EP, , 
+259,emi_n,Niet/wel myocardial infarction  EP, ,    2,Lost to FU, , 
+259,emi_n,Niet/wel myocardial infarction  EP, ,    3,Overleden (anderszins), , 
+260,emi_s,Soort myocardial infarction EP, ,    0,Geen myocardial infarction EP, , 
+260,emi_s,Soort myocardial infarction EP, ,   41,Zeker myocard infarct, , 
+260,emi_s,Soort myocardial infarction EP, ,   42,Waarschijnlijk myocard infarct, , 
+260,emi_s,Soort myocardial infarction EP, ,  101,Fataal myocard infarct, , 
+261,ervasb_d,Datum revascularisatie been EP, ,    ., , , 
+262,ervasb_f,FU-duur tot revascularisatie been EP (in dagen), ,    ., , , 
+263,ervasb_n,Niet/wel revascularisatie been EP, ,    0,FU afgekapt, , 
+263,ervasb_n,Niet/wel revascularisatie been EP, ,    1,Revascularisatie been EP, , 
+263,ervasb_n,Niet/wel revascularisatie been EP, ,    2,Lost to FU, , 
+263,ervasb_n,Niet/wel revascularisatie been EP, ,    3,Overleden (anderszins), , 
+264,ervasb_s,Soort revascularisatie been EP, ,    0,Geen revascularisatie been EP, , 
+264,ervasb_s,Soort revascularisatie been EP, ,   82,Vaatinterventie - operatie, , 
+264,ervasb_s,Soort revascularisatie been EP, ,   83,Vaatinterventie - dotter of stentplaatsing, , 
+265,ervasl_d,Datum revascularisatie laag deel EP, ,    ., , , 
+266,ervasl_f,FU-duur tot revascularisatie laag deel EP (in dagen), ,    ., , , 
+267,ervasl_n,Niet/wel revascularisatie laag deel EP, ,    0,FU afgekapt, , 
+267,ervasl_n,Niet/wel revascularisatie laag deel EP, ,    1,Revascularisatie laag deel EP, , 
+267,ervasl_n,Niet/wel revascularisatie laag deel EP, ,    2,Lost to FU, , 
+267,ervasl_n,Niet/wel revascularisatie laag deel EP, ,    3,Overleden (anderszins), , 
+268,ervasl_s,Soort revascularisatie laag deel EP, ,    0,Geen revascularisatie laag deel EP, , 
+268,ervasl_s,Soort revascularisatie laag deel EP, ,  582,Vaatinterventie Iliaca- operatie, , 
+268,ervasl_s,Soort revascularisatie laag deel EP, ,  583,Vaatinterventie Iliaca- dotter of stentplaatsing, , 
+268,ervasl_s,Soort revascularisatie laag deel EP, ,  682,Vaatinterventie Been- operatie, , 
+268,ervasl_s,Soort revascularisatie laag deel EP, ,  683,Vaatinterventie Been- dotter of stentplaatsing, , 
+269,eHF_d,Datum hartfalen EP, ,    ., , , 
+270,eHF_f,FU-duur tot hartfalen EP (in dagen), ,    ., , , 
+271,eHF_n,Niet/wel hartfalen EP, ,    0,FU afgekapt, , 
+271,eHF_n,Niet/wel hartfalen EP, ,    1,Hartfalen EP, , 
+271,eHF_n,Niet/wel hartfalen EP, ,    2,Lost to FU, , 
+271,eHF_n,Niet/wel hartfalen EP, ,    3,Overleden (anderszins), , 
+272,eHF_s,Soort hartfalenl EP, ,    0,Geen hartfalen EP, , 
+272,eHF_s,Soort hartfalenl EP, ,  312,systolisch hartfalen tgv coronair lijden, , 
+272,eHF_s,Soort hartfalenl EP, ,  313,systolisch hartfalen tgv overige oorzaken, , 
+272,eHF_s,Soort hartfalenl EP, ,  314,hartfalen met behouden ejectie fractie tgv overige oorzaken, , 
+272,eHF_s,Soort hartfalenl EP, ,  315,Hartfalen met behouden ejectie fractie tgv kleplijden, , 
+272,eHF_s,Soort hartfalenl EP, ,  316,Hartfalen met behouden ejectie fractie tgv coronair lijden, , 
+272,eHF_s,Soort hartfalenl EP, ,  317,Systolisch hartfalen tgv kleplijden, , 
+273,eESRD_d,Datum end stage renal disease EP, ,    ., , , 
+274,eESRD_f,FU-duur tot end stage renal disease EP (in dagen), ,    ., , , 
+275,eESRD_n,Niet/wel end stage renal disease EP, ,    0,FU afgekapt, , 
+275,eESRD_n,Niet/wel end stage renal disease EP, ,    1,end stage renal disease EP, , 
+275,eESRD_n,Niet/wel end stage renal disease EP, ,    2,Lost to FU, , 
+275,eESRD_n,Niet/wel end stage renal disease EP, ,    3,Overleden (anderszins), , 
+276,eESRD_s,Soort end stage renal disease EP, ,    0,Geen end stage renal disease EP, , 
+276,eESRD_s,Soort end stage renal disease EP, ,   61,Terminale nierinsufficientie - chronisch dialyse, , 
+277,eIntrv_d,Datum interventie EP, ,    ., , , 
+278,eIntrv_f,FU-duur tot interventie EP (in dagen), ,    ., , , 
+279,eIntrv_n,Niet/wel interventie EP, ,    0,FU afgekapt, , 
+279,eIntrv_n,Niet/wel interventie EP, ,    1,Interventie EP, , 
+279,eIntrv_n,Niet/wel interventie EP, ,    2,Lost to FU, , 
+279,eIntrv_n,Niet/wel interventie EP, ,    3,Overleden (anderszins), , 
+280,eIntrv_s,Soort interventie EP, ,    0,Geen interventie EP, , 
+280,eIntrv_s,Soort interventie EP, ,   73,Amputatie voet, , 
+280,eIntrv_s,Soort interventie EP, ,   74,Amputatie onder de knie, , 
+280,eIntrv_s,Soort interventie EP, ,   75,Amputatie door de knie, , 
+280,eIntrv_s,Soort interventie EP, ,   76,Amputatie boven de knie, , 
+280,eIntrv_s,Soort interventie EP, ,   82,Vaatinterventie - operatie, , 
+280,eIntrv_s,Soort interventie EP, ,   83,Vaatinterventie - dotter of stentplaatsing, , 
+280,eIntrv_s,Soort interventie EP, ,   84,Vaatinterventie - anderszins, , 
+280,eIntrv_s,Soort interventie EP, ,   85,Vaatinterventie - niet gespecificeerd, , 
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    1,Endovasculair, ,"8, 9"
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    2,Operatief, ,"8, 9"
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    4,PTCA, ,"8, 9"
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    5,CABG, ,"8, 9"
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    8,n.v.t., ,"8, 9"
+281,eIntAard,Soort ingreep eindpunt eIntrv_n / eCvdIv_n, ,    9,missend, ,"8, 9"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    1,Hals, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    2,Hart, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    3,Aorta, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    4,Nieren, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    5,Iliaca, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    6,Benen, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,    7,Aorta / Iliaca, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,   10,Intracranieel, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,   66,Overige, ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,   98,n.v.t., ,"98, 99"
+282,eIntLoca,Locatie eindpunt eIntrv_n / eCvdIv_n, ,   99,missend, ,"98, 99"
+283,eIntToel,Toelichting eindpunt eIntrv_n / eCvdIv_n, ,    ., , , 
+284,eCvdIv_d,Datum CVD of interventie EP, ,    ., , , 
+285,eCvdIv_f,FU-duur tot CVD of interventie EP (in dagen), ,    ., , , 
+286,eCvdIv_n,Niet/wel CVD of interventie EP, ,    0,FU afgekapt, , 
+286,eCvdIv_n,Niet/wel CVD of interventie EP, ,    1,CVD of Interventie EP, , 
+286,eCvdIv_n,Niet/wel CVD of interventie EP, ,    2,Lost to FU, , 
+286,eCvdIv_n,Niet/wel CVD of interventie EP, ,    3,Overleden (anderszins), , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,    0,Geen CVD of interventie EP, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   11,"Zekere beroerte, zeker geen hersenbloeding", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   12,"Zekere beroerte, zeker hemorrhagisch infarct", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   13,"Zekere beroerte, waarschijnlijk niet-hemorrhagisch infarct", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   14,"Zekere beroerte, zekere hersenbloeding", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   15,"Zekere beroerte, geen CT-scan gemaakt", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   20,Subarachnoidale bloeding, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   31,Zeker retina infarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   32,Waarschijnlijk retina infarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   35,Zekere retina bloeding, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   41,Zeker myocard infarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   42,Waarschijnlijk myocard infarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   73,Amputatie voet, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   74,Amputatie onder de knie, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   75,Amputatie door de knie, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   76,Amputatie boven de knie, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   82,Vaatinterventie - operatie, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   83,Vaatinterventie - dotter of stentplaatsing, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   84,Vaatinterventie - anderszins, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,   85,Vaatinterventie - niet gespecificeerd, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  101,Fataal myocard infarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  102,Fataal herseninfarct, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  103,Fatale hersenbloeding, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  104,"Fatale beroerte, aard niet vastgesteld", , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  105,Zekere plotselinge dood, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  106,Waarschijnlijke plotselinge dood, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  107,Terminale decompensatio cordis, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  108,Fatale ruptuur aneurysma abdominale aorta, , 
+287,eCvdIv_s,Soort CVD of interventie EP, ,  109,Overige vasculaire dood, , 

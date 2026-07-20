@@ -210,6 +210,20 @@ def preprocess_longitudinal_survival(
     with open(out_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
+    if dic is not None:
+        cov = dic.coverage_report()
+        rendered = cov["fields_seen"] - cov["coded_missing_omitted"]
+        print(f"\n{'-'*60}")
+        print("ENRICHMENT COVERAGE (across all splits)")
+        print(f"  fields serialized     : {cov['fields_seen']:,}  ({rendered:,} rendered, {cov['coded_missing_omitted']:,} coded-missing omitted)")
+        print(f"  label coverage        : {cov['label_hit_pct']}%  ({cov['label_hit']:,} of {rendered:,} rendered fields got a readable name)")
+        print(f"  coded values mapped   : {cov['values_translated']:,}")
+        print(f"  unmapped field names  : {cov['distinct_unmapped_fields']:,} distinct (kept as raw code)")
+        if cov["top_unmapped"]:
+            print("  most frequent unmapped fields (upload/check the dictionaries for these):")
+            for name, n in cov["top_unmapped"]:
+                print(f"      {n:>8,}  {name}")
+
     print(f"\n  Saved to {out_dir}")
     print(f"  Next: run scripts/smartehr/extract_qwen_embeddings_longitudinal.py on this directory.")
     print(f"{'='*60}")
@@ -230,11 +244,11 @@ if __name__ == "__main__":
                         help="Administrative censoring horizon in days. Default: 1825 (5 years).")
     parser.add_argument("--enrich", action="store_true",
                         help="Map coded field names / values to human-readable text via the data "
-                             "dictionaries (recommended for the LLM encoder; enables the coded-vs-readable ablation).")
+                             "dictionaries (recommended for the LLM encoder; enables the coded-vs-readable ablation). "
+                             "Prints a coverage report so you can see how much of your extraction the dictionaries match.")
     parser.add_argument("--dict-dir", type=str, default="data/smartehr/data_dicts",
-                        help="Directory with data_dict.csv, lab.csv, meting.csv, echo.csv (EHR columns/values).")
-    parser.add_argument("--smart-xls", type=str, default="data/SmartEPjan22dd12072023.xls",
-                        help="SMART baseline data-dictionary spreadsheet (baseline smart_utf8 columns/values).")
+                        help="Directory with data_dict.csv, lab.csv, meting.csv, echo.csv (EHR columns/values) "
+                             "and smart.csv (baseline SMART registry).")
     args = parser.parse_args()
 
     dic = None
@@ -243,10 +257,9 @@ if __name__ == "__main__":
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from smart_dictionaries import SmartDictionary
 
-        smart_xls = args.smart_xls if args.smart_xls and Path(args.smart_xls).exists() else None
-        if args.smart_xls and smart_xls is None:
-            print(f"  WARNING: --smart-xls {args.smart_xls} not found; baseline columns will keep coded names.")
-        dic = SmartDictionary(dict_dir=args.dict_dir, smart_xls=smart_xls)
+        if not Path(args.dict_dir).exists():
+            print(f"  WARNING: --dict-dir {args.dict_dir} not found; enrichment will fall back to raw codes.")
+        dic = SmartDictionary(dict_dir=args.dict_dir)
 
     preprocess_longitudinal_survival(
         jsonl_dir=args.jsonl_dir,

@@ -1,0 +1,39 @@
+label,Omschrijving,Count,explanation,extra comments
+Resp,Ademfreq.,4783743,Respiratory Rate,
+ABP,ArteriÎle bloeddruk,20340,Arterial Blood Pressure,
+BMI,Body Mass Index,19229,Body Mass Index,
+BUIKOMVANG,Buikomvang in centimeters,686,Waist Circumference (in centimeters),
+E-Score,E-Score vanaf 4 jaar,26506,E-Score from 4 years,Subpart of EMV score
+EMV,EMV Score,3556,EMV Score,
+FAC,FAC Score,315,FAC Score,
+GDS,Geriatric Depression Scale,337,Geriatric Depression Scale,
+Gewicht,Gewicht,121417,Weight,
+GLUCOSE,Glucose,95872,Glucose,
+HR,Heart Rate,9954266,Heart Rate,
+Lengte,Lengte,68918,Height,
+M-Score,M-Score vanaf 4 jaar,26475,M-Score from 4 years,Subpart of EMV score
+NIBPLBA,NIBP Arm Li,527,NIBP Arm Left,
+NIBPRBA,NIBP Arm Re,539,NIBP Arm Right,
+NIBP,Non-invasive Blood Pressure,396205,Non-invasive Blood Pressure,
+Peep,Peep,2360,Peep,Mechanical ventilation measurements
+PEEP(set),Peep(set),4579,Peep (set),Mechanical ventilation measurements
+PINSP,Pinsp,731,Pinsp,Mechanical ventilation measurements
+Pmean,Pmean,987,Pmean,Mechanical ventilation measurements
+POLS,Pols,461145,Pulse,
+PAP,Pulm.Art.Druk,81,Pulse Artery Pressure,
+PR,Pulse Rate,2267417,Pulse Rate,
+SpO2,Saturatie,3755546,Saturation,
+SCL90 AG,SCL90 Agorafobie,274,SCL90 Agoraphobia,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 AN,SCL90 Angst,274,SCL90 Anxiety,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 D,SCL90 Depressie,274,SCL90 Depression,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 H,SCL90 Hostiliteit,274,SCL90 Hostility,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 IDH,SCL90 Insufficientie van DH,274,SCL90 Insufficiency of the DH,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 O,SCL90 Overig,274,SCL90 Other,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 SP,SCL90 Slaapproblemen,273,SCL90 Sleep Problems,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 SK,SCL90 Somatische klachten,274,SCL90 Somatic Complaints,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 TS,SCL90 Totaalscore,274,SCL90 Total Score,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+SCL90 WS,SCL90 Wantrouwen en IS,274,SCL90 Distrust and IBS,"Symptom checklist 90 questionaire, not clinically indicated, do not use"
+Temp,Temp,229894,Temperature,
+Tot gezw g,Totaal gezwollen gewrichten,986,Total Joint Swelling,
+V-Score,V-Score vanaf 4 jaar,26411,V-Score from 4 years,Subpart of EMV score
+VENTMODEs,Ventilatie mode (set),4759,Ventilation Mode (set),Mechanical ventilation measurements

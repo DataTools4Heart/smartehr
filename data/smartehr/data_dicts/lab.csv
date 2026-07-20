@@ -1,0 +1,884 @@
+lab_testcode,Local Name,Counts
+125OH2VitD-BL,"1,25-di-OH-Vitamine D",171
+17aOHProgesteron-BL,17-OH-Progesteron,20
+25OHVitD-BL,25-OH-Vitamine D,6442
+3OHBoterzuur-BL,3-OH-Boterzuur,12
+4N_acSulfamethoxa-BL,4N-acsulfamethoxazol,27
+5Flucytosine-BL,5-Flucytosine,26
+5FlucytosineDS-BL,5-Flucytosine (DS),32
+5HIAA-UV,5-HIAA,48
+5HIAAVol-UV,5-HIAA /24u,44
+a1Antitrypsine-BL,alfa1-Antitrypsine,68
+AA_Aggr1.5-BL,Ara. Aggregatie 1.5,24
+ABObloedgroep-BL,ABO Bloedgroep,17090
+aCardioIgG-BL,anti-Cardiolipine IgG,546
+aCardioIgM-BL,anti-Cardiolipine IgM,546
+ACE-BL,ACE,379
+Acetazolamide-UP,Acetazolamide,10
+ACReceptor-BL,anti-Acetylchol.receptor,60
+ActBicarbArt-BL,Actueel Bicarbonaat (Art.),22037
+ActBicarbJugul-BL,Actuele Bicarbonaat (Jugul.),51
+ActBicarbMix-BL,Actuele Bicarbonaat (Mix.),1200
+ActBicarbVen-BL,Actuele Bicarbonaat (Ven.),6177
+ACTH-0h-BL,ACTH (+0:00 h),58
+ACTH-BL,ACTH,110
+ACTHR-BL,ACT+,8071
+ACTLR-BL,ACT-LR,29
+AdalimumabIgG-BL,Adalimumab IgG,20
+AdalimumabIgGDS-BL,Adalimumab IgG (DS),19
+ADP_Aggr2.5-BL,ADP Aggregatie 2.5,24
+ADP_Aggr5.0-BL,ADP Aggregatie 5.0,13
+ADPtrombocyten-BL,ADP trombocyten,25
+Adrenaline-BL,Adrenaline,57
+aFactorIX-BL,anti-Factor IX,68
+aFactorVIII-BL,anti-Factor VIII,210
+AFisoBotRel-BL,AF-isoÎnz. bot,25
+AFisoDarmRel-BL,AF-isoÎnz. darm/darmvariant,14
+AFisoLever1Rel-BL,AF-isoÎnz. lever,25
+AFisoLever2Rel-BL,AF-isoÎnz. lever 2,20
+aFoetoprot_DXI-BL,alfa-FoetoproteÔne (OUD),18
+aFoetoprot-BL,alfa-FoetoproteÔne,807
+Agranulatie-BL,Agranulatie,21
+AH-Screening-BL,AH-Screening,371
+AH-ScreeningInfo-BL,AH-Screening Info,310
+aHCV-BL,anti-HCV,10
+aHeparinePF4-BL,anti-Heparine PF4,44
+ALAT-BL,ALAT,69212
+Albu_kreat_ratio-UP,Albumine / creat ratio,15229
+Albumine-BL,Albumine,21756
+Aldosteron-BL,Aldosteron,2664
+Aldosteron-UV,Aldosteron /24u,12
+Algemeen-BL,Diverse bepalingen,25
+AlkFosfatase-BL,Alkalische fosfatase,45429
+AllergieOvPhadia-BL,"Type-I allergie, overige",10
+AlternariaTenuis-BL,Alternaria tenuis,21
+ALTpathProcent-BL,Alternative pathway,36
+ALTpathway-BL,Alternative Pathway,34
+AltTenuisTypeIII-BL,Alternaria tenuis,37
+Aluminium-BL,Aluminium,47
+AMH-BL,Anti-Mullerian Hormoon,93
+Amiodarone-BL,Amiodaron,424
+AmiodaroneDS-BL,Amiodarone (DS),340
+Amlodipine_AH-BL,Amlodipine,35
+Ammoniak-BL,Ammoniak,362
+Amphetamine-UP,Amfetamines,55
+Amylase-BL,Amylase,1662
+Amylase-UP,Amylase,11
+ANA100-BL,ANA (verd.: 1/100),857
+ANA1000-BL,ANA (verd.: 1/1000),30
+AncaMPO_S-BL,Anca-MPO_S,130
+AncaPR3_S-BL,Anca-PR3_S,130
+Androsteendion-BL,Androsteendion,19
+anti_c_klein-BL,allo as anti c,33
+anti_C-BL,allo as anti C,19
+anti_D-BL,allo as anti D,20
+anti_E-BL,allo as anti E,71
+anti_Fya-BL,allo as anti Fy(a),24
+anti_K-BL,allo as anti-K,74
+anti_kou_aspec-BL,koude as aspecifiek,16
+anti_M-BL,allo as anti M,43
+anti_S-BL,allo as anti S,29
+anti_warmte_aspec-BL,warmte as aspecifiek,59
+anti_Wra-BL,allo as anti Wr(a),39
+AntiAdalimumabIgG-BL,Anti-Adalimumab IgG,20
+AntiB2GPI_IgG-BL,anti-beta2 GP-I IgG,506
+AntiB2GPI_IgM-BL,anti-beta2 GP-I IgM,506
+AntiInfliximabIgG-BL,Anti-infliximab IgG,37
+Antiplasmine-BL,Antiplasmine,13
+Antistofbepaling-BL,Antistofbepaling,460
+AntiTromb-BL,Antitrombine activiteit,137
+APCresistentie-BL,APC resistentie,85
+ApoA1-BL,Apo-A1,393
+ApoA2-BL,Apo-A2,24
+ApoB-BL,Apo-B,8047
+ApoE-BL,Apo-E,12
+ApoEgenotype-BL,Apo-E genotype,221
+Appel-BL,Appel,15
+APTT-BL,APTT,8717
+APTT1op1NP-BL,APTT (1:1 Norm. plasma),66
+APTTcont-BL,APTT controle,6729
+APTThepneut-BL,APTT (heparine geneutr.),609
+ASAT-BL,ASAT,49068
+AspFumig-BL,Aspergillus fumigatus,151
+AspFumTypeIII-BL,Aspergillus fumigatus,126
+Aspirin-BL,VerifyNow Acetylsal.zuur,441
+aStofscreen1-BL,Antistofscreening,17103
+aStofscreen2-BL,Antistofscreening,17101
+aStofscreen3-BL,Antistofscreening,17093
+aThalassemie-BL,‡-Thalassemie (PCR),14
+ATPADPratio-BL,ATP / ADP ratio,25
+ATPtrombocyten-BL,ATP trombocyten,25
+AtypLymfoAbs-BL,Atypische Lymfocyten,1557
+Auerstaaf-BL,Auerse Staafjes,10
+auto_warmte_aspec-BL,auto warmte aspecifiek,53
+Azathioprine6MMP-BL,Azathioprine 6MMP,64
+Azathioprine6TGN-BL,Azathioprine 6TGN,64
+AzathioprineDS-BL,Azathioprine (DS),43
+b2Microglobuline-BL,beta2-Microglobuline,135
+b2Microglobuline-UP,beta2-Microglobuline,55
+b2Microglobuline-UV,beta2-Microglobuline,121
+Bacterien-UP,BacteriÎn,2167
+BarbituratenKwan-UP,Barbituraten,52
+BaseExcessArt-BL,Base Excess (Art.),22039
+BaseExcessJugul-BL,Base Excess (Jugul.),51
+BaseExcessMix-BL,Base Excess (Mix.),1200
+BaseExcessVen-BL,Base Excess (Ven.),6177
+BasofielAbs-BL,Basofiele granulocyten,21463
+BasoStip-BL,Basofiele stippeling,11
+BCR-ABL_result-BL,BCR-ABL_result,64
+Benzodiazepinen-UP,Benzodiazepines,54
+Berk-BL,Berk,85
+Bicarbonaat-BL,Bicarbonaat,17674
+Bijnierschors-BL,anti-Bijnierschors,21
+Bijvoet-BL,Bijvoet,76
+BiliDir-BL,Bilirubine Direct,5391
+Bilirubine-UP,Bilirubine,110
+BiliTot-BL,Bilirubine Totaal,25807
+BlastAbs-BL,Blasten,1556
+BloedingstijdSurg-BL,Bloedingstijd Surgicutt,41
+BNP-BL,BNP,4014
+BSE-BL,Bezinking (BSE),17978
+BTP-BL,BTP serum,32
+Bumetanide-UP,Bumetanide,10
+Busulfan-BL,Busulfan,36
+C3-BL,C3,429
+C4-BL,C4,433
+CA125-BL,CA 125,204
+CA153_DXI-BL,CA 15.3 (OUD),18
+CA153-BL,CA 15.3,547
+CA199-BL,CA 19.9,156
+Calcitonine-BL,Calcitonine,33
+Calcium-BL,Calcium,20373
+Calcium-UP,Calcium,162
+Calcium-UV,Calcium,452
+CalciumGeion-BL,Calcium geÔoniseerd,17665
+CalciumVol-UV,Calcium /24u,406
+cANCA-BL,c-ANCA (imm. fluoresc.),350
+Cannabis-UP,Cannabis (THC),55
+Canrenon-UP,Canrenon,10
+Carbamazepine-BL,Carbamazepine,39
+CarbamazepineDS-BL,Carbamazepine (DS),30
+CD19abs-BL,B-cellen absoluut,192
+CD19Rel-BL,B-cellen relatief,192
+CD3-CD1656+abs-BL,NK-cellen absoluut,192
+CD3-CD1656+Rel-BL,NK-cellen relatief,192
+CD3abs-BL,T-cellen absoluut,192
+CD3Rel-BL,T-cellen relatief,173
+CD4abs-BL,CD4 absoluut,6923
+CD4CD8Ratio-BL,CD4/CD8-ratio,169
+CD4Rel-BL,CD4 relatief,2022
+CD8abs-BL,CD8 absoluut,174
+CD8Rel-BL,CD8 relatief,169
+CDT-BL,CDT,14
+CEA_DXI-BL,CEA (OUD),31
+CEA-BL,CEA,1006
+Ceruloplasmine-BL,Ceruloplasmine,83
+Chloortalidon-UP,Chloortalidon,11
+Chloorthiazide-UP,Chloorthiazide,11
+Chloride-BL,Chloride,6770
+Chloride-UP,Chloride,276
+Chloride-UV,Chloride,110
+ChlorideVol-UV,Chloride /24u,106
+Chol-BL,Cholesterol,44236
+CholRatio-BL,Cholesterol-ratio,42
+ChromogrA-BL,Chromogranine A,34
+CIAP-BL,CIAP,14
+Ciclosporine-BL,Ciclosporine,676
+CiclosporineDS-BL,Ciclosporine (DS),506
+Citraat-UV,Citraat,115
+CitraatVol-UV,Citraat /24u,101
+Citrulline-BL,Citrulline (anti-CCP),260
+CK-BL,CK,31169
+CKBBfractie-BL,CK-BB fractie,13
+CKMBfractie-BL,CK-MB fractie,13
+CKMBmassa-BL,CK-MB massa,24523
+CKMMfractie-BL,CK-MM fractie,13
+CLASSpathProcent-BL,Classical pathway,36
+CLASSpathway-BL,Classical Pathway,34
+Clomipramine-BL,Clomipramine,24
+ClomipramineDS-BL,Clomipramine (DS),15
+Cocaine-UP,CocaÔne,55
+Coll_Aggr1.0-BL,Coll. Aggregatie 1.0,24
+Coll_Aggr4.0-BL,Coll. Aggregatie 4.0,11
+Conclusie_Isac-BL,Conclusie Isac,15
+ConclusieGlycEnz-BL,Conclusie glyc. enzymen,22
+Cortisol-0.30h-BL,Cortisol (+0:30 h),88
+Cortisol-0h-BL,Cortisol (+0:00 h),225
+Cortisol-1h-BL,Cortisol (+1:00 h),88
+Cortisol-BL,Cortisol,1102
+Cortisol-min0.30h-BL,Cortisol (-0:30 h),90
+CortisolVrij-UV,Vrij Cortisol /24u,596
+Cotinine-BL,Cotinine,66
+Cotinine-UP,Cotinine,78
+Cpeptide-BL,C-peptide,423
+Creat-BL,Creatinine,149294
+Creat-UP,Creatinine,20507
+Creat-UV,Creatinine,4307
+CreatVol-UV,Creatinine /24u,3916
+CRP-BL,CRP,61952
+Cryoglob04-BL,Cryoglobuline   4 ∞C,108
+Cryoglob20-BL,Cryoglobuline  20 ∞C,103
+Cryoglob37-BL,Cryoglobuline  37 ∞C,103
+CTF-CD16_56-pkg-BL,CD16_56/kg,34
+CTF-CD19-pkg-BL,CD19/kg,18
+CTF-CD3-pkg-BL,CD3/kg,35
+CTF-CD3-Totaal-BL,CD3 totaal,35
+CTF-CD34-pkg-BL,CD34/kg,52
+CTF-CD34-Totaal-BL,CD34 totaal,52
+CTF-DonorABO-BL,DonorABO,34
+CTF-Procedure-BL,Procedure,69
+CTF-Product-BL,Product,70
+CTF-ProductStaat-BL,Productstaat,70
+CTF-RBC-corr-BL,RBC gecorrigeerd,15
+CTF-WBC-pkg-BL,WBC/kg,70
+CTF-WBC-totaal-BL,WBC Totaal,70
+CYP2C19_Concl-BL,CYP2C19 concl,130
+CYP2C19-genotype-BL,CYP2C19 geno,44
+CystatineC-BL,Cystatine C,130
+D-dimeer-BL,D-dimeer,1165
+dALA-UP,d-ALA,14
+Darunavir-BL,Darunavir,56
+DarunavirDS-BL,Darunavir (DS),37
+DCTcompl-BL,Dir. Coombs anti compl.,76
+DCTIgG-BL,Dir. Coombs anti IgG,76
+Desethylamiodaron-BL,D-eth.amiodarone,424
+Desipramine-BL,Desipramine,11
+DesmClomipramine-BL,Desmethylclomipramine,24
+DesmVenlafaxine-BL,Desmethylvenlafaxine,22
+DHEA-BL,DHEA,19
+DHEAsulfaat-BL,DHEA-Sulfaat,48
+DiffOpmerkingen-BL,Diff opmerkingen,199
+Digoxine-BL,Digoxine,101
+DigoxineDS-BL,Digoxine (DS),74
+Diltiazem-BL,Diltiazem,13
+DirCoombs-BL,Directe Coombs,280
+Diversen-BL,Diversen,40
+DOC-BL,DOC,20
+Dopamine-BL,Dopamine,57
+DPYD-genotype-BL,DPYD geno,40
+dsDNA-BL,anti-ds-DNA (EliA),651
+Duffy_Fya-BL,Duffy syst.: Fy(a),19
+DuifTypeIII-BL,Duif,43
+DwGestrSpierw-BL,anti-Dw.gestr.spierweef.,15
+DysmorfeEry-UP,Dysmorfe erytrocyten,1659
+Echinocyt-BL,Echinocyten,100
+EffectorMemCD4-BL,Eff/Mem T-cellen (CD4),35
+EffectorMemCD8-BL,Eff/Mem T-cellen (CD8),35
+EilLangerhans-BL,anti-Eil.v.Langerhans,13
+Eiwit_kreat_ratio-UP,Eiwit / creat ratio,6583
+EiwitScreen_UD-UP,Eiwit screening,74
+EiwitScreen-UP,Eiwit screening,24138
+EiwitTot-BL,Totaal Eiwit,5194
+EiwitTot-UP,Totaal Eiwit,7428
+EiwitTot-UV,Totaal Eiwit,3533
+EiwitTotVol-UV,Totaal eiwit /24u,3219
+Elliptocyt-BL,Elliptocyten,511
+Eluaat-BL,Eluaat,67
+ENAscreen-BL,ENA-screening,14
+Endomysium_IgA-BL,anti-Endomysium (IgA),411
+EosinofielAbs-BL,Eosinofiele granulocyten,21466
+EpitheelCyl-UP,Epitheelcylinders,38
+EPO-BL,ErytropoÎtine,135
+EryCyl-UP,Erytrocytencylinders,1294
+EryMorfologie-BL,Erytrocyten morfologie,256
+ErytroblastAbs-BL,Erytroblasten,1258
+Erytrocyt-BL,Erytrocyten,55407
+EryVrijHb_UD-UP,Erytrocyten / vrij Hb,71
+EryVrijHb-UP,Erytrocyten / vrij Hb,21433
+Ethanol-BL,Ethanol,262
+Everolimus-BL,Everolimus,213
+EverolimusDS-BL,Everolimus (DS),127
+FactorIAg-BL,Factor I antigeen,23
+FactorII-BL,Factor II activititeit,17
+FactorIIMutatie-BL,Protrombine mutatie,86
+FactorIX-BL,Factor IX activiteit,326
+FactorV-BL,Factor V activiteit,104
+FactorVII-BL,Factor VII activiteit,17
+FactorVIII-BL,Factor VIII activiteit,610
+FactorVLeiden-BL,Factor V Leiden,88
+FactorX-BL,Factor X activiteit,46
+FactorXI-BL,Factor XI activiteit,58
+FactorXII-BL,Factor XII activiteit,55
+FactorXIII-BL,Factor XIII activiteit,11
+Fencyclidine-UP,Fencyclidine,46
+FenytoineTot-BL,FenytoÔne totaal,18
+FenytoineVrij-BL,FenytoÔne vrij,18
+Ferritine-BL,Ferritine,9757
+Fibrinogeen-BL,Fibrinogeen,1302
+Flecainide-BL,Flecainide,51
+FlecainideDS-BL,Flecainide (DS),41
+fO2HbArt-BL,Fractie oxyhemoglobine (Art.),912
+Foliumzuur-BL,Foliumzuur,4703
+Fosfaat-BL,Fosfaat,23977
+Fosfaat-UP,Fosfaat,146
+Fosfaat-UV,Fosfaat,447
+FosfaatVol-UV,Fosfaat /24u,411
+Fragmentocyt-BL,Fragmentocyten(schizoc.),34
+Fructosamine-BL,Fructosamine,412
+FSH-BL,FSH,781
+Functietest-BL,Functietest,326
+Furosemide-UP,Furosemide,11
+G6PD_HK_Ratio-BL,G6PD/HK ratio,16
+G6PD-BL,Glucose-6P-dehydrogenase,19
+GAD-BL,anti-GAD65,112
+Galzuren-BL,Galzuren,205
+GammaGT-BL,gamma-GT,46960
+Ganciclovir-BL,Ganciclovir,33
+Gastrine-BL,Gastrine,42
+GeactiveerdeT_CD4-BL,Geact. T-cellen (CD4),35
+GeactiveerdeT_CD8-BL,Geact. T-cellen (CD8),35
+Gentamicine-BL,Gentamicine,18
+GentamicineDS-BL,Gentamicine (DS),16
+GFR-BL,eGFR,149327
+Gist-UP,Gist,134
+Gladspier-BL,anti-Gladspierweefsel,210
+GlomBasMem-BL,anti-GBM,34
+Glucagon-BL,Glucagon,14
+Glucose-0.30h-BL,Glucose (+0:30 h),30
+Glucose-0h-BL,Glucose (+0:00 h),58
+Glucose-1.30h-BL,Glucose (+1:30 h),30
+Glucose-1h-BL,Glucose (+1:00 h),44
+Glucose-2h-BL,Glucose (+2:00 h),58
+Glucose-BL,Glucose,214516
+Glucose-nuchter-BL,Glucose (nuchter),197
+Glucose-UP,Glucose,65
+Glucose-UV,Glucose,107
+GlucoseScreen-UP,Glucose screening,23685
+GlucoseVol-UV,Glucose /24u,99
+GluLiBlindex-BL,Glucose LI/BS index,107
+Groeihor-0.30h-BL,Groeihormoon (+0:30 h),10
+Groeihor-0h-BL,Groeihormoon (+0:00 h),10
+Groeihor-1.30h-BL,Groeihormoon (+1:30 h),10
+Groeihor-1h-BL,Groeihormoon (+1:00 h),10
+Groeihor-2h-BL,Groeihormoon (+2:00 h),10
+Groeihormoon-BL,Groeihormoon,40
+GumprSch-BL,Gumprechtse Schollen,51
+Haptoglobine-BL,Haptoglobine,1530
+Hazelnoot-BL,Hazelnoot,22
+Hb-BL,Hemoglobine,144737
+HbA1c_2-BL,HbA1c,33303
+HbA2-BL,HbA2,113
+HbDiagnostiek-BL,Hb diagnostiek,113
+HbF-BL,HbF,113
+HbMyoCyl-UP,Hb/myoglobulinecylinders,13
+hCGtotaal-BL,Totaal hCG,475
+HDLchol-BL,HDL-cholesterol,42756
+Hep_aXa_Soort-BL,Medicijn soort anti-Xa,451
+Heparine_aXa-BL,Anti-Xa,435
+HeparineRatio-BL,Heparine ratio,4878
+Hexokinase-BL,Hexokinase,22
+HiB-BL,anti-Haem. infl. type B,27
+HIV-BL,HIV,13
+HLA-A_1_ngs-BL,HLA-A  NGS,55
+HLA-A_1_sbt-BL,HLA-A (SBT),14
+HLA-A_1_sso-BL,HLA-A (SSO),148
+HLA-A_2_ngs-BL,HLA-A  NGS,47
+HLA-A_2_sbt-BL,HLA-A (SBT),11
+HLA-A_2_sso-BL,HLA-A (SSO),119
+HLA-AS_3mndScrPRA-BL,HLA as 3 mnd Scr PRA,139
+HLA-AS_3mndScrSpec-BL,HLA as 3 mnd Scr Spec.,184
+HLA-AS_elisa-BL,HLA AS elisa,230
+HLA-AS_kl1-DSA-BL,HLA AS Luminex kl1 DSA,24
+HLA-AS_kl1-SA-BL,HLA AS Luminex kl1 SA,154
+HLA-AS_kl2-DSA-BL,HLA AS Luminex kl2 DSA,25
+HLA-AS_kl2-SA-BL,HLA AS Luminex kl2 SA,158
+HLA-B_1_ngs-BL,HLA-B  NGS,55
+HLA-B_1_sbt-BL,HLA-B (SBT),19
+HLA-B_1_sso-BL,HLA-B (SSO),364
+HLA-B_2_ngs-BL,HLA-B  NGS,46
+HLA-B_2_sbt-BL,HLA-B (SBT),15
+HLA-B_2_sso-BL,HLA-B (SSO),311
+HLA-B27_sso-BL,HLA-B27 (SSO),42
+HLA-B5701_sso-BL,HLA-B*57:01 SSO,142
+HLA-Cw_1_ngs-BL,HLA-Cw  NGS,55
+HLA-Cw_1_sbt-BL,HLA-Cw (SBT),13
+HLA-Cw_1_sso-BL,HLA-Cw (SSO),93
+HLA-Cw_2_ngs-BL,HLA-Cw  NGS,45
+HLA-Cw_2_sbt-BL,HLA-Cw (SBT),9
+HLA-Cw_2_sso-BL,HLA-Cw (SSO),60
+HLA-DPB1_1_ngs-BL,HLA-DPB1 1 ngs BL,46
+HLA-DPB1_2_ngs-BL,HLA-DPB1 2 ngs BL,40
+HLA-DQ2-8_sso-BL,HLA-DQ2/8 (SSO),50
+HLA-DQA1_1_sso-BL,HLA-DQA1 (SSO),163
+HLA-DQA1_2_sso-BL,HLA-DQA1 (SSO),128
+HLA-DQB1_1_ngs-BL,HLA-DQB1  NGS,55
+HLA-DQB1_1_sbt-BL,HLA-DQB1 (SBT),14
+HLA-DQB1_1_sso-BL,HLA-DQB1 (SSO),165
+HLA-DQB1_2_ngs-BL,HLA-DQB1  NGS,48
+HLA-DQB1_2_sbt-BL,HLA-DQB1 (SBT),11
+HLA-DQB1_2_sso-BL,HLA-DQB1 (SSO),120
+HLA-DRB1_1_ngs-BL,HLA-DRB1  NGS,54
+HLA-DRB1_1_sbt-BL,HLA-DRB1 (SBT),15
+HLA-DRB1_1_sso-BL,HLA-DRB1 (SSO),131
+HLA-DRB1_2_ngs-BL,HLA-DRB1  NGS,49
+HLA-DRB1_2_sbt-BL,HLA-DRB1 (SBT),12
+HLA-DRB1_2_sso-BL,HLA-DRB1 (SSO),108
+HLA-LSM-BL,LSM,216
+Homocysteine-BL,HomocysteÔne,1867
+Hond-BL,Hond,75
+HowJolLich-BL,Howell-Jolly lichaampjes,33
+HsCRP-BL,HsCRP,4874
+Ht-BL,Hematocriet,79958
+HuisstofmijtD1-BL,Huisstofmijt,88
+HyalCyl-UP,Hyalinecylinders,5285
+Hydrochlorthiazon-UP,Hydrochloorthiazon,11
+Hydroxymidazolam-BL,Hydroxymidazolam,15
+Hypersegm-BL,Hypersegmentatie,61
+Hypochroom-BL,Hypochromasie,97
+IC-Anisochroom-BL,Anisochroom,27
+IC-Anisoplanie-BL,Anisoplanie,123
+IC-AnisoTrombo-BL,Anisotrombo,51
+IC-BasofielRel-BL,Basofiel,224
+IC-BasoStip-BL,Basofiele stippeling,15
+IC-BLastRel-BL,Blast,224
+IC-Burrcel-BL,Burr cellen,15
+IC-Elliptocyt-BL,Elliptocyten,75
+IC-EosinofielRel-BL,Eosinofiel,224
+IC-ErythroblastAbs-BL,Erythroblasten,224
+IC-Fragmentocyt-BL,Fragmentocyten,25
+IC-Geldrol-BL,Geldrolvorming,59
+IC-HowJolLich-BL,Howell-Jolly lichaampjes,26
+IC-Hypersegm-BL,Hypersegmentatie,63
+IC-Hypochroom-BL,Hypochromasie,32
+IC-HypogranLeu-BL,Hypogranulatie,28
+IC-Kernpyknose-BL,Kernpyknose,51
+IC-LymfoblastRel-BL,Lymfoblast,192
+IC-LymfocytRel-BL,Lymfocyt,224
+IC-Macroplanie-BL,Macroplanie,11
+IC-MetamyelocytRel-BL,Metamyelocyt,224
+IC-MonocytRel-BL,Monocyt,224
+IC-MyelocytRel-BL,Myelocyt,223
+IC-OverigCalcRel-BL,Overig (Calc),224
+IC-PelgerHuetPs-BL,Pseudo Pelger Huet,21
+IC-Plasmablast-BL,Plasmablast,192
+IC-PlasmacelRel-BL,Plasmacel,224
+IC-Poikilocyt-BL,Poikilocyten,16
+IC-Polychr-BL,Polychromasie,37
+IC-PromonocytRel-BL,Promonocyt,224
+IC-PromyelocytRel-BL,Promyelocyt,224
+IC-Reuzentrombo-BL,Reuzentrombocyten,74
+IC-Rijpingsdiss-BL,Rijpingsdissociatie,8
+IC-SegmentRel-BL,Segment,224
+IC-Sferocyt-BL,Sferocyten,8
+IC-StaafRel-BL,Staaf,224
+IC-Targetcel-BL,Targetcellen,16
+IC-TearDrop-BL,Teardrop cellen,24
+IC-ToxKor-BL,Toxische korreling,56
+IC-Tromboklontjes-BL,Trombocytenklontjes,20
+IC-Vacuolisatie-BL,Vacuolisatie,25
+IgA1-BL,IgA1,14
+IgA2-BL,IgA2,14
+IgAGeheugenB-BL,IgA geheugen B-cellen,26
+IgAtot-BL,IgA-totaal,1252
+IgD-BL,IgD,173
+IgEtot-BL,IgE-totaal,472
+IGF1_nmol-BL,IGF-I,670
+IGF1_SD-BL,IGF-I SD waarde,663
+IGF1-BL,IGF-I,183
+IGFBP3-BL,IGFBP-3,19
+IgG1-BL,IgG1,249
+IgG2-BL,IgG2,249
+IgG3-BL,IgG3,249
+IgG4-BL,IgG4,249
+IgGGeheugenB-BL,IgG geheugen B-cellen,26
+IgGtot-BL,IgG-totaal,1406
+IgMGeheugenB-BL,IgM geheugen B-cellen,26
+IgMtot-BL,IgM-totaal,963
+IJzer-BL,IJzer,5400
+Imipramine-BL,Imipramine,11
+Indapamide-UP,Indapamide,10
+InfliximabIgG-BL,Infliximab IgG,37
+InfliximabIgGDS-BL,Infliximab IgG (DS),36
+InhalatieScreen-BL,Inhalatie screening,205
+InhibineA-BL,Inhibine A,38
+InhibineB-BL,Inhibine B,44
+Insuline-0.30h-BL,Insuline (0:30 h),16
+Insuline-0h-BL,Insuline (0:00 h),22
+Insuline-1.30h-BL,Insuline (1:30 h),15
+Insuline-1h-BL,Insuline (1:00 h),16
+Insuline-2h-BL,Insuline (2:00 h),21
+Insuline-BL,Insuline,7731
+IntrFact-BL,anti-Intrinsieke factor,172
+IRF-BL,IRF,3060
+Isavuconazol-BL,Isavuconazol,14
+IsavuconazolDS-BL,Isavuconazol (DS),15
+IsoAntiA-BL,Iso antistoffen anti A,37
+IsoAntiB-BL,Iso antistoffen anti B,37
+Kalium-BL,Kalium,128608
+Kalium-UP,Kalium,1280
+Kalium-UV,Kalium,1964
+KaliumVol-UV,Kalium /24u,1740
+Kat-BL,Kat,81
+Kell_K-BL,Kell syst.: grote K,450
+Kernpyknose-BL,Kernpyknose,19
+Ketonen-UP,Ketonen,365
+Kidd_Jka-BL,Kidd syst.: Jk(a),14
+Kidd_Jkb-BL,Kidd syst.: Jk(b),14
+Kinidine-BL,Kinidine,43
+KinidineDS-BL,Kinidine (DS),43
+KIR-haplotype-BL,KIR haplotype,25
+Koolmonoxide-BL,Koolmonoxide,1023
+KoolzuurspArt-BL,Koolzuurspanning (Art.),22041
+KoolzuurspJugul-BL,Koolzuurspanning (Jugul.),51
+KoolzuurspMix-BL,Koolzuurspanning (Mix.),1200
+KoolzuurspVen-BL,Koolzuurspanning (Ven.),6179
+Koper-BL,Koper,31
+KorrelCyl-UP,Korrelcylinders,3679
+KruisAH1-BL,Kruisproef BA1,9
+KruisAH2-BL,Kruisproef BA2,9
+KruisAH3-BL,Kruisproef BA3,9
+KruisLiss-BL,Kruisproef Liss,223
+LAC-BL,Lupus anticoagulans,612
+Lactaat-BL,Lactaat,9047
+Lamotrigine-BL,Lamotrigine,10
+Latex-BL,Latex,10
+LD-BL,LD,41492
+LDIsoEnz1-BL,LD-iso fractie 1,15
+LDIsoEnz2-BL,LD-iso fractie 2,15
+LDIsoEnz3-BL,LD-iso fractie 3,15
+LDIsoEnz4-BL,LD-iso fractie 4,15
+LDIsoEnz5-BL,LD-iso fractie 5,15
+LDLchol-BL,LDL-cholesterol,41067
+LeucoCyl-UP,Leukocytencylinders,1498
+Leucocyt-BL,Leukocyten,99336
+LeucoScreen_UD-UP,Leukocyten screening,71
+LeucoScreen-UP,Leukocyten screening,21430
+Levetiracetam-BL,Levetiracetam,32
+LevetiracetamDS-BL,Levetiracetam (DS),15
+LH-BL,LH,958
+LichDohle-BL,Lichaampjes van Dˆhle,45
+Lineblot_AMA-M2-BL,anti-AMA-M2,25
+Lineblot_Centromere-B-BL,anti-Centromere-B,25
+Lineblot_dsDNA-BL,anti-dsDNA (Lineblot),25
+Lineblot_Histones-BL,anti-Histones,25
+Lineblot_Jo-1-BL,anti-Jo-1,25
+Lineblot_Neg-BL,Lineblot_Neg,263
+Lineblot_nRNP-Sm-BL,anti-nRNP/Sm,25
+Lineblot_Nucleosomes-BL,anti-Nucleosomes,25
+Lineblot_PCNA-BL,anti-PCNA,25
+Lineblot_PM-Scl-BL,anti-PM-Scl,25
+Lineblot_Pos-BL,Lineblot_Pos,263
+Lineblot_RibP-protein-BL,anti-Ribosomal-P-protein,25
+Lineblot_Ro-52-BL,anti-SSA-52,25
+Lineblot_Scl-70-BL,anti-Scl-70,25
+Lineblot_Sm-BL,anti-Sm,25
+Lineblot_SS-A-BL,anti-SSA-60,25
+Lineblot_SS-B-BL,anti-SS-B,25
+LineBlot-BL,Line-blot,18
+Lipase-BL,Lipase,1810
+Lithium-BL,Lithium,109
+LKM-BL,anti-LKM,18
+Lpa-BL,Lp(a),871
+LymfocytAbs-BL,Lymfocyten,21464
+Lysozym-BL,Lysozyme,26
+Macroplanie-BL,Macroplanie,870
+Magnesium-BL,Magnesium,14800
+Magnesium-UP,Magnesium,141
+Magnesium-UV,Magnesium,109
+MagnesiumVol-UV,Magnesium /24u,97
+Maraviroc-BL,Maraviroc,18
+MBLpathProcent-BL,MBL pathway,36
+MBLpathway-BL,MBL pathway,34
+MCH-BL,MCH,55303
+MCHC-BL,MCHC,55397
+MCV-BL,MCV,55338
+MetamyeloAbs-BL,Metamyelocyten,1557
+Metanefrine-UV,Metanefrine,650
+MetanefrineVol-UV,Metanefrine /24u,579
+Methadon-UP,Methadon,55
+MetHb-BL,Met-Hb,999
+Methotrexaat-BL,Methotrexaat,14
+MethotrxaatDS-BL,Methotrexaat (DS),11
+Methylmalonzuur-BL,Methylmalonzuur,259
+MicroAlbumine-UP,Micro-albumine,17172
+MicroAlbumine-UV,Micro-albumine,2110
+MicroAlbumineVol-UV,Micro-albumine /24u,1835
+Microplanie-BL,Microplanie,706
+Midazolam-BL,Midazolam,15
+Mitochondr-BL,anti-MitochondriÎn,202
+MNSs_M-BL,MNSs syst.: M,19
+MNSs_N-BL,MNSs syst.: N,15
+MNSs_S-BL,MNSs syst.: grote S,15
+MonocytAbs-BL,Monocyten,21464
+MprotKwant-BL,M-proteÔne kwantitatief,1224
+MprotKwant-UP,M-proteÔne kwantitatief,24
+MprotKwant-UV,M-proteÔne kwantitatief,37
+MprotScreen-BL,M-proteÔne screening,1499
+MprotTyp-BL,M-proteÔne kwal (IF),291
+MprotTyp-UP,M-proteÔne typering,198
+MprotTyp-UV,M-proteÔne typering,219
+MPV-BL,MPV,328
+MuSK-BL,anti-MuSK,16
+Mycophenolzuur-BL,Mycofenolaat,34
+MycophenolzuurDS-BL,Mycofenolzuur (DS),13
+MyelocytAbs-BL,Myelocyten,1557
+Myoglobine-BL,Myoglobine,12
+NaiefB-BL,NaÔeve B-cellen,26
+NaiefCD4-BL,NaÔeve T-cellen (CD4),35
+NaiefCD8-BL,NaÔeve T-cellen (CD8),35
+Natrium-BL,Natrium,108103
+Natrium-UP,Natrium,4216
+Natrium-UV,Natrium,3152
+NatriumVol-UV,Natrium /24u,2836
+NeuroBlot_Neg-BL,Neuronale blot Neg,32
+NeuroBlot_Pos-BL,Neuronale blot Pos,32
+NeutrofielAbs-BL,Neutrofiele granulocyten,22114
+Nitriet-UP,Nitriet,10272
+nonHDLchol-BL,non-HDL cholesterol,33221
+Noradrenaline-BL,Noradrenaline,57
+Normetanefrine-UV,Normetanefrine,650
+NormetanefrVol-UV,Normetanefrine /24u,579
+Nortriptyline-BL,Nortriptyline,60
+NortriptylineDS-BL,Nortriptyline (DS),31
+NT-proBNP_pg-BL,NT-proBNP,2047
+O2gebruik-BL,O2 gebruik,389
+O2gehalteArt-BL,O2-gehalte (Art.),975
+O2gehalteVen-BL,O2-gehalte (Ven.),48
+OASINR-BL,PT-INR,29162
+Oestradiol-BL,Oestradiol,433
+OHcarbazepine-BL,Hydroxycarbazepine,10
+OHmidazolamgluc-BL,Ohmidazolamglucuronide,14
+Olmesartan_AH-BL,Olmesartan,24
+OM-ApotheekOverige-BL,Apotheek Overige,41
+OM-dsApotheekOverige-BL,Apotheek Overige (DS),41
+OnrijpPerifeerB-BL,Onrijp perifere B-cellen,26
+Opiaten-UP,Opiaten,56
+Opm_CytoMorf-BL,Opmerking,228
+Osmolaliteit-BL,Osmolaliteit,1456
+Osmolaliteit-UP,Osmolaliteit,1345
+Osmolaliteit-UV,Osmolaliteit,989
+OverigeBepalingenAPO-BL,Overige bepalingen,5
+OverigeBepalingenEXT-BL,Overige bepalingen,150
+Oxaalzuur-UP,Oxaalzuur,10
+Oxaalzuur-UV,Oxaalzuur,126
+OxaalzuurVol-UV,Oxaalzuur /24u,112
+P2Y12_Baseline-BL,VerifyNow P2Y12 Baseline,334
+P2Y12_Post-BL,VerifyNow P2Y12 Post,334
+P2Y12_Remming-BL,VerifyNow P2Y12 Remming,337
+pANCA-BL,p-ANCA (imm. fluoresc.),350
+PancrPolypeptide-BL,Pancreas polypeptide,19
+PapegaaiTypeIII-BL,Papegaai,43
+Paracetamol-BL,Paracetamol,14
+Paracetamol-UP,Paracetamol,46
+ParacetamolDS-BL,Paracetamol (DS),9
+ParietaleCel-BL,anti-PariÎtale cellen,181
+ParkietTypeIII-BL,Parkiet,44
+PBG-UP,PBG,14
+PhosphoLipaseA2r-BL,anti-PLA2rec (1:10),62
+PlasmacelAbs-BL,Plasmacellen,1219
+PlasmaHb-BL,Plasma Hb,19
+PLT_Re-BL,%rP,271
+Pneumococ1-BL,anti-Pneumococcen type 1,16
+Pneumococ14-BL,anti-Pneumococcen type 14,68
+Pneumococ15B-BL,anti Pneumococcen type 15B,52
+Pneumococ18C-BL,anti-Pneumococcen type 18C,16
+Pneumococ19F-BL,anti-Pneumococcen type 19F,68
+Pneumococ20-BL,anti Pneumococcen type 20,52
+Pneumococ23F-BL,anti-Pneumococcen type 23F,68
+Pneumococ3-BL,anti-Pneumococcen type 3,16
+Pneumococ33F-BL,anti Pneumococcen type 33F,52
+Pneumococ4-BL,anti-Pneumococcen type 4,16
+Pneumococ5-BL,anti-Pneumococcen type 5,16
+Pneumococ6B-BL,anti-Pneumococcen type 6B,68
+Pneumococ7F-BL,anti-Pneumococcen type 7F,16
+Pneumococ8-BL,anti Pneumococcen type 8,52
+Pneumococ9V-BL,anti-Pneumococcen type 9V,68
+Poikilocyt-BL,Poikilocytose,289
+Polychr-BL,Polychromasie,199
+PorfScreen-UP,Porfyrine screening,13
+Pro-Insuline-BL,Pro-Insuline,115
+Procalcitonine-BL,Procalcitonine kwant.,299
+Progesteron-BL,Progesteron,172
+Prolactine-BL,Prolactine,465
+PromyelocytAbs-BL,Promyelocyten,1557
+ProteineCact-BL,ProteÔne C activiteit,88
+ProteineSact-BL,ProteÔne S activiteit,86
+Protromb-BL,Protrombinetijd,12519
+ProtrombCont-BL,Protrombinetijd controle,10044
+PRP-BL,PRP,51
+PSAratio-BL,PSA F/T-ratio,349
+PSAtot_plasma-BL,Totaal PSA,80
+PSAtot-BL,Totaal PSA,5312
+PSAvrij-BL,Vrij PSA,367
+PTH-BL,PTH,4881
+RBC_HPO-BL,Hypochrome RBC's,279
+RBC_HPR-BL,Hyperchrome RBC's,279
+RBC_MAC-BL,Macrocytaire RBC's,291
+RBC_MIC-BL,Microcytaire RBC's,292
+RDW-BL,RDW,384
+RenineAct-BL,Renine activiteit,2350
+RenineAg-BL,Renine antigeen,96
+RETI_CHCr-BL,MCHC  (reticulocyten(CHCr)),226
+RETI_MCH-BL,MCH  (reticulocyten),227
+RETI_MCV-BL,MCV (reticulocyten),227
+ReticulocytAbs-BL,Reticulocyten,3073
+ReumaFac-BL,"Reumafactor (EliA, IgM)",337
+Rh_c_klein-BL,Rh. syst.: kleine c,450
+Rh_C-BL,Rh. syst.: grote C,450
+Rh_Cw-BL,Rh. syst.: C(w),11
+Rh_e_klein-BL,Rh. syst.: kleine e,450
+Rh_E-BL,Rh. syst.: grote E,450
+RhesusDfact-BL,Rhesus D Factor,17090
+Ribavirine-BL,Ribavirine,46
+RibavirineDS-BL,Ribavirine (DS),37
+Risto0.6E-BL,Ristocetine 0.6E,13
+Risto0.8E-BL,Ristocetine 0.8E,21
+Risto1.0E-BL,Ristocetine 1.0E,15
+Rivaroxaban_aXa-BL,Rivaroxaban (Xarelto),20
+RondEpi-UP,Rondepitheel,2819
+S100B-BL,S-100B,201
+SchildklierTPO-BL,Schildklier (anti-TPO),319
+Schimmel-UP,Schimmel,137
+Sediment-UP,Sediment,6472
+SediOpm-UP,Opmerking,914
+SegmentkAbs-BL,Segmentk. granulocyten,1562
+Serotonine_ng-BL,Serotonine trombocyten,19
+Serotonine-BL,Serotonine trombocyten,19
+SezarycelAbs-BL,Sezarycellen,1207
+SG-UP,Soortelijk gewicht,151
+SG-UV,Soortelijk gewicht,25
+SHBG-BL,SHBG,782
+Sirolimus-BL,Sirolimus,648
+SirolimusDS-BL,Sirolimus (DS),485
+Sol_IL2Rec-BL,Sol. IL-2 receptor,450
+SolTransRec-BL,Sol. transferr. receptor,96
+Sotalol-BL,Sotalol,18
+SotalolDS-BL,Sotalol (DS),17
+SpijtCitraatPl1_CC-BL,Citraat plasma,83
+SpijtCitraatPl1_SH-BL,Citraat plasma,50
+SpijtDNA_SH-BL,DNA materiaal,19
+SpijtEDTApl1_CC-BL,EDTA plasma,54
+SpijtLiHepPl1_CC-BL,Li-heparine plasma,47
+SpijtLiHepPl1_LPL-BL,Li-heparine plasma voor LPL,25
+SpijtSerum1_CC-BL,Serum,96
+Spijtserum1_IS-BL,Serum,46
+SpijtSerum1_SK-BL,Serum,19
+SpijtUrine_CU-UP,Spijt urine portie,42
+Spironolacton-UP,Spironolacton,11
+sST2-BL,sST2,226
+StaafkAbs-BL,Staafkernige granulocyt.,1562
+StBicarbArt-BL,Standaard Bicarbonaat (Art.),16700
+StBicarbJugul-BL,Standaard Bicarbonaat (Jugul.),51
+StBicarbMix-BL,Standaard Bicarbonaat (Mix.),1178
+StBicarbVen-BL,Standaard Bicarbonaat (Ven.),5475
+Steroidprofiel-UV,SteroÔdprofiel,17
+Sulfamethoxazol-BL,Sulfmethoxazol,27
+SulfamethoxazolDS-BL,Sulfamethoxazol (DS),23
+T3-BL,T3,139
+T3vrij-BL,Vrij T3,400
+T4-BL,Totaal T4,281
+T4vrij-BL,Vrij T4,12328
+Tacrolimus-BL,Tacrolimus,6214
+TacrolimusDS-BL,Tacrolimus (DS),3642
+TARC-BL,TARC,91
+Targetcel-BL,Target cellen,126
+TCelgdabs-BL,Tcel gamma delta,78
+TCelgdRel-BL,Tcel gamma delta,78
+TearDrop-BL,Teardrop cellen,119
+TEG-alpha-BL,TEG alpha,380
+TEG-K-BL,TEG K,378
+TEG-LY30-BL,TEG LY30,378
+TEG-MA-BL,TEG MA,380
+TEG-R-BL,TEG R,384
+TEG-sample-type-BL,TEG monster type,383
+Testosteron-BL,Testosteron,1451
+TestosteronVrij-BL,Vrij Testosteron,695
+Thyreoglobuline-BL,Thyreoglobuline,62
+ThyreoglobulineAL-BL,Thyreoglobuline a.l.,62
+ThyrStimIg-BL,ThyroÔd stim. Ig (TSI),278
+Timotheegras-BL,Timotheegras,85
+Titer_IgG_antiA-BL,Titer IgG anti A,27
+Titer_IgG_antiB-BL,Titer IgG anti B,27
+ToxKor-BL,Toxische korreling,134
+ToxScreening-BL,Toxicologische screening,10
+Transferrine-BL,Transferrine,5209
+Transferrineverz-BL,Transferrineverzadiging,4722
+Triamtereen-UP,Triamtereen,11
+TricyclAntidepres-UP,Tricyclische Antidepres.,52
+Trig-0.03h-BL,Triglyceriden (+0:03 h),25
+Trig-0.06h-BL,Triglyceriden (+0:06 h),25
+Trig-0.09h-BL,Triglyceriden (+0:09 h),25
+Trig-0.15h-BL,Triglyceriden (+0:15 h),25
+Trig-BL,Triglyceriden,43534
+Trig-min0.01h-BL,Triglyceriden (-0:01 h),25
+Trombinetijd-BL,Trombinetijd,4116
+TrombinetijdCont-BL,Trombinetijd controle,3477
+TromboCitr-BL,Trombocyten (citraat),203
+Trombocyt-BL,Trombocyten,95879
+TrombocytRemming-BL,VerifyNow Trombo.remming,659
+TromboHep-BL,Trombocyten (heparine),188
+TromboMorfologie-BL,Trombocyten morfologie,869
+Troponine_ng-BL,Troponine-I,19158
+Troponine-BL,Troponine,5210
+Tryptase-BL,Tryptase,80
+TSH-BL,TSH,23237
+TTG_IgA-BL,anti-TTG (IgA),498
+Ureum-BL,Ureum,80327
+Ureum-UP,Ureum,1864
+Ureum-UV,Ureum,1212
+UreumVol-UV,Ureum /24u,1137
+Urinezuur-BL,Urinezuur,7057
+Urinezuur-UP,Urinezuur,73
+Urinezuur-UV,Urinezuur,307
+UrinezuurVol-UV,Urinezuur /24u,287
+Urobilinogeen-UP,Urobilinogeen,108
+Valproinezuur-BL,ValproÔnezuur,27
+ValproinezuurDS-BL,ValproÔnezuur (DS),22
+Vancomycine-BL,Vancomycine,594
+VancomycineDS-BL,Vancomycine (DS),387
+VEGFD-BL,VEGF-D,26
+Venlafaxine-BL,Venlafaxine,22
+Verzamelperiode-UV,Verzamelperiode,4601
+Vg9-d2--BL,Vg9- d2-,78
+Vg9-d2+-BL,Vg9- d2+,78
+Vg9+d2--BL,Vg9+ d2-,78
+Vg9+d2+-BL,Vg9+ d2+,78
+VitamineA-BL,Vitamine A,94
+VitamineB1-BL,Vitamine B1,441
+VitamineB12-BL,Vitamine B12,5706
+VitamineB6-BL,Vitamine B6,401
+VitamineC-BL,Vitamine C,17
+VitamineE-BL,Vitamine E,104
+VMA-UV,VMA,118
+VMAVol-UV,VMA /24u,113
+VoedselScreen-BL,Voedsel screening,14
+Volume-UV,Volume,4603
+Voriconazol-BL,Voriconazol,88
+VoriconazolDS-BL,Voriconazol (DS),57
+Vrij3MethTyramine-BL,Vrij 3-Methoxytyramine,274
+VrijAdrenaline-UV,Vrij Adrenaline,142
+VrijAdrenalineVol-UV,Vrij Adrenaline /24u,134
+VrijDopamine-UV,Vrij Dopamine,142
+VrijDopamineVol-UV,Vrij Dopamine /24u,134
+VrijeKappa-BL,Vrije kappa,968
+VrijeLambda-BL,Vrije lambda,918
+VrijeVetzuren-BL,Vrije vetzuren,12
+VrijK_VrijLratio-BL,Vrije kappa/lambda ratio,924
+VrijMetanefrine-BL,Vrij Metanefrine,274
+VrijNoradrenaline-UV,Vrij Noradrenaline,142
+VrijNoradrenalineVol-UV,Vrij Noradrenaline /24u,134
+VrijNormetanefr-BL,Vrij Normetanefrine,274
+vWFantigeen-BL,vWF antigeen,234
+vWFcollageen-BL,vWF collageen binding,14
+vWFmultimeren-BL,vWF multimeren,23
+vWFprotease-BL,ADAMTS13,24
+vWFristocetine-BL,vWF ristocetine,165
+Wr_Wra-BL,Wright syst.: Wr(a),12
+XTC-UP,Methamfetamines (XTC),55
+Zink-BL,Zink,37
+ZinkDS-BL,Zink (DS),37
+Zinkprotoporfyrine-BL,Zink protoporfyrine,222
+Zuurgraad-UP,Zuurgraad,21500
+ZuurgraadArt-BL,Zuurgraad (Art.),22045
+ZuurgraadJugul-BL,Zuurgraad (Jugul.),51
+ZuurgraadMix-BL,Zuurgraad (Mix.),1202
+ZuurgraadVen-BL,Zuurgraad (Ven.),6180
+ZuurstofSatArt-BL,Zuurstof Saturatie (Art.),21844
+ZuurstofSatJugul-BL,Zuurstof Saturatie (Jugul.),51
+ZuurstofSatMix-BL,Zuurstof Saturatie (Mix.),1193
+ZuurstofSatVen-BL,Zuurstof Saturatie (Ven.),6021
+ZuurstofspArt-BL,Zuurstofspanning (Art.),22047
+ZuurstofspJugul-BL,Zuurstofspanning (Jugul.),51
+ZuurstofspMix-BL,Zuurstofspanning (Mix.),1203
+ZuurstofspVen-BL,Zuurstofspanning (Ven.),6180
+Zwanger-UP,Zwangerschapstest,52

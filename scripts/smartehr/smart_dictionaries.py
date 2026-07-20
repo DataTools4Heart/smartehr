@@ -7,7 +7,8 @@ already shipped in the repo:
 
   - EHR longitudinal columns:  data/smartehr/data_dicts/data_dict.csv  (column -> description)
   - coded VALUE maps:          lab.csv / meting.csv / echo.csv         (code -> readable name)
-  - baseline SMART registry:   data/SmartEPjan22dd12072023.xls         (var -> label; value -> label)
+  - baseline SMART registry:   smart.csv (converted from SmartEPjan22dd12072023.xls;
+                               var -> label; value -> label)
 
 This is semantic labeling, not value transformation: no imputation, no
 standardization — it only makes the recorded data legible. Missing fields
@@ -17,6 +18,7 @@ standardization — it only makes the recorded data legible. Missing fields
 """
 
 import csv
+from collections import Counter
 from pathlib import Path
 
 # Field keys (in the merged JSONL events) whose VALUE is itself a code, and the
@@ -75,7 +77,7 @@ def _fmt(v):
 
 
 class SmartDictionary:
-    def __init__(self, dict_dir: str, smart_xls: str | None = None):
+    def __init__(self, dict_dir: str):
         dict_dir = Path(dict_dir)
         self.col_desc: dict[str, str] = {}            # EHR column -> description
         self.value_maps: dict[str, dict[str, str]] = {}  # 'lab'/'meting'/'echo' -> {code: name}
@@ -86,8 +88,29 @@ class SmartDictionary:
         self._load_value_map(dict_dir / "lab.csv", "lab", "lab_testcode", "Local Name")
         self._load_value_map(dict_dir / "meting.csv", "meting", "label", "explanation", fallback="Omschrijving")
         self._load_value_map(dict_dir / "echo.csv", "echo", "MeasName_ECHO", "Name")
-        if smart_xls:
-            self._load_smart_xls(smart_xls)
+        self._load_smart(dict_dir / "smart.csv")
+
+        self.reset_stats()
+
+    # ---- coverage stats ------------------------------------------------------
+    def reset_stats(self):
+        self.n_fields = 0            # non-missing fields passed to enrich()
+        self.n_label_hit = 0         # got a human-readable label (not the raw code)
+        self.n_value_translated = 0  # coded value mapped to a readable name/label
+        self.n_value_omitted = 0     # coded-missing value dropped
+        self.missed_labels = Counter()  # field names with no label mapping (kept as raw code)
+
+    def coverage_report(self) -> dict:
+        rendered = self.n_fields - self.n_value_omitted
+        return {
+            "fields_seen": self.n_fields,
+            "label_hit": self.n_label_hit,
+            "label_hit_pct": round(100 * self.n_label_hit / max(rendered, 1), 1),
+            "values_translated": self.n_value_translated,
+            "coded_missing_omitted": self.n_value_omitted,
+            "distinct_unmapped_fields": len(self.missed_labels),
+            "top_unmapped": self.missed_labels.most_common(15),
+        }
 
     # ---- loading -------------------------------------------------------------
     def _load_data_dict(self, path: Path):
@@ -113,51 +136,69 @@ class SmartDictionary:
                         m[k] = v
         self.value_maps[name] = m
 
-    def _load_smart_xls(self, path: str):
-        import pandas as pd
-
-        df = pd.read_excel(path, sheet_name=0, header=0, dtype=str).fillna("")
-        for _, row in df.iterrows():
-            var = str(row.get("Var Name", "")).strip()
-            if not var:
-                continue
-            label = str(row.get("VaR lab English", "")).strip() or str(row.get("Variable Label", "")).strip()
-            if label:
-                self.baseline_label.setdefault(var, label)
-            val = str(row.get("Value", "")).strip()
-            vlab = str(row.get("VaL lab English", "")).strip() or str(row.get("Value Label", "")).strip()
-            if val and vlab:
-                self.baseline_valuelabel[(var, _norm_val(val))] = vlab
+    def _load_smart(self, path: Path):
+        """Baseline SMART dictionary (smart.csv, converted from the SMART EP .xls)."""
+        if not path.exists():
+            return
+        with open(path, encoding="utf-8", errors="replace", newline="") as f:
+            for r in csv.DictReader(f):
+                var = (r.get("Var Name") or "").strip()
+                if not var:
+                    continue
+                label = (r.get("VaR lab English") or "").strip() or (r.get("Variable Label") or "").strip()
+                if label:
+                    self.baseline_label.setdefault(var, label)
+                val = (r.get("Value") or "").strip()
+                vlab = (r.get("VaL lab English") or "").strip() or (r.get("Value Label") or "").strip()
+                if val and vlab:
+                    self.baseline_valuelabel[(var, _norm_val(val))] = vlab
 
     # ---- rendering -----------------------------------------------------------
-    def label_for(self, key: str) -> str:
+    def _label_and_hit(self, key: str) -> tuple[str, bool]:
         if key in _VALUE_CODE_LABEL:
-            return _VALUE_CODE_LABEL[key]
+            return _VALUE_CODE_LABEL[key], True
         if key in _CLEAN_LABELS:
-            return _CLEAN_LABELS[key]
+            return _CLEAN_LABELS[key], True
         desc = self.col_desc.get(key) or self.baseline_label.get(key)
         if desc:
             desc = desc.splitlines()[0].strip()
             if len(desc) <= _MAX_LABEL_LEN:
-                return desc
-        return key  # code is more compact than a paragraph-length curation note
+                return desc, True
+        return key, False  # code is more compact than a paragraph-length curation note
 
-    def _render_value(self, key, value):
-        """Return the human-readable value, or None to omit (coded-missing)."""
+    def label_for(self, key: str) -> str:
+        return self._label_and_hit(key)[0]
+
+    def _render_value(self, key, value) -> tuple[object, str]:
+        """Return (rendered_value_or_None, status) where status is
+        'translated' | 'plain' | 'omitted'."""
         if key in _VALUE_CODE_FIELDS:
             m = self.value_maps.get(_VALUE_CODE_FIELDS[key], {})
-            return m.get(str(value).strip(), _fmt(value))
+            code = str(value).strip()
+            if code in m:
+                return m[code], "translated"
+            return _fmt(value), "plain"
         vlab = self.baseline_valuelabel.get((key, _norm_val(value)))
         if vlab is not None:
-            return None if vlab.strip().lower() in _MISSING_LABELS else vlab
-        return _fmt(value)
+            if vlab.strip().lower() in _MISSING_LABELS:
+                return None, "omitted"
+            return vlab, "translated"
+        return _fmt(value), "plain"
 
     def enrich(self, key: str, value) -> str | None:
-        """Render one ``key: value`` pair as ``<label>: <readable value>``.
-
-        Returns None when the value resolves to a missing indicator (omit the field).
+        """Render one ``key: value`` pair as ``<label>: <readable value>``, updating
+        coverage stats. Returns None when the value is a coded-missing indicator (omit).
         """
-        rendered = self._render_value(key, value)
-        if rendered is None:
+        self.n_fields += 1
+        rendered, status = self._render_value(key, value)
+        if status == "omitted":
+            self.n_value_omitted += 1
             return None
-        return f"{self.label_for(key)}: {rendered}"
+        label, hit = self._label_and_hit(key)
+        if hit:
+            self.n_label_hit += 1
+        else:
+            self.missed_labels[key] += 1
+        if status == "translated":
+            self.n_value_translated += 1
+        return f"{label}: {rendered}"

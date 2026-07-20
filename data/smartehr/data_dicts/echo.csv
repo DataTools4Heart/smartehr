@@ -1,0 +1,387 @@
+MeasName_ECHO,UnitName_ECHO,Counts,Name
+% IVS thick,%,163,
+% LVPW thick,%,107,
+Dimensieloze index,%,2949,Dimension less index; ratio of the velocity-time integral of the left ventricular outflow tract (LVOT-VTI) to that of the aortic valve jet (AV VTI)
+ED Current (HM)_phl,%,44,
+ED Default (HM)_phl,%,44,
+EF (est.),%,1,
+EF (HM)_phl,%,44,
+EF_3D-VOL,%,166,
+EF(3DQ)_phl,%,1,
+EF(3DQA)_phl,%,431,
+EF(AP2)(a2DQ)_phl,%,3,
+EF(AP2)(aCMQ)_phl,%,6,
+EF(AP4)(a2DQ)_phl,%,42,
+EF(AP4)(aCMQ)_phl,%,20,
+EF(Bi-Plane)(a2DQ)_phl,%,4,
+EF(Bi-Plane)(aCMQ)_phl,%,7,
+EF(cubed),%,6886,Ejection Fraction
+EF(MOD-bp),%,3449,Ejection Fraction
+EF(MOD-sp2),%,3496,Ejection Fraction
+EF(MOD-sp4),%,3965,Ejection Fraction
+EF(sp-el),%,3,
+EF(sp2-el),%,3487,Ejection Fraction
+EF(sp4-el),%,3950,Ejection Fraction
+EF(Teich),%,6886,Ejection Fraction
+ES Current (HM)_phl,%,44,
+ES Default (HM)_phl,%,44,
+FS,%,6886,Fractional Shortening
+G peak SL Full (2CH),%,90,
+G peak SL Full (4CH),%,90,
+G peak SL Full (APLAX),%,92,
+G peak SL Full (Avg),%,88,
+Global Long Strain(aCMQ)_phl,%,6,
+IVC Collaps,%,1624,Inferior Vena Cava collaps
+LAEF (HM),%,27,
+Long Strain(AP2)(aCMQ)_phl,%,7,
+Long Strain(AP3)(aCMQ)_phl,%,8,
+Long Strain(AP4)(aCMQ)_phl,%,21,
+LV 2d Auto (4CH) GE,%,30,
+LV 2D Auto Biplane,%,26,
+LVEF (MOD) 4CH,%,3,
+LVEF (MOD) BP,%,3,
+LVEF 2D Auto (2CH),%,52,
+LVEF 4D Auto,%,438,
+LVLd %diff,%,3464,Left Ventricular Length diastole % difference
+LVLs %diff,%,3434,Left Ventricular Length systole % difference
+RV FAC_phl,%,12,
+Tmsv 12-DIF (%),%,552,Time to the point of minimal regional systolic volume in 12 segments maximal difference
+Tmsv 12-SD (%),%,552,Time to the point of minimal regional systolic volume in 12 segments standard deviation
+Tmsv 16-DIF (%),%,552,Time to the point of minimal regional systolic volume in 16 segments maximal difference
+Tmsv 16-SD (%),%,552,Time to the point of minimal regional systolic volume in 16 segments standard deviation
+Tmsv 3-5 (%)_phl,%,413,
+Tmsv 3-6 (%)_phl,%,413,
+Tmsv 6-DIF (%),%,552,Time to the point of minimal regional systolic volume in 66 segments maximal difference
+Tmsv 6-SD (%),%,552,Time to the point of minimal regional systolic volume in 6 segments standard deviation
+Ao Annulus/BSA,1,18,
+Ao asc Diam/BSA,1,913,Indexed Ascending aorta diameter
+Ao Sinus Vals/BSA,1,109,
+Aorta root/ BSA,1,425,
+AV VR_phl,1,6,
+IVS/LVPW,1,9334,Intraventricular Septum and Left Ventricular Posterior Wall thickness ratio
+LA/Ao,1,3701,Left Atrium to Aortic Root ratio
+LPulV S/D ratio,1,3647,pulmonary vein (PV) S/D ratio (systolic to diastolic velocity ratio)
+LV Spl 4D Auto,1,392,
+LVF dP/dt,1,116,
+MV E/A,1,9976,"Mitral Valve Early (E) to Late (A) wave ratio,"
+Pulm S/D,1,92,
+"RF(MV,LVOT)",1,6,
+RWT,1,1351,Relative Wall Thickness
+TDI E/e',1,8512,Tissue Doppler Imaging Early diastolic mitral annular velocity / Early diastolic transmitral flow velocity
+TDI E/e' Gem.,1,8366,Mean Tissue Doppler Imaging Early diastolic mitral annular velocity / Early diastolic transmitral flow velocity
+TDI E/e' Lateraal,1,8488,Lateral Tissue Doppler Imaging Early diastolic mitral annular velocity / Early diastolic transmitral flow velocity
+HR (HM)_phl,1/min,44,
+Aortic HR,BPM,256,
+BZI_Heart_Rate,BPM,71,
+Mitral HR,BPM,4,
+MM HR,BPM,144,
+Vcf mean,circ/s,2,
+ACS,cm,26,
+Ao root diam,cm,5343,Aortic root diameter
+Ao root diam(2D),cm,1459,Aortic root diameter
+Ao sinus diam,cm,112,
+Ao Sinus Diam_phl,cm,3,
+Ao V2 VTI,cm,3963,Aortic Velocity Time Integral measured through the valve
+Aorta abd diam,cm,170,
+Aortic arch,cm,608,Aortic arch diameter
+AoV annu diam,cm,18,
+asc Aorta,cm,2405,Ascending aorta diameter
+ASD diam,cm,2,
+BZI_Metric_Height,cm,9417,Length of person
+Circ,cm,425,
+desc Aorta,cm,124,
+EPSS,cm,13,
+IVC diam exp,cm,2244,Inferior Vena Cava diameter expiration
+IVC diam insp,cm,1640,Inferior Vena Cava diameter inspiration
+IVSd,cm,9538,Interventricular Septum in end-diastole (IVSd)
+IVSs,cm,168,
+LA dimension,cm,4255,Left Atrium Dimension
+LA Length (A4C),cm,3422,Left Atrium Length 
+LAs major,cm,442,
+LAs minor,cm,410,
+Length,cm,3884,Length unknown of which chamber
+LV Excursion - Avg,cm,552,Left ventricular excursion (movement) average
+LV Excursion - Max,cm,552,Left ventricular excursion (movement) maximum
+LV Excursion - Min,cm,552,Left ventricular excursion (movement) minimum
+LV Excursion - SD,cm,552,Left ventricular excursion (movement) standard deviation
+LV V1 VTI,cm,3916,Left Ventricular Outflow Tract Velocity-Time Integral
+LVIDd,cm,10160,Left Ventricular Internal Diameter in diastole
+LVIDs,cm,6895,Left Ventricular Internal Diameter in systole
+LVLd ap2,cm,3524,Left Ventricular Length diastole
+LVLd ap4,cm,4042,Left Ventricular Length diastole
+LVLd apical,cm,5,
+LVLs ap2,cm,3499,Left Ventricular Length systole
+LVLs ap4,cm,3965,Left Ventricular Length systole
+LVOT diam,cm,1357,Left Ventricular Outflow Tract Diameter
+LVPWd,cm,9687,Left Ventricular Posterior Wall thickness in diastole
+LVPWs,cm,113,
+MPA diam,cm,2,
+MR PISA radius,cm,315,
+MR VTI,cm,82,
+MV Diam,cm,9,
+MV diam 1,cm,9,
+MV diam 2,cm,7,
+MV V2 VTI,cm,1476,Mitral Valve VTI
+PA V2 VTI,cm,84,
+PLAX RVOT diam,cm,216,
+PSSAX RVOT diam,cm,157,
+RA dimension,cm,14,
+RAs major,cm,399,
+RAs minor,cm,397,
+RV V1 VTI,cm,31,
+RVAW,cm,13,
+RVDd,cm,893,Right ventricular Dimension at diastole
+RVDd major,cm,64,
+RVDs,cm,9,
+RVOT diam,cm,18,
+TAPSE,cm,6811,Tricuspid Annular Plane Systolic Excursion
+TAPSE_phl,cm,1799,Tricuspid Annular Plane Systolic Excursion
+TV V2 VTI,cm,125,
+Vol-circ,cm,1975,Unknown
+Vol-length,cm,1975,Unknown
+VTI,cm,162,
+AI end-d vel,cm/s,23,
+AI max vel,cm/s,841,Maximum velocity Aortic Insufficience jet
+Ao V2 max,cm/s,12015,Aortic Valve maximal velocity
+Ao V2 mean,cm/s,3961,Aortic valve mean velocity
+AS max vel,cm/s,1,
+EDV,cm/s,5,
+Lat Peak E' Vel,cm/s,8892,Lateral peak E' vel
+LPulV A max vel,cm/s,817,Pulmonary vein peak velocity - A wave
+LPulV D max vel,cm/s,3670,Pulmonary vein peak velocity - Early diastole
+LPulV S2 max vel,cm/s,3709,Pulmonary vein peak velocity - Early systole
+LV V1 max,cm/s,11571,Left Ventricular maximal velocity
+LV V1 mean,cm/s,3914,Left Ventricular mean velocity
+Max V,cm/s,3650,Maximal velocity unknown which valve
+Mean V,cm/s,162,
+Med Peak E' Vel,cm/s,8915,Peak Mitral E-wave velocity
+MR alias vel,cm/s,312,
+MR max vel,cm/s,530,Mitral regurgitation maximum velocity
+MR mean vel,cm/s,80,
+MV A point,cm/s,10008,A' wave velocity (A-prime) of the mitral annulus using Tissue Doppler Imaging (TDI)
+MV E point,cm/s,11282,E' wave velocity (A-prime) of the mitral annulus using Tissue Doppler Imaging (TDI)
+MV E-F slope,cm/s,4,
+MV P1/2t max vel,cm/s,190,
+MV V2 max,cm/s,1501,Maximal velocity mitral valve
+MV V2 mean,cm/s,1474,Mean velocity mitral valve
+PA V2 max,cm/s,1774,Maximal velocity Pulmonary Artery
+PA V2 mean,cm/s,84,
+PI end-d vel,cm/s,333,
+PI max vel,cm/s,153,
+PSV,cm/s,5,
+Pulm A Revs Vel,cm/s,49,
+Pulm Dias Vel,cm/s,92,
+Pulm Sys Vel,cm/s,94,
+RV Peak syst Vel,cm/s,5133,Peak RV systolic velocity
+RV V1 max,cm/s,196,
+RV V1 mean,cm/s,31,
+TAPV,cm/s,5,
+TR Max vel,cm/s,6140,Maximal Tricuspid Regurgitation velocity
+TV P1/2t max vel,cm/s,1,
+TV V2 max,cm/s,182,
+TV V2 mean,cm/s,125,
+VSD max vel,cm/s,6,
+AI dec slope,cm/s2,816,Aortic Insufficiency decelartion slpe
+MV dec slope,cm/s2,178,
+PA acc slope,cm/s2,4890,Pulmonary artery acceleration slope
+PI dec slope,cm/s2,49,
+Slope (Dop),cm/s2,167,
+Ao root area,cm2,5343,Aortic root area
+Area,cm2,425,
+"AVA(I,A)",cm2,1103,Aortic valve area
+"AVA(I,D)",cm2,1116,Aortic valve area
+"AVA(V,A)",cm2,1270,Aortic valve area
+"AVA(V,D)",cm2,1284,Aortic valve area
+LA Area (A2C),cm2,3189,Left atrial area
+LA Area (A4C),cm2,3554,Left atrial area
+LVAd ap2,cm2,3522,Left Ventricular Area diastole
+LVAd ap4,cm2,4033,Left Ventricular Area diastole
+LVAs ap2,cm2,3497,Left ventricular area systole
+LVAs ap4,cm2,3956,Left ventricular area systole
+LVOT area,cm2,1357,Left Ventricular Outflow Tract Area
+LVOT area (M),cm2,35,
+MPA area,cm2,2,
+MR ERO,cm2,298,
+MR PISA,cm2,315,
+MV area (1 diam),cm2,9,
+MV flow area,cm2,7,
+MV Flow area(1diam),cm2,9,
+MVA(2 diam),cm2,7,
+MVA(P1/2t),cm2,161,
+MVA(VTI),cm2,218,
+Opp LA,cm2,1,
+"PVA(V,A)",cm2,3,
+"PVA(V,D)",cm2,3,
+RV EDA_phl,cm2,12,
+RV ESA_phl,cm2,12,
+RVOT area,cm2,18,
+Vol-area,cm2,1975,Unknown
+MR flow rate,cm3/s,306,
+ED Mass (HM),g,26,
+LV mass(C)d,g,9434,Left ventricular mass 
+LV mass(C)s,g,102,
+LV mass(C)dI,g/m2,8206,Indexed left ventricular mass
+LV mass(C)sI,g/m2,90,
+BZI_Metric_Weight,kg,9389,Weight of person
+BZI_BMI,kg/m2,9362,Body Mass Index
+CO(Teich),L/min,98,
+LV CO 2D auto,L/min,27,
+LV CO 4D Auto,L/min,439,
+CI (HM),L/min/m2,25,
+BSA,m2,12332,Body Surface Area
+EDV(3DQ)_phl,ml,2,
+EDV(3DQA)_phl,ml,431,
+EDV(AP2)(a2DQ)_phl,ml,3,
+EDV(AP2)(aCMQ)_phl,ml,6,
+EDV(AP4)(a2DQ)_phl,ml,42,
+EDV(AP4)(aCMQ)_phl,ml,20,
+EDV(Bi-Plane)(a2DQ)_phl,ml,4,
+EDV(Bi-Plane)(aCMQ)_phl,ml,7,
+ESV(3DQ)_phl,ml,2,
+ESV(3DQA)_phl,ml,431,
+ESV(AP2)(a2DQ)_phl,ml,3,
+ESV(AP2)(aCMQ)_phl,ml,6,
+ESV(AP4)(a2DQ)_phl,ml,42,
+ESV(AP4)(aCMQ)_phl,ml,20,
+ESV(Bi-Plane)(a2DQ)_phl,ml,4,
+ESV(Bi-Plane)(aCMQ)_phl,ml,7,
+EDV (HM)_phl,mL,44,
+EDV_3D-VOL,mL,166,
+EDV(cubed),mL,10160,End diastolic volume
+EDV(MOD-bp),mL,3502,End diastolic volume
+EDV(MOD-sp2),mL,3531,End diastolic volume
+EDV(MOD-sp4),mL,4048,End diastolic volume
+EDV(sp-el),mL,3,
+EDV(sp2-el),mL,3522,End diastolic volume
+EDV(sp4-el),mL,4033,End diastolic volume
+EDV(Teich),mL,10160,End diastolic volume
+ESV (HM)_phl,mL,44,
+ESV_3D-VOL,mL,166,
+ESV(cubed),mL,6895,End systolic volume
+ESV(MOD-bp),mL,3470,End systolic volume
+ESV(MOD-sp2),mL,3505,End systolic volume
+ESV(MOD-sp4),mL,3971,End systolic volume
+ESV(sp-el),mL,3,
+ESV(sp2-el),mL,3497,End systolic volume
+ESV(sp4-el),mL,3956,End systolic volume
+ESV(Teich),mL,6895,End systolic volume
+LA Volume (biplane),mL,3131,Left atrial volume
+LA Volume (HM)_phl,mL,17,
+LAV(MOD-bp)_phl,mL,821,Left atrial volume
+LAV(MOD-sp2)_phl,mL,834,Left atrial volume
+LAV(MOD-sp4)_phl,mL,870,Left atrial volume
+LAVmax (HM),mL,27,
+LAVmin (HM),mL,27,
+LV EDV 2d Auto,mL,27,
+LV EDV 4D Auto,mL,439,
+LV ESV 2D auto,mL,27,
+LV ESV 4D Auto,mL,439,
+LV SV 2D Auto,mL,26,
+LV SV 4D Auto,mL,439,
+MR volume,mL,73,
+RAV(MOD-sp4),mL,606,Right atrial volume
+Stroke Vol,mL,597,Stroke Volume
+SV (HM)_phl,mL,44,
+SV(Ao),mL,1138,Stroke Volume
+SV(cubed),mL,6812,Stroke Volume
+SV(LVOT),mL,1190,Stroke Volume
+SV(MOD-bp),mL,3413,Stroke Volume
+SV(MOD-sp2),mL,3460,Stroke Volume
+SV(MOD-sp4),mL,3965,Stroke Volume
+SV(MV 1 diam),mL,4,
+SV(MV),mL,6,
+SV(PV),mL,1,
+SV(RVOT),mL,1,
+SV(sp-el),mL,3,
+SV(sp2-el),mL,3487,Stroke Volume
+SV(sp4-el),mL,3950,Stroke Volume
+SV(Teich),mL,6886,Stroke Volume
+Vol-by-MOD,mL,1975,Volume measurement
+Vol-by-SPE,mL,1975,Volume measurement
+LA Volume / BSA,mL/m2,3032,Indexed LA volume
+LAV(MOD-bp) Indexed_phl,mL/m2,813,Left atrial volume indexed
+LAVI (HM),mL/m2,25,
+RAVI (MOD-sp4),mL/m2,599,Right atrial volume indexed
+SI(Ao),mL/m2,940,Stroke Index measured at the aorta
+SI(cubed),mL/m2,5952,Stroke Index
+SI(LVOT),mL/m2,1002,Stroke Index
+SI(MOD-bp),mL/m2,3046,Stroke Index
+SI(MOD-sp2),mL/m2,3083,Stroke Index
+SI(MOD-sp4),mL/m2,3491,Stroke Index
+SI(MV),mL/m2,6,
+SI(sp2-el),mL/m2,3078,Stroke Index
+SI(sp4-el),mL/m2,3481,Stroke Index
+SI(Teich),mL/m2,6019,Stroke Index
+LV Length ED (HM)_phl,mm,44,
+LV Length ES (HM)_phl,mm,44,
+AI max PG,mm[Hg],841,Aortic insufficiency maximal pressure gradient
+Ao max PG,mm[Hg],12015,Maximal Aortic pressure gradient
+Ao max PG (full),mm[Hg],11074,Maximal Aortic pressure gradient
+Ao mean PG,mm[Hg],3961,Mean Aortic pressure gradient
+Ao mean PG (full),mm[Hg],2999,Mean Aortic pressure gradient
+AS max PG,mm[Hg],1,
+BZI_Diastolic_Pressure,mm[Hg],58,
+BZI_Systolic_Pressure,mm[Hg],58,
+LAPs (MR maxV),mm[Hg],1,
+LV max PG,mm[Hg],11571,Maximal Left Ventricular pressure gradient
+LV mean PG,mm[Hg],3914,Mean Left Ventricular pressure gradient
+Max PG,mm[Hg],3650,Maximal pressure gradient (unknown where)
+Mean PG,mm[Hg],162,
+MR max PG,mm[Hg],522,Mitral regurgitation maximum pressure gradient
+MR mean PG,mm[Hg],81,
+MV max PG,mm[Hg],1501,Mitral valve maximal pressure gradient
+MV mean PG,mm[Hg],1476,Mitral valve mean pressure gradient
+PA max PG,mm[Hg],1774,Pulmonary Artery maximal pressure gradient
+PA max PG (full),mm[Hg],142,
+PA mean PG,mm[Hg],84,
+PA mean PG (full),mm[Hg],22,
+PA pr(Accel),mm[Hg],4837,Pulmonary artery acceleration time 
+PAPd(PI edV),mm[Hg],32,
+PI max PG,mm[Hg],153,
+RAP diastole,mm[Hg],32,
+RAP systole,mm[Hg],3225,Right Atrial pressure at systle
+RV max PG,mm[Hg],196,
+RV mean PG,mm[Hg],31,
+RVSP,mm[Hg],2184,Right Ventricular Systolic pressure
+TR Max PG,mm[Hg],6141,Tricuspid regurgitation maximal pressure gradient
+TV max PG,mm[Hg],182,
+TV mean PG,mm[Hg],125,
+VSD max PG,mm[Hg],8,
+LV dP/dt,mm[Hg]/s,27,
+LVF dP/dt 2,mm[Hg]/s,150,
+RV dP/dt,mm[Hg]/s,14,
+AI P1/2t,ms,816,Aortic insufficience pressure half time
+AVC (Auto),ms,92,
+MM R-R int msec,ms,136,
+MV P1/2t,ms,161,
+MV P1/2t-pr_phl,ms,4,
+PI P1/2t,ms,48,
+PSD Full,ms,43,
+Tmsv 3-5_phl,ms,413,
+Tmsv 3-6_phl,ms,413,
+AI dec time,s,55,
+Aortic R-R,s,257,
+LPulV A dur,s,108,
+LV IVRT,s,11,
+LVET,s,5,
+LVPEP,s,247,
+Mitral R-R,s,4,
+MM LVPEPc,s,5,
+MM R-R int,s,144,
+MM RVPEPc,s,5,
+MR dP/dt,s,150,
+MV A dur,s,69,
+MV dec time,s,7699,Mitral Valve Deceleration Tim
+PA acc time,s,4911,Pulmonary artery acceleration time 
+PI dec time,s,10,
+Pulm A Revs Dur,s,3,
+R-R time,s,552,R-R interval (heartbeat interval)
+RVPEP,s,246,
+Time (Dop),s,167,
+Tmsv 12-DIF (ms),s,552,Time to the point of minimal regional systolic volume in 12 segments maximal difference
+Tmsv 12-SD (ms),s,552,Time to the point of minimal regional systolic volume in 12 segments standard deviation
+Tmsv 16-DIF (ms),s,552,Time to the point of minimal regional systolic volume in 16 segments maximal difference
+Tmsv 16-SD (ms),s,552,Time to the point of minimal regional systolic volume in 16 segments standard deviation
+Tmsv 6-DIF (ms),s,552,Time to the point of minimal regional systolic volume in 6 segments maximal difference
+Tmsv 6-SD (ms),s,552,Time to the point of minimal regional systolic volume in 6 segments standard deviation
+TR dP/dt,s,14,

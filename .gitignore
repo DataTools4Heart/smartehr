@@ -1,6 +1,5 @@
 env/
 __pycache__*
-data/
 lightning_logs/
 legacy/
 outputs/
@@ -16,3 +15,14 @@ multirun/
 results/
 !eda_legacy_outcomes.ipynb
 !eda_survival_intervals.ipynb
+
+# Ignore everything under data/ EXCEPT the SMARTEHR data dictionaries
+# (schema + code maps; no patient records), so the enrichment mapping ships with
+# the repo. Nested negation: re-include each parent dir, then the *.csv files
+# (the last rule must come after the global *.csv ignore above to win).
+data/*
+!data/smartehr/
+data/smartehr/*
+!data/smartehr/data_dicts/
+data/smartehr/data_dicts/*
+!data/smartehr/data_dicts/*.csv
