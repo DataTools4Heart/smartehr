@@ -5,11 +5,18 @@
 # Prereqs (run once, on a machine with the encoder installed):
 #   pip install -U sentence-transformers "transformers>=4.51"   # Qwen3 arch support
 #
-# Stage 1 — build per-time-point text sequences from the longitudinal JSONL:
+# Stage 1 — build per-time-point text sequences from the longitudinal JSONL.
+#   --enrich maps coded field names/values to human-readable text via the data
+#   dictionaries (e.g. "vgok_nie: 0.0" -> "Voorgeschiedenis; nier-operatie: Nooit"),
+#   which is what lets the LLM encoder use its semantic prior. Build BOTH (with and
+#   without --enrich, to different --out-dir) to run the coded-vs-enriched ablation.
 #   python scripts/smartehr/preprocess_smartehr_longitudinal_survival.py \
 #       --jsonl-dir data/dummy_data/longitudinal_smartehr_0_36500 \
 #       --out-dir   data/dummy_data/longitudinal_dummy_smart_survival_longitudinal \
-#       --horizon-days 1825
+#       --horizon-days 1825 \
+#       --enrich \
+#       --dict-dir data/smartehr/data_dicts \
+#       --smart-xls data/SmartEPjan22dd12072023.xls
 #
 # Stage 2 — encode each time point with frozen Qwen3-Embedding-4B (Tesla T4 = fp16, NOT bf16):
 #   python scripts/smartehr/extract_qwen_embeddings_longitudinal.py \

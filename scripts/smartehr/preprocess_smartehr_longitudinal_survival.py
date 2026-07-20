@@ -34,13 +34,24 @@ def _is_missing(v) -> bool:
     return v is None or v == "" or (isinstance(v, float) and v != v)
 
 
-def serialize_time_point(fields: dict, skip_keys: tuple = ()) -> str:
+def _render_pair(k, v, dic) -> str | None:
+    """Render one ``key: value`` line. With a dictionary, map the field name and coded
+    value to human-readable text (may return None to omit a coded-missing value);
+    otherwise emit the raw coded ``key: value``.
+    """
+    if dic is not None:
+        return dic.enrich(k, v)
+    return f"{k}: {round(v, 4) if isinstance(v, float) else v}"
+
+
+def serialize_time_point(fields: dict, skip_keys: tuple = (), dic=None) -> str:
     """Serialize one time point (a dict of field->value) into a text string.
 
     One ``name: value`` per line (floats rounded); free-text fields render verbatim.
-    No imputation, no standardization, no code translation — the text is the
-    near-lossless representation of whatever was actually recorded at this point, and
-    missing fields are omitted rather than emitted as ``nan``.
+    No imputation, no standardization — the text is the near-lossless representation of
+    whatever was actually recorded at this point, and missing fields are omitted rather
+    than emitted as ``nan``. If ``dic`` (a SmartDictionary) is given, field names and
+    coded values are mapped to human-readable text.
     """
     parts = []
     for k, v in fields.items():
@@ -48,11 +59,13 @@ def serialize_time_point(fields: dict, skip_keys: tuple = ()) -> str:
             continue
         if _is_missing(v):
             continue  # omit missing values rather than imputing or emitting "nan"
-        parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
+        piece = _render_pair(k, v, dic)
+        if piece is not None:
+            parts.append(piece)
     return "\n".join(parts)
 
 
-def serialize_baseline(smart: dict) -> str:
+def serialize_baseline(smart: dict, dic=None) -> str:
     """Serialize the static SMART baseline block as time point 0.
 
     Mirrors the leakage guard in preprocess_smartehr_survival.serialize_patient:
@@ -70,11 +83,13 @@ def serialize_baseline(smart: dict) -> str:
             continue
         if _is_missing(v):
             continue
-        parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
+        piece = _render_pair(k, v, dic)
+        if piece is not None:
+            parts.append(piece)
     return "\n".join(parts)
 
 
-def build_patient_sequence(record: dict) -> tuple[list[str], list[float]]:
+def build_patient_sequence(record: dict, dic=None) -> tuple[list[str], list[float]]:
     """Turn one patient record into a time-ordered sequence of time points.
 
     Returns (texts, time_deltas) where:
@@ -86,12 +101,12 @@ def build_patient_sequence(record: dict) -> tuple[list[str], list[float]]:
     Every sequence has length >= 1 (baseline always present), so a patient with no
     events cleanly degrades to a length-1 sequence (the static baseline alone).
     """
-    texts = [serialize_baseline(record["smart"])]
+    texts = [serialize_baseline(record["smart"], dic=dic)]
     time_deltas = [0.0]
 
     events = sorted(record.get("events", []), key=lambda e: e["datediff"])
     for event in events:
-        texts.append(serialize_time_point(event, skip_keys=("datediff",)))
+        texts.append(serialize_time_point(event, skip_keys=("datediff",), dic=dic))
         time_deltas.append(event["datediff"] / 365.0)
 
     return texts, time_deltas
@@ -101,6 +116,7 @@ def preprocess_longitudinal_survival(
     jsonl_dir: str,
     out_dir: str,
     horizon_days: int = 1825,
+    dic=None,
 ):
     jsonl_dir = Path(jsonl_dir)
     out_dir = Path(out_dir)
@@ -109,6 +125,8 @@ def preprocess_longitudinal_survival(
     print(f"Loading split JSONL files from {jsonl_dir} ...")
     print(f"Applying administrative censoring at {horizon_days} days ({horizon_days / 365:.1f} years)")
     print("Serializing each time point to raw text (instruction + tokenization happen in the extractor).")
+    if dic is not None:
+        print("Enrichment ON: mapping field names / coded values to human-readable text.")
 
     split_datasets = {}
     total_n = 0
@@ -135,7 +153,7 @@ def preprocess_longitudinal_survival(
                 cd_event_raw = rec["smart"].get("cd_event")
                 cd_event = int(cd_event_raw) if cd_event_raw is not None else 1
 
-                texts, time_deltas = build_patient_sequence(rec)
+                texts, time_deltas = build_patient_sequence(rec, dic=dic)
                 duration, event = apply_censoring(first_event, cd_event, horizon_days)
 
                 texts_list.append(texts)
@@ -180,6 +198,7 @@ def preprocess_longitudinal_survival(
     metadata = {
         "horizon_days": horizon_days,
         "representation": "per_time_point_text",
+        "enriched": dic is not None,
         "time_delta_unit": "years",
         "n_patients": total_n,
         "n_time_points": total_tps,
@@ -209,10 +228,29 @@ if __name__ == "__main__":
                         default="data/dummy_data/longitudinal_dummy_smart_survival_longitudinal")
     parser.add_argument("--horizon-days", type=int, default=1825,
                         help="Administrative censoring horizon in days. Default: 1825 (5 years).")
+    parser.add_argument("--enrich", action="store_true",
+                        help="Map coded field names / values to human-readable text via the data "
+                             "dictionaries (recommended for the LLM encoder; enables the coded-vs-readable ablation).")
+    parser.add_argument("--dict-dir", type=str, default="data/smartehr/data_dicts",
+                        help="Directory with data_dict.csv, lab.csv, meting.csv, echo.csv (EHR columns/values).")
+    parser.add_argument("--smart-xls", type=str, default="data/SmartEPjan22dd12072023.xls",
+                        help="SMART baseline data-dictionary spreadsheet (baseline smart_utf8 columns/values).")
     args = parser.parse_args()
+
+    dic = None
+    if args.enrich:
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from smart_dictionaries import SmartDictionary
+
+        smart_xls = args.smart_xls if args.smart_xls and Path(args.smart_xls).exists() else None
+        if args.smart_xls and smart_xls is None:
+            print(f"  WARNING: --smart-xls {args.smart_xls} not found; baseline columns will keep coded names.")
+        dic = SmartDictionary(dict_dir=args.dict_dir, smart_xls=smart_xls)
 
     preprocess_longitudinal_survival(
         jsonl_dir=args.jsonl_dir,
         out_dir=args.out_dir,
         horizon_days=args.horizon_days,
+        dic=dic,
     )
