@@ -7,8 +7,22 @@ from datasets import Dataset
 from transformers import AutoTokenizer
 
 
+def _is_missing(v) -> bool:
+    """True for values we omit from the serialization: None, empty string, or NaN.
+
+    NaN matters specifically: pandas missing cells become Python ``float('nan')`` in
+    the JSONL (json dumps/loads pass ``NaN`` through), and ``float('nan')`` is neither
+    None nor "" — so it must be caught explicitly (``v != v`` is the NaN test), else it
+    serializes as the noise token ``"nan"``.
+    """
+    return v is None or v == "" or (isinstance(v, float) and v != v)
+
+
 def serialize_patient(record: dict, include_events: bool = True) -> str:
     """Serialize a patient record to a natural-language text string.
+
+    Fields are newline-separated ``name: value`` lines; missing fields (None/""/NaN)
+    are omitted rather than emitted as ``nan``.
 
     Args:
         record: Patient record dict with 'smart' and 'events' keys.
@@ -25,6 +39,8 @@ def serialize_patient(record: dict, include_events: bool = True) -> str:
             continue  # SmrtRisk and all subsequent columns are outcome-adjacent
         if k in ("first_event", "cd_event"):
             continue  # target variables, must not be in the input
+        if _is_missing(v):
+            continue  # omit missing values rather than emitting "nan"
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
 
     if include_events:
@@ -33,10 +49,12 @@ def serialize_patient(record: dict, include_events: bool = True) -> str:
             for k, v in event.items():
                 if k == "datediff":
                     continue
+                if _is_missing(v):
+                    continue
                 event_parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
             parts.append(" ".join(event_parts))
 
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 def apply_censoring(first_event: float, cd_event: int, horizon: int) -> tuple[float, int]:

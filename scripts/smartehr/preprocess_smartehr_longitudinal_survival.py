@@ -23,21 +23,33 @@ def apply_censoring(first_event: float, cd_event: int, horizon: int) -> tuple[fl
     return (float(horizon), 0)
 
 
+def _is_missing(v) -> bool:
+    """True for values we omit from the serialization: None, empty string, or NaN.
+
+    NaN matters specifically: pandas missing cells become Python ``float('nan')`` in
+    the JSONL (json dumps/loads pass ``NaN`` through), and ``float('nan')`` is neither
+    None nor "" — so it must be caught explicitly (``v != v`` is the NaN test), else it
+    serializes as the noise token ``"nan"``.
+    """
+    return v is None or v == "" or (isinstance(v, float) and v != v)
+
+
 def serialize_time_point(fields: dict, skip_keys: tuple = ()) -> str:
     """Serialize one time point (a dict of field->value) into a text string.
 
-    Structured fields render as ``name: value`` (floats rounded); free-text fields
-    render verbatim. No imputation, no standardization, no code translation — the
-    text is the near-lossless representation of whatever was recorded at this point.
+    One ``name: value`` per line (floats rounded); free-text fields render verbatim.
+    No imputation, no standardization, no code translation — the text is the
+    near-lossless representation of whatever was actually recorded at this point, and
+    missing fields are omitted rather than emitted as ``nan``.
     """
     parts = []
     for k, v in fields.items():
         if k in skip_keys:
             continue
-        if v is None or v == "":
-            continue  # omit missing values rather than imputing them
+        if _is_missing(v):
+            continue  # omit missing values rather than imputing or emitting "nan"
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 def serialize_baseline(smart: dict) -> str:
@@ -56,10 +68,10 @@ def serialize_baseline(smart: dict) -> str:
             continue
         if k in ("first_event", "cd_event"):
             continue
-        if v is None or v == "":
+        if _is_missing(v):
             continue
         parts.append(f"{k}: {round(v, 4) if isinstance(v, float) else v}")
-    return " | ".join(parts)
+    return "\n".join(parts)
 
 
 def build_patient_sequence(record: dict) -> tuple[list[str], list[float]]:
