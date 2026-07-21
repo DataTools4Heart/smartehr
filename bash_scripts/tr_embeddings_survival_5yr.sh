@@ -41,9 +41,12 @@
 #       training.lr=1e-3 "training.devices=[0]"
 #
 # DIAGNOSTIC (do this BEFORE the LSTM) — is there signal beyond baseline?
-# --pool writes inputs = concat(baseline, mean(event embeddings)) [dim 2E]. Train the SAME
-# MLP on it and compare CI/AUC vs the --flat baseline-only MLP: if --pool does NOT beat
-# --flat, the events are redundant with baseline and no LSTM will help (a valid finding).
+# inputs = concat(baseline, mean(event embeddings)) [dim 2E]. Train the SAME MLP on it and
+# compare CI/AUC vs the --flat baseline-only MLP: if pool does NOT beat flat, the events are
+# redundant with baseline and no LSTM will help (a valid finding).
+#   # REUSE existing sequence embeddings (no re-extraction / no GPU):
+#   python scripts/smartehr/pool_embeddings.py --seq-dir <EMB_sequence> --out-dir <EMB_pool> --mode pool
+#   # ...or, if you don't have the sequence embeddings, extract straight to pooled:
 #   ...extract... --pool --out-dir <EMB_pool>
 #   python scripts/train_lightning_model.py \
 #       dataset=smartehr_embeddings dataset.root_path=<EMB_pool> \
