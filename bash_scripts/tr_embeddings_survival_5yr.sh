@@ -19,25 +19,39 @@
 #       --enrich \
 #       --dict-dir data/smartehr/data_dicts
 #
-# Stage 2 — encode each time point with frozen Qwen3-Embedding-4B (Tesla T4 = fp16, NOT bf16):
+# Stage 2 — encode with a frozen Qwen3-Embedding model (Tesla T4 = fp16, NOT bf16).
+# On a RAM-limited box use the 0.6B model (dim 1024) instead of 4B (dim 2560).
 #   python scripts/smartehr/extract_qwen_embeddings_longitudinal.py \
 #       --parquet-dir data/dummy_data/longitudinal_dummy_smart_survival_longitudinal \
 #       --out-dir     data/dummy_data/longitudinal_dummy_smart_survival_longitudinal_embeddings \
-#       --model-name  Qwen/Qwen3-Embedding-4B \
+#       --model-name  Qwen/Qwen3-Embedding-0.6B \
 #       --dtype float16 --device cuda --encode-batch-size 16
 #   # (Tip: smoke-test the pipeline first with --model-name sentence-transformers/all-MiniLM-L6-v2
 #   #  and set model.embedding_dim to that model's dim, e.g. 384.)
 #
-# Stage 3 — train the LSTM survival head over the cached embeddings.
-# precision=32: the LSTM is tiny; fp32 avoids recurrent-step instability and keeps nll_pmf stable.
-# (The default bf16-true is unsupported on a T4.)
+# STEP 0 (recommended first) — SMART baseline only -> MLP. Add --flat to Stage 2 to encode
+# ONLY the baseline time point per patient into a flat `inputs` vector, then train the small
+# MLP head. Lowest capacity; isolates "does the encoder embedding carry signal" from temporal
+# modeling, and is directly comparable to the numeric static baseline (smartehr_raw_features).
+#   ...extract... --flat  --out-dir <EMB_flat>
+#   python scripts/train_lightning_model.py \
+#       dataset=smartehr_embeddings dataset.root_path=<EMB_flat> \
+#       model=mlp model.input_size=1024 model.num_nodes='[128,128]' model.dropout=0.5 \
+#       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
+#       training.lr=1e-3 "training.devices=[0]"
+#
+# Stage 3 — train the time-aware LSTM head over the cached embedding SEQUENCES.
+# precision=32 (T4 has no bf16). If it overfits: keep the small hidden_dim/time_delta_dim
+# defaults (model config), raise weight_decay / input_dropout, and/or coarsen the PMF bins
+# (training.task.num_time_intervals). Set model.embedding_dim to the encoder dim (0.6B=1024).
 python scripts/train_lightning_model.py \
     dataset=smartehr_longitudinal_embeddings_5yr \
     model=temporal_recurrent_embeddings \
-    model.embedding_dim=2560 \
+    model.embedding_dim=1024 \
     training=lightning_survival_5yr \
     training.precision=32 \
     training.batch_size=32 \
     training.lr=1e-3 \
+    training.weight_decay=1e-2 \
     "training.devices=[0]" \
     training.patience=10

@@ -60,6 +60,9 @@ class TemporalRecurrentLMParams(ModelParams):
 class TemporalRecurrentEmbeddingsParams(ModelParams):
     embedding_dim: int
     dropout: float
+    hidden_dim: int | None = None       # LSTM hidden + input projection width (None -> embedding_dim)
+    time_delta_dim: int | None = None   # time-delta encoder width (None -> embedding_dim)
+    input_dropout: float = 0.0          # dropout on projected input embeddings
 
 
 @dataclass

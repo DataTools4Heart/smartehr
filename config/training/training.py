@@ -23,6 +23,9 @@ class LightningTrainingParams(TrainingParams):
     # Precision string passed to Lightning Trainer (e.g. "bf16-true", "bf16-mixed", "16-mixed").
     # Use "16-mixed" on Tesla T4 (no native bf16); use "bf16-true" on A100/H100.
     precision: str = "bf16-true"
+    # AdamW weight decay. 0.0 = no decay (previous behavior). Raise (e.g. 1e-2) to
+    # regularize small-data survival runs that overfit.
+    weight_decay: float = 0.0
 
     def __post_init__(self):
         self.devices = [int(device) for device in self.devices]

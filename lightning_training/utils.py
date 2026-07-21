@@ -177,6 +177,9 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
             embedding_dim=model_params.embedding_dim,
             num_outputs=num_outputs,
             dropout=model_params.dropout,
+            hidden_dim=model_params.hidden_dim,
+            time_delta_dim=model_params.time_delta_dim,
+            input_dropout=model_params.input_dropout,
         )
     elif model_name == "temporal_recurrent_mlp":
         model_params = TemporalRecurrentMLPModelParams(**model_params)
@@ -247,7 +250,7 @@ def load_lightning_model(model_params: ModelParams, train_params: LightningTrain
     else:
         raise NotImplementedError(f"Unknown model: {model_params.name}")
 
-    model = module_cls(model, lr=train_params.lr)
+    model = module_cls(model, lr=train_params.lr, weight_decay=train_params.weight_decay)
     return model, tokenizer
 
 

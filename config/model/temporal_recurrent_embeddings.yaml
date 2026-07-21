@@ -2,7 +2,12 @@ defaults:
   - base_temporal_recurrent_embeddings
 
 name: temporal_recurrent_embeddings
-# Must equal the extractor's output dim. Qwen3-Embedding-4B = 2560
+# Must equal the extractor's output dim: Qwen3-Embedding-4B = 2560, 0.6B = 1024
 # (or the --truncate-dim value if MRL-truncated at extraction time).
 embedding_dim: 2560
 dropout: 0.3
+# Capacity control for small cohorts (project the frozen embeddings down + small LSTM).
+# Set hidden_dim/time_delta_dim = embedding_dim to recover the original large model.
+hidden_dim: 128
+time_delta_dim: 16
+input_dropout: 0.2

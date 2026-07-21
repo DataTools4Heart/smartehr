@@ -12,3 +12,4 @@ patience: 5
 accumulation_steps: 1
 resume_ckpt_path: null
 precision: bf16-true
+weight_decay: 0.0

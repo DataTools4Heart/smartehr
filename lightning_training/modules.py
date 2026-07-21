@@ -7,10 +7,11 @@ from lightning_training.collator import DatasetBatch
 
 
 class SurvivalAnalysisModule(L.LightningModule):
-    def __init__(self, model: nn.Module, lr: float, evaluation_times: list[int]):
+    def __init__(self, model: nn.Module, lr: float, evaluation_times: list[int], weight_decay: float = 0.0):
         super().__init__()
         self.model = model
         self.lr = lr
+        self.weight_decay = weight_decay
         self.surv_metrics = SurvMetrics(evaluation_times=evaluation_times)
 
     def training_step(self, batch: DatasetBatch, batch_idx):
@@ -52,18 +53,19 @@ class SurvivalAnalysisModule(L.LightningModule):
         print(results)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        return optimizer
+        trainable = [p for p in self.model.parameters() if p.requires_grad]
+        return torch.optim.AdamW(trainable, lr=self.lr, weight_decay=self.weight_decay)
 
 
 from torchmetrics import Accuracy, F1Score, AUROC, Precision, Recall
 
 
 class ClassificationModule(L.LightningModule):
-    def __init__(self, model: nn.Module, lr: float, task: str, num_outputs: int):
+    def __init__(self, model: nn.Module, lr: float, task: str, num_outputs: int, weight_decay: float = 0.0):
         super().__init__()
         self.model = model
         self.lr = lr
+        self.weight_decay = weight_decay
         self.num_outputs = num_outputs
         self.task = task
 
@@ -145,5 +147,4 @@ class ClassificationModule(L.LightningModule):
 
     def configure_optimizers(self):
         trainable = [p for p in self.model.parameters() if p.requires_grad]
-        optimizer = torch.optim.Adam(trainable, lr=self.lr)
-        return optimizer
+        return torch.optim.AdamW(trainable, lr=self.lr, weight_decay=self.weight_decay)

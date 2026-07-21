@@ -73,12 +73,19 @@ def extract_split(
     patient_flush: int,
     truncate_dim: int | None,
     out_path: Path,
+    flat: bool = False,
 ) -> tuple[int, int]:
-    """Encode each patient's time points and stream per-patient embedding sequences to parquet.
+    """Encode patients and stream to parquet.
 
-    Buffers up to ``patient_flush`` patients, flattens their time points into one big list,
-    encodes it in one sentence-transformers call (which batches internally at
-    ``encode_batch_size``), then splits the result back into per-patient [L, E] sequences.
+    Sequence mode (default): per patient, encode every time point and write a
+    ``embeddings`` [L, E] sequence + ``time_deltas_list`` (for TemporalRecurrentEmbeddings).
+
+    Flat mode (``flat=True``): per patient, encode ONLY the baseline time point (index 0)
+    and write a single ``inputs`` [E] vector — the schema the ``mlp`` model / collate_fn_mlp
+    expect. This is the SMART-baseline-only MLP first step.
+
+    Buffers up to ``patient_flush`` patients, encodes their texts in one
+    sentence-transformers call (internally batched at ``encode_batch_size``).
     """
     writer = None
     n_rows = 0
@@ -116,26 +123,26 @@ def extract_split(
             norms[norms == 0] = 1.0
             emb = emb / norms
 
-        # Split the flat [sum(L), E] matrix back into per-patient [L, E] sequences.
-        seqs = []
-        offset = 0
-        for length in buf_lengths:
-            seqs.append(emb[offset : offset + length].tolist())
-            offset += length
+        if flat:
+            # One text per patient -> one vector per patient, flat `inputs` schema.
+            table = pa.table({"inputs": emb.tolist(), "duration": buf_dur, "event": buf_evt})
+            n_tps += len(buf_lengths)
+        else:
+            # Split the flat [sum(L), E] matrix back into per-patient [L, E] sequences.
+            seqs = []
+            offset = 0
+            for length in buf_lengths:
+                seqs.append(emb[offset : offset + length].tolist())
+                offset += length
+            table = pa.table(
+                {"embeddings": seqs, "time_deltas_list": buf_deltas, "duration": buf_dur, "event": buf_evt}
+            )
+            n_tps += offset
 
-        table = pa.table(
-            {
-                "embeddings": seqs,
-                "time_deltas_list": buf_deltas,
-                "duration": buf_dur,
-                "event": buf_evt,
-            }
-        )
         if writer is None:
             writer = pq.ParquetWriter(out_path, table.schema)
         writer.write_table(table)
         n_rows += len(buf_lengths)
-        n_tps += offset
 
         buf_texts.clear()
         buf_lengths.clear()
@@ -144,11 +151,14 @@ def extract_split(
         buf_evt.clear()
 
     try:
-        for i, rec in enumerate(split):
-            texts = rec["texts"]
-            buf_texts.extend(texts)
-            buf_lengths.append(len(texts))
-            buf_deltas.append([float(d) for d in rec["time_deltas_list"]])
+        for rec in split:
+            if flat:
+                buf_texts.append(rec["texts"][0])  # baseline time point only
+                buf_lengths.append(1)
+            else:
+                buf_texts.extend(rec["texts"])
+                buf_lengths.append(len(rec["texts"]))
+                buf_deltas.append([float(d) for d in rec["time_deltas_list"]])
             buf_dur.append(float(rec["duration"]))
             buf_evt.append(float(rec["event"]))
 
@@ -173,6 +183,7 @@ def main(
     patient_flush: int,
     max_seq_length: int | None,
     truncate_dim: int | None,
+    flat: bool,
 ):
     parquet_dir = Path(parquet_dir)
     out_dir = Path(out_dir)
@@ -180,7 +191,7 @@ def main(
 
     prompt = f"Instruct: {task}\nQuery:"  # Qwen3 template; text is appended by sentence-transformers.
 
-    print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}")
+    print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}  |  mode: {'flat (baseline-only)' if flat else 'sequence'}")
     if dtype == "bfloat16":
         print("  WARNING: Tesla T4 does not support bf16 — use --dtype float16 on a T4.")
     print(f"Loading frozen encoder ...")
@@ -200,7 +211,7 @@ def main(
         print(f"Extracting {split_name} ({split_file}): {len(split):,} patients ...")
         with torch.no_grad():
             n_rows, n_tps = extract_split(
-                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path
+                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path, flat=flat
             )
         del split
         print(f"  {split_name:12s}: {n_rows:,} patients / {n_tps:,} time points -> {out_path}")
@@ -214,13 +225,17 @@ def main(
             "normalized": True,
             "instruction": task,
             "prompt_template": prompt,
+            "mode": "flat_baseline" if flat else "sequence",
         }
     )
     with open(out_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
     print(f"\nSaved embeddings to {out_dir}")
-    print(f"Set model.embedding_dim={embedding_dim} in config/model/temporal_recurrent_embeddings.yaml.")
+    if flat:
+        print(f"Flat baseline-only embeddings: train with model=mlp model.input_size={embedding_dim}.")
+    else:
+        print(f"Set model.embedding_dim={embedding_dim} in config/model/temporal_recurrent_embeddings.yaml.")
 
 
 if __name__ == "__main__":
@@ -248,6 +263,9 @@ if __name__ == "__main__":
                         help="Override the encoder max token length per time point. Default: model default.")
     parser.add_argument("--truncate-dim", type=int, default=None,
                         help="MRL: truncate embeddings to this dim and renormalize (Qwen3-Embedding-4B supports 32..2560).")
+    parser.add_argument("--flat", action="store_true",
+                        help="Baseline-only: encode ONLY the baseline time point per patient and write a flat "
+                             "`inputs` vector (for `model=mlp`), instead of a per-time-point embedding sequence.")
     args = parser.parse_args()
 
     main(
@@ -261,4 +279,5 @@ if __name__ == "__main__":
         patient_flush=args.patient_flush,
         max_seq_length=args.max_seq_length,
         truncate_dim=args.truncate_dim,
+        flat=args.flat,
     )
