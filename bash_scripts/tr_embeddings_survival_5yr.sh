@@ -40,6 +40,17 @@
 #       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
 #       training.lr=1e-3 "training.devices=[0]"
 #
+# DIAGNOSTIC (do this BEFORE the LSTM) — is there signal beyond baseline?
+# --pool writes inputs = concat(baseline, mean(event embeddings)) [dim 2E]. Train the SAME
+# MLP on it and compare CI/AUC vs the --flat baseline-only MLP: if --pool does NOT beat
+# --flat, the events are redundant with baseline and no LSTM will help (a valid finding).
+#   ...extract... --pool --out-dir <EMB_pool>
+#   python scripts/train_lightning_model.py \
+#       dataset=smartehr_embeddings dataset.root_path=<EMB_pool> \
+#       model=mlp model.input_size=2048 model.num_nodes='[128,128]' model.dropout=0.5 \
+#       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
+#       training.lr=1e-3 "training.devices=[0]"   # input_size = 2 * embedding_dim (0.6B -> 2048)
+#
 # Stage 3 — train the time-aware LSTM head over the cached embedding SEQUENCES.
 # precision=32 (T4 has no bf16). If it overfits: keep the small hidden_dim/time_delta_dim
 # defaults (model config), raise weight_decay / input_dropout, and/or coarsen the PMF bins

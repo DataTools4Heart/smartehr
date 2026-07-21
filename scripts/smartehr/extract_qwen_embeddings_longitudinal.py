@@ -73,16 +73,19 @@ def extract_split(
     patient_flush: int,
     truncate_dim: int | None,
     out_path: Path,
-    flat: bool = False,
+    mode: str = "sequence",
 ) -> tuple[int, int]:
-    """Encode patients and stream to parquet.
+    """Encode patients and stream to parquet. ``mode`` picks the output schema:
 
-    Sequence mode (default): per patient, encode every time point and write a
-    ``embeddings`` [L, E] sequence + ``time_deltas_list`` (for TemporalRecurrentEmbeddings).
-
-    Flat mode (``flat=True``): per patient, encode ONLY the baseline time point (index 0)
-    and write a single ``inputs`` [E] vector — the schema the ``mlp`` model / collate_fn_mlp
-    expect. This is the SMART-baseline-only MLP first step.
+    - "sequence" (default): per patient, encode every time point -> ``embeddings`` [L, E]
+      sequence + ``time_deltas_list`` (for TemporalRecurrentEmbeddings).
+    - "flat": encode ONLY the baseline time point -> flat ``inputs`` [E] vector
+      (SMART-baseline-only MLP; schema for the ``mlp`` model / collate_fn_mlp).
+    - "pool": encode all time points, write flat ``inputs`` [2E] =
+      concat(baseline_embedding, mean(event_embeddings)); event-mean is zeros when a
+      patient has no events. This is the diagnostic: MLP on [baseline ; mean(events)]
+      vs the flat baseline-only MLP tells you whether the events carry signal beyond
+      baseline BEFORE investing in the temporal (LSTM) model.
 
     Buffers up to ``patient_flush`` patients, encodes their texts in one
     sentence-transformers call (internally batched at ``encode_batch_size``).
@@ -123,12 +126,22 @@ def extract_split(
             norms[norms == 0] = 1.0
             emb = emb / norms
 
-        if flat:
+        if mode == "flat":
             # One text per patient -> one vector per patient, flat `inputs` schema.
             table = pa.table({"inputs": emb.tolist(), "duration": buf_dur, "event": buf_evt})
             n_tps += len(buf_lengths)
-        else:
-            # Split the flat [sum(L), E] matrix back into per-patient [L, E] sequences.
+        elif mode == "pool":
+            # Per patient: concat(baseline, mean(events)); event-mean = zeros if no events.
+            vecs = []
+            offset = 0
+            for length in buf_lengths:
+                base = emb[offset]
+                ev_mean = emb[offset + 1 : offset + length].mean(axis=0) if length > 1 else np.zeros_like(base)
+                vecs.append(np.concatenate([base, ev_mean]).tolist())
+                offset += length
+            table = pa.table({"inputs": vecs, "duration": buf_dur, "event": buf_evt})
+            n_tps += offset
+        else:  # sequence
             seqs = []
             offset = 0
             for length in buf_lengths:
@@ -152,13 +165,14 @@ def extract_split(
 
     try:
         for rec in split:
-            if flat:
+            if mode == "flat":
                 buf_texts.append(rec["texts"][0])  # baseline time point only
                 buf_lengths.append(1)
-            else:
+            else:  # "pool" and "sequence" need all time points
                 buf_texts.extend(rec["texts"])
                 buf_lengths.append(len(rec["texts"]))
-                buf_deltas.append([float(d) for d in rec["time_deltas_list"]])
+                if mode == "sequence":
+                    buf_deltas.append([float(d) for d in rec["time_deltas_list"]])
             buf_dur.append(float(rec["duration"]))
             buf_evt.append(float(rec["event"]))
 
@@ -183,7 +197,7 @@ def main(
     patient_flush: int,
     max_seq_length: int | None,
     truncate_dim: int | None,
-    flat: bool,
+    mode: str,
 ):
     parquet_dir = Path(parquet_dir)
     out_dir = Path(out_dir)
@@ -191,7 +205,8 @@ def main(
 
     prompt = f"Instruct: {task}\nQuery:"  # Qwen3 template; text is appended by sentence-transformers.
 
-    print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}  |  mode: {'flat (baseline-only)' if flat else 'sequence'}")
+    _mode_desc = {"flat": "flat (baseline-only)", "pool": "pool (baseline + mean events)", "sequence": "sequence"}
+    print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}  |  mode: {_mode_desc[mode]}")
     if dtype == "bfloat16":
         print("  WARNING: Tesla T4 does not support bf16 — use --dtype float16 on a T4.")
     print(f"Loading frozen encoder ...")
@@ -211,7 +226,7 @@ def main(
         print(f"Extracting {split_name} ({split_file}): {len(split):,} patients ...")
         with torch.no_grad():
             n_rows, n_tps = extract_split(
-                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path, flat=flat
+                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path, mode=mode
             )
         del split
         print(f"  {split_name:12s}: {n_rows:,} patients / {n_tps:,} time points -> {out_path}")
@@ -225,15 +240,18 @@ def main(
             "normalized": True,
             "instruction": task,
             "prompt_template": prompt,
-            "mode": "flat_baseline" if flat else "sequence",
+            "mode": mode,
         }
     )
     with open(out_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
     print(f"\nSaved embeddings to {out_dir}")
-    if flat:
+    if mode == "flat":
         print(f"Flat baseline-only embeddings: train with model=mlp model.input_size={embedding_dim}.")
+    elif mode == "pool":
+        print(f"Pooled [baseline; mean(events)]: train with model=mlp model.input_size={2 * embedding_dim} "
+              f"and compare vs the flat baseline-only MLP to see if events add signal.")
     else:
         print(f"Set model.embedding_dim={embedding_dim} in config/model/temporal_recurrent_embeddings.yaml.")
 
@@ -263,11 +281,17 @@ if __name__ == "__main__":
                         help="Override the encoder max token length per time point. Default: model default.")
     parser.add_argument("--truncate-dim", type=int, default=None,
                         help="MRL: truncate embeddings to this dim and renormalize (Qwen3-Embedding-4B supports 32..2560).")
-    parser.add_argument("--flat", action="store_true",
-                        help="Baseline-only: encode ONLY the baseline time point per patient and write a flat "
-                             "`inputs` vector (for `model=mlp`), instead of a per-time-point embedding sequence.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--flat", action="store_true",
+                       help="Baseline-only: encode ONLY the baseline time point per patient -> flat `inputs` [E] "
+                            "vector (for `model=mlp`). The SMART-baseline MLP first step.")
+    group.add_argument("--pool", action="store_true",
+                       help="Diagnostic: write flat `inputs` [2E] = concat(baseline, mean(event embeddings)). "
+                            "Train `model=mlp model.input_size=2E` and compare to --flat to test whether the "
+                            "events carry signal beyond baseline (before investing in the LSTM).")
     args = parser.parse_args()
 
+    mode = "flat" if args.flat else "pool" if args.pool else "sequence"
     main(
         parquet_dir=args.parquet_dir,
         out_dir=args.out_dir,
@@ -279,5 +303,5 @@ if __name__ == "__main__":
         patient_flush=args.patient_flush,
         max_seq_length=args.max_seq_length,
         truncate_dim=args.truncate_dim,
-        flat=args.flat,
+        mode=mode,
     )
