@@ -3,17 +3,29 @@ vectors — no re-encoding, no GPU. Use this to run the baseline-vs-events diagn
 on embeddings you already extracted (the `embeddings` [L, E] + duration + event
 parquet produced by extract_qwen_embeddings_longitudinal.py in sequence mode).
 
-Modes:
-  - flat : inputs = baseline embedding (time point 0)                 [dim E]
-  - pool : inputs = concat(baseline, mean(event embeddings))          [dim 2E]
-           (event-mean is zeros when a patient has no events)
-  - mean : inputs = mean over ALL time points (baseline + events)     [dim E]
+The event embeddings (rows 1:) are ordered oldest -> most recent (row -1 = latest
+pre-baseline event); row 0 is the baseline. Aggregators:
 
-Then train the same MLP on the output and compare CI/AUC:
+Baseline / additive:
+  - flat      : baseline embedding (time point 0)                     [dim E]
+  - pool      : concat(baseline, mean(events))                        [dim 2E]
+  - pool_last : concat(baseline, most-recent event)                   [dim 2E]
+  - pool_max  : concat(baseline, elementwise max over events)         [dim 2E]
+  - mean      : mean over ALL time points (baseline + events)         [dim E]
+Events-only (does the event representation carry ANY signal vs baseline/random?):
+  - events    : mean over event embeddings                            [dim E]
+  - last      : most-recent event embedding                           [dim E]
+  - max       : elementwise max over event embeddings                 [dim E]
+(event aggregate is zeros when a patient has no events)
+
+Diagnostic reading (train the same MLP on each, compare CI/AUC):
+  - pool/pool_last/pool_max don't beat flat  -> events add nothing beyond baseline.
+  - BUT if events/last/max alone are ~random -> the frozen event *representation* is
+    the weak link (fix: better event encoding / LoRA), not necessarily redundancy.
+  - if events-only is well above random but pool* ties flat -> real but redundant.
     python scripts/train_lightning_model.py \
         dataset=smartehr_embeddings dataset.root_path=<OUT> \
         model=mlp model.input_size=<E or 2E> ... training.weight_decay=1e-2
-If `pool` does not beat `flat`, the events add nothing beyond baseline.
 """
 
 import argparse
@@ -26,22 +38,40 @@ import pyarrow.parquet as pq
 from datasets import load_dataset
 
 
+def _event_agg(emb: np.ndarray, how: str) -> np.ndarray:
+    """Aggregate the event rows emb[1:] (oldest..most-recent); zeros if no events."""
+    ev = emb[1:]
+    if ev.shape[0] == 0:
+        return np.zeros(emb.shape[1], dtype=np.float32)
+    if how == "mean":
+        return ev.mean(axis=0)
+    if how == "last":
+        return ev[-1]
+    if how == "max":
+        return ev.max(axis=0)
+    raise ValueError(f"unknown event aggregator: {how}")
+
+
+def _make_vec(emb: np.ndarray, mode: str) -> np.ndarray:
+    base = emb[0]
+    if mode == "flat":
+        return base
+    if mode == "mean":
+        return emb.mean(axis=0)
+    if mode in ("events", "last", "max"):
+        return _event_agg(emb, {"events": "mean", "last": "last", "max": "max"}[mode])
+    if mode in ("pool", "pool_last", "pool_max"):
+        how = {"pool": "mean", "pool_last": "last", "pool_max": "max"}[mode]
+        return np.concatenate([base, _event_agg(emb, how)])
+    raise ValueError(f"unknown mode: {mode}")
+
+
 def pool_split(in_path: Path, out_path: Path, mode: str) -> tuple[int, int]:
     ds = load_dataset("parquet", data_files=str(in_path), split="train")
     inputs, durations, events = [], [], []
     for rec in ds:
         emb = np.asarray(rec["embeddings"], dtype=np.float32)  # [L, E]
-        base = emb[0]
-        if mode == "flat":
-            vec = base
-        elif mode == "pool":
-            ev_mean = emb[1:].mean(axis=0) if emb.shape[0] > 1 else np.zeros_like(base)
-            vec = np.concatenate([base, ev_mean])
-        elif mode == "mean":
-            vec = emb.mean(axis=0)
-        else:
-            raise ValueError(f"unknown mode: {mode}")
-        inputs.append(vec.tolist())
+        inputs.append(_make_vec(emb, mode).tolist())
         durations.append(float(rec["duration"]))
         events.append(float(rec["event"]))
     pq.write_table(
@@ -84,6 +114,10 @@ if __name__ == "__main__":
                         help="Directory with train/validation/test.parquet that have an `embeddings` "
                              "[L, E] column (sequence-mode output of extract_qwen_embeddings_longitudinal.py).")
     parser.add_argument("--out-dir", type=str, required=True)
-    parser.add_argument("--mode", choices=["flat", "pool", "mean"], default="pool")
+    parser.add_argument(
+        "--mode",
+        choices=["flat", "pool", "pool_last", "pool_max", "mean", "events", "last", "max"],
+        default="pool",
+    )
     args = parser.parse_args()
     main(seq_dir=args.seq_dir, out_dir=args.out_dir, mode=args.mode)
