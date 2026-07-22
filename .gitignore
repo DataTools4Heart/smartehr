@@ -15,6 +15,7 @@ multirun/
 results/
 !eda_legacy_outcomes.ipynb
 !eda_survival_intervals.ipynb
+!eda_joint_tokens.ipynb
 
 # Ignore everything under data/ EXCEPT the SMARTEHR data dictionaries
 # (schema + code maps; no patient records), so the enrichment mapping ships with
