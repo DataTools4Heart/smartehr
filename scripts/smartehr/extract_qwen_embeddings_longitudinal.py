@@ -35,13 +35,52 @@ from datasets import load_dataset
 
 _DTYPES = {"float32": torch.float32, "float16": torch.float16, "bfloat16": torch.bfloat16}
 
-# Frozen task instruction (English, per Qwen guidance). Applied identically to every
-# time point and every split. Qwen3-Embedding query template is: "Instruct: {task}\nQuery:{text}".
+# Frozen task instructions (English, per Qwen guidance). Applied identically to every
+# item and split. Qwen3-Embedding query template is: "Instruct: {task}\nQuery:{text}".
+# Per-time-point / per-item default (flat / pool / sequence modes):
 DEFAULT_TASK = (
     "Represent this cardiovascular patient's clinical encounter — diagnoses, lab and vital "
     "measurements, medications, imaging findings, and clinical notes — for predicting the risk "
     "of a future cardiovascular event (vascular death, stroke, or myocardial infarction)."
 )
+# Whole-history default (joint mode): tells the encoder it is reading a chronological
+# history and should integrate across records.
+DEFAULT_TASK_JOINT = (
+    "The following is a cardiovascular patient's clinical history — a baseline assessment at "
+    "enrollment, followed by earlier records (labs, medications, consultations, imaging) each "
+    "dated relative to baseline. Represent the patient's overall status for predicting the risk "
+    "of a future cardiovascular event (vascular death, stroke, or myocardial infarction)."
+)
+
+
+def _time_phrase(dt_years: float) -> str:
+    """Human-readable, LLM-friendly time for an event (all events are pre-baseline)."""
+    y = abs(float(dt_years))
+    if y < 1.0:
+        m = max(1, round(y * 12))
+        return f"about {m} month{'s' if m != 1 else ''} before baseline"
+    return f"{y:.1f} years before baseline"
+
+
+def build_joint_document(texts: list[str], time_deltas: list[float], exclude_baseline: bool = False) -> str:
+    """Join a patient's per-time-point texts into ONE chronological document.
+
+    Baseline (index 0, delta 0) first, then events. Block titles are natural language
+    wrapped in [] as section headers; fields inside stay newline-separated; blocks are
+    separated by a blank line.
+    """
+    blocks = []
+    for i, (txt, dt) in enumerate(zip(texts, time_deltas)):
+        if i == 0:
+            if exclude_baseline:
+                continue
+            title = "At baseline (enrollment)"
+        else:
+            title = _time_phrase(dt)
+        blocks.append(f"[{title}]\n{txt}")
+    if not blocks:
+        return "No clinical records before baseline."
+    return "\n\n".join(blocks)
 
 
 def load_encoder(model_name: str, device: str, dtype: str, max_seq_length: int | None):
@@ -74,6 +113,7 @@ def extract_split(
     truncate_dim: int | None,
     out_path: Path,
     mode: str = "sequence",
+    exclude_baseline: bool = False,
 ) -> tuple[int, int]:
     """Encode patients and stream to parquet. ``mode`` picks the output schema:
 
@@ -83,9 +123,11 @@ def extract_split(
       (SMART-baseline-only MLP; schema for the ``mlp`` model / collate_fn_mlp).
     - "pool": encode all time points, write flat ``inputs`` [2E] =
       concat(baseline_embedding, mean(event_embeddings)); event-mean is zeros when a
-      patient has no events. This is the diagnostic: MLP on [baseline ; mean(events)]
-      vs the flat baseline-only MLP tells you whether the events carry signal beyond
-      baseline BEFORE investing in the temporal (LSTM) model.
+      patient has no events. Diagnostic: MLP on [baseline ; mean(events)] vs flat.
+    - "joint": serialize the WHOLE history into ONE chronological document and encode
+      it once -> flat ``inputs`` [E]. Unlike pool, this lets the encoder integrate
+      across events (cross-event self-attention). ``exclude_baseline`` drops the
+      baseline block (events-jointly-with-context test).
 
     Buffers up to ``patient_flush`` patients, encodes their texts in one
     sentence-transformers call (internally batched at ``encode_batch_size``).
@@ -126,7 +168,7 @@ def extract_split(
             norms[norms == 0] = 1.0
             emb = emb / norms
 
-        if mode == "flat":
+        if mode in ("flat", "joint"):
             # One text per patient -> one vector per patient, flat `inputs` schema.
             table = pa.table({"inputs": emb.tolist(), "duration": buf_dur, "event": buf_evt})
             n_tps += len(buf_lengths)
@@ -168,6 +210,9 @@ def extract_split(
             if mode == "flat":
                 buf_texts.append(rec["texts"][0])  # baseline time point only
                 buf_lengths.append(1)
+            elif mode == "joint":
+                buf_texts.append(build_joint_document(rec["texts"], rec["time_deltas_list"], exclude_baseline))
+                buf_lengths.append(1)
             else:  # "pool" and "sequence" need all time points
                 buf_texts.extend(rec["texts"])
                 buf_lengths.append(len(rec["texts"]))
@@ -198,6 +243,7 @@ def main(
     max_seq_length: int | None,
     truncate_dim: int | None,
     mode: str,
+    exclude_baseline: bool = False,
 ):
     parquet_dir = Path(parquet_dir)
     out_dir = Path(out_dir)
@@ -205,7 +251,12 @@ def main(
 
     prompt = f"Instruct: {task}\nQuery:"  # Qwen3 template; text is appended by sentence-transformers.
 
-    _mode_desc = {"flat": "flat (baseline-only)", "pool": "pool (baseline + mean events)", "sequence": "sequence"}
+    _mode_desc = {
+        "flat": "flat (baseline-only)",
+        "pool": "pool (baseline + mean events)",
+        "joint": "joint (whole history, one embedding)" + (", events-only" if exclude_baseline else ""),
+        "sequence": "sequence",
+    }
     print(f"Device: {device}  |  dtype: {dtype}  |  model: {model_name}  |  mode: {_mode_desc[mode]}")
     if dtype == "bfloat16":
         print("  WARNING: Tesla T4 does not support bf16 — use --dtype float16 on a T4.")
@@ -226,7 +277,8 @@ def main(
         print(f"Extracting {split_name} ({split_file}): {len(split):,} patients ...")
         with torch.no_grad():
             n_rows, n_tps = extract_split(
-                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path, mode=mode
+                model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path,
+                mode=mode, exclude_baseline=exclude_baseline,
             )
         del split
         print(f"  {split_name:12s}: {n_rows:,} patients / {n_tps:,} time points -> {out_path}")
@@ -252,6 +304,9 @@ def main(
     elif mode == "pool":
         print(f"Pooled [baseline; mean(events)]: train with model=mlp model.input_size={2 * embedding_dim} "
               f"and compare vs the flat baseline-only MLP to see if events add signal.")
+    elif mode == "joint":
+        print(f"Joint whole-history embedding: train with model=mlp model.input_size={embedding_dim} "
+              f"and compare vs the flat baseline-only MLP (does cross-event context beat baseline?).")
     else:
         print(f"Set model.embedding_dim={embedding_dim} in config/model/temporal_recurrent_embeddings.yaml.")
 
@@ -267,8 +322,9 @@ if __name__ == "__main__":
     parser.add_argument("--out-dir", type=str, required=True)
     parser.add_argument("--model-name", type=str, default="Qwen/Qwen3-Embedding-4B",
                         help="Encoder. Use a small sentence-transformers model to smoke-test the pipeline first.")
-    parser.add_argument("--task", type=str, default=DEFAULT_TASK,
-                        help="Instruction task description (English). Frozen into metadata.json.")
+    parser.add_argument("--task", type=str, default=None,
+                        help="Instruction task description (English). Frozen into metadata.json. "
+                             "Default depends on mode (per-encounter for flat/pool/sequence, whole-history for --joint).")
     parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--dtype", type=str, default="float16", choices=list(_DTYPES),
                         help="Backbone precision. Use float16 on a Tesla T4 (no bf16). "
@@ -289,14 +345,23 @@ if __name__ == "__main__":
                        help="Diagnostic: write flat `inputs` [2E] = concat(baseline, mean(event embeddings)). "
                             "Train `model=mlp model.input_size=2E` and compare to --flat to test whether the "
                             "events carry signal beyond baseline (before investing in the LSTM).")
+    group.add_argument("--joint", action="store_true",
+                       help="Serialize the WHOLE history into ONE chronological document and encode it once -> "
+                            "flat `inputs` [E]. Lets the encoder integrate across events (unlike --pool). "
+                            "Train `model=mlp model.input_size=E` and compare vs --flat.")
+    parser.add_argument("--exclude-baseline", action="store_true",
+                        help="With --joint only: drop the baseline block (events-jointly-with-context test).")
     args = parser.parse_args()
 
-    mode = "flat" if args.flat else "pool" if args.pool else "sequence"
+    mode = "flat" if args.flat else "pool" if args.pool else "joint" if args.joint else "sequence"
+    if args.exclude_baseline and mode != "joint":
+        parser.error("--exclude-baseline is only valid with --joint")
+    task = args.task or (DEFAULT_TASK_JOINT if mode == "joint" else DEFAULT_TASK)
     main(
         parquet_dir=args.parquet_dir,
         out_dir=args.out_dir,
         model_name=args.model_name,
-        task=args.task,
+        task=task,
         device=args.device,
         dtype=args.dtype,
         encode_batch_size=args.encode_batch_size,
@@ -304,4 +369,5 @@ if __name__ == "__main__":
         max_seq_length=args.max_seq_length,
         truncate_dim=args.truncate_dim,
         mode=mode,
+        exclude_baseline=args.exclude_baseline,
     )

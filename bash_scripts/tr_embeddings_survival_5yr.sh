@@ -46,8 +46,24 @@
 # redundant with baseline and no LSTM will help (a valid finding).
 #   # REUSE existing sequence embeddings (no re-extraction / no GPU):
 #   python scripts/smartehr/pool_embeddings.py --seq-dir <EMB_sequence> --out-dir <EMB_pool> --mode pool
+#   #   (pool_embeddings.py also has --mode events/last/max and pool_last/pool_max to test whether
+#   #    the event representation carries ANY signal, and recency/max instead of mean.)
 #   # ...or, if you don't have the sequence embeddings, extract straight to pooled:
 #   ...extract... --pool --out-dir <EMB_pool>
+#
+# JOINT (whole-history, one embedding) — needs a cheap re-extract (one forward per patient),
+# but unlike --pool it lets the encoder integrate ACROSS events (cross-event self-attention).
+# Serializes the full history into one chronological document (baseline + time-stamped blocks)
+# and encodes it once. Compare vs the --flat baseline-only MLP; --exclude-baseline tests the
+# events jointly, without baseline.
+#   python scripts/smartehr/extract_qwen_embeddings_longitudinal.py \
+#       --parquet-dir <TEXT> --out-dir <EMB_joint> \
+#       --model-name Qwen/Qwen3-Embedding-0.6B --dtype float16 --device cuda --joint
+#   python scripts/train_lightning_model.py \
+#       dataset=smartehr_embeddings dataset.root_path=<EMB_joint> \
+#       model=mlp model.input_size=1024 model.num_nodes='[128,128]' model.dropout=0.5 \
+#       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
+#       training.lr=1e-3 "training.devices=[0]"
 #   python scripts/train_lightning_model.py \
 #       dataset=smartehr_embeddings dataset.root_path=<EMB_pool> \
 #       model=mlp model.input_size=2048 model.num_nodes='[128,128]' model.dropout=0.5 \
