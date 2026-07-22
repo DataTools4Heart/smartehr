@@ -62,12 +62,23 @@ def _time_phrase(dt_years: float) -> str:
     return f"{y:.1f} years before baseline"
 
 
-def build_joint_document(texts: list[str], time_deltas: list[float], exclude_baseline: bool = False) -> str:
+def build_joint_document(
+    texts: list[str],
+    time_deltas: list[float],
+    exclude_baseline: bool = False,
+    max_tokens_per_block: int | None = None,
+    truncate_fn=None,
+) -> str:
     """Join a patient's per-time-point texts into ONE chronological document.
 
     Baseline (index 0, delta 0) first, then events. Block titles are natural language
     wrapped in [] as section headers; fields inside stay newline-separated; blocks are
     separated by a blank line.
+
+    If ``max_tokens_per_block`` and ``truncate_fn`` are given, each block's body is
+    truncated to that many tokens BEFORE assembly. This spreads the token budget across
+    time points — every time point stays represented (breadth) instead of a few
+    note-heavy blocks consuming the whole document and dropping the rest.
     """
     blocks = []
     for i, (txt, dt) in enumerate(zip(texts, time_deltas)):
@@ -77,6 +88,8 @@ def build_joint_document(texts: list[str], time_deltas: list[float], exclude_bas
             title = "At baseline (enrollment)"
         else:
             title = _time_phrase(dt)
+        if max_tokens_per_block and truncate_fn is not None:
+            txt = truncate_fn(txt, max_tokens_per_block)
         blocks.append(f"[{title}]\n{txt}")
     if not blocks:
         return "No clinical records before baseline."
@@ -114,6 +127,7 @@ def extract_split(
     out_path: Path,
     mode: str = "sequence",
     exclude_baseline: bool = False,
+    max_tokens_per_block: int | None = None,
 ) -> tuple[int, int]:
     """Encode patients and stream to parquet. ``mode`` picks the output schema:
 
@@ -135,6 +149,16 @@ def extract_split(
     writer = None
     n_rows = 0
     n_tps = 0
+
+    # Per-block truncation for joint mode: use the encoder's own tokenizer so the cap is
+    # measured in the same tokens the model will see.
+    _tok = getattr(model, "tokenizer", None)
+
+    def _truncate_fn(text: str, n: int) -> str:
+        if _tok is None:
+            return text
+        ids = _tok(text, add_special_tokens=False, truncation=True, max_length=n)["input_ids"]
+        return _tok.decode(ids, skip_special_tokens=True)
 
     buf_texts: list[str] = []
     buf_lengths: list[int] = []
@@ -211,7 +235,10 @@ def extract_split(
                 buf_texts.append(rec["texts"][0])  # baseline time point only
                 buf_lengths.append(1)
             elif mode == "joint":
-                buf_texts.append(build_joint_document(rec["texts"], rec["time_deltas_list"], exclude_baseline))
+                buf_texts.append(build_joint_document(
+                    rec["texts"], rec["time_deltas_list"], exclude_baseline,
+                    max_tokens_per_block=max_tokens_per_block, truncate_fn=_truncate_fn,
+                ))
                 buf_lengths.append(1)
             else:  # "pool" and "sequence" need all time points
                 buf_texts.extend(rec["texts"])
@@ -244,6 +271,7 @@ def main(
     truncate_dim: int | None,
     mode: str,
     exclude_baseline: bool = False,
+    max_tokens_per_block: int | None = None,
 ):
     parquet_dir = Path(parquet_dir)
     out_dir = Path(out_dir)
@@ -278,7 +306,7 @@ def main(
         with torch.no_grad():
             n_rows, n_tps = extract_split(
                 model, split, prompt, encode_batch_size, patient_flush, truncate_dim, out_path,
-                mode=mode, exclude_baseline=exclude_baseline,
+                mode=mode, exclude_baseline=exclude_baseline, max_tokens_per_block=max_tokens_per_block,
             )
         del split
         print(f"  {split_name:12s}: {n_rows:,} patients / {n_tps:,} time points -> {out_path}")
@@ -351,11 +379,18 @@ if __name__ == "__main__":
                             "Train `model=mlp model.input_size=E` and compare vs --flat.")
     parser.add_argument("--exclude-baseline", action="store_true",
                         help="With --joint only: drop the baseline block (events-jointly-with-context test).")
+    parser.add_argument("--max-tokens-per-block", type=int, default=None,
+                        help="With --joint only: truncate EACH time-point block to this many tokens before "
+                             "assembling the document. Spreads the budget across time points (breadth) so a few "
+                             "long clinical-note blocks don't consume everything and drop later time points. "
+                             "Total doc length ~= n_time_points * this; combine with --max-seq-length as a backstop.")
     args = parser.parse_args()
 
     mode = "flat" if args.flat else "pool" if args.pool else "joint" if args.joint else "sequence"
     if args.exclude_baseline and mode != "joint":
         parser.error("--exclude-baseline is only valid with --joint")
+    if args.max_tokens_per_block and mode != "joint":
+        parser.error("--max-tokens-per-block is only valid with --joint")
     task = args.task or (DEFAULT_TASK_JOINT if mode == "joint" else DEFAULT_TASK)
     main(
         parquet_dir=args.parquet_dir,
@@ -370,4 +405,5 @@ if __name__ == "__main__":
         truncate_dim=args.truncate_dim,
         mode=mode,
         exclude_baseline=args.exclude_baseline,
+        max_tokens_per_block=args.max_tokens_per_block,
     )

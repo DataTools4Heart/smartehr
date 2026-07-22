@@ -56,9 +56,15 @@
 # Serializes the full history into one chronological document (baseline + time-stamped blocks)
 # and encodes it once. Compare vs the --flat baseline-only MLP; --exclude-baseline tests the
 # events jointly, without baseline.
+#   # Use the ENRICHED <TEXT> build so the encoder can read the fields. Joint docs are long
+#   # (whole history + clinical notes) -> OOM. Don't blindly cap --max-seq-length (that right-
+#   # truncates the doc and drops recent time points); instead cap EACH block with
+#   # --max-tokens-per-block so every time point stays represented (breadth). Total doc length
+#   # ~= n_time_points * max-tokens-per-block; add --max-seq-length as a hard backstop.
 #   python scripts/smartehr/extract_qwen_embeddings_longitudinal.py \
-#       --parquet-dir <TEXT> --out-dir <EMB_joint> \
-#       --model-name Qwen/Qwen3-Embedding-0.6B --dtype float16 --device cuda --joint
+#       --parquet-dir <TEXT_enriched> --out-dir <EMB_joint> \
+#       --model-name Qwen/Qwen3-Embedding-0.6B --dtype float16 --device cuda \
+#       --joint --max-tokens-per-block 48 --max-seq-length 4096
 #   python scripts/train_lightning_model.py \
 #       dataset=smartehr_embeddings dataset.root_path=<EMB_joint> \
 #       model=mlp model.input_size=1024 model.num_nodes='[128,128]' model.dropout=0.5 \
