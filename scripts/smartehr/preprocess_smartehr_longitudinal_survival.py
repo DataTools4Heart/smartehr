@@ -89,7 +89,12 @@ def serialize_baseline(smart: dict, dic=None) -> str:
     return "\n".join(parts)
 
 
-def build_patient_sequence(record: dict, dic=None) -> tuple[list[str], list[float]]:
+def _in_window(datediff, window_days) -> bool:
+    """Keep events within `window_days` before baseline (all events are pre-baseline)."""
+    return window_days is None or (-window_days <= datediff <= 0)
+
+
+def build_patient_sequence(record: dict, dic=None, window_days: int | None = None) -> tuple[list[str], list[float]]:
     """Turn one patient record into a time-ordered sequence of time points.
 
     Returns (texts, time_deltas) where:
@@ -106,6 +111,8 @@ def build_patient_sequence(record: dict, dic=None) -> tuple[list[str], list[floa
 
     events = sorted(record.get("events", []), key=lambda e: e["datediff"])
     for event in events:
+        if not _in_window(event["datediff"], window_days):
+            continue
         texts.append(serialize_time_point(event, skip_keys=("datediff",), dic=dic))
         time_deltas.append(event["datediff"] / 365.0)
 
@@ -117,6 +124,7 @@ def preprocess_longitudinal_survival(
     out_dir: str,
     horizon_days: int = 1825,
     dic=None,
+    window_days: int | None = None,
 ):
     jsonl_dir = Path(jsonl_dir)
     out_dir = Path(out_dir)
@@ -153,7 +161,7 @@ def preprocess_longitudinal_survival(
                 cd_event_raw = rec["smart"].get("cd_event")
                 cd_event = int(cd_event_raw) if cd_event_raw is not None else 1
 
-                texts, time_deltas = build_patient_sequence(rec, dic=dic)
+                texts, time_deltas = build_patient_sequence(rec, dic=dic, window_days=window_days)
                 duration, event = apply_censoring(first_event, cd_event, horizon_days)
 
                 texts_list.append(texts)
@@ -242,6 +250,9 @@ if __name__ == "__main__":
                         default="data/dummy_data/longitudinal_dummy_smart_survival_longitudinal")
     parser.add_argument("--horizon-days", type=int, default=1825,
                         help="Administrative censoring horizon in days. Default: 1825 (5 years).")
+    parser.add_argument("--window-days", type=int, default=None,
+                        help="Keep only events within this many days before baseline (e.g. 180 = last 6 months). "
+                             "Default: all pre-baseline events.")
     parser.add_argument("--enrich", action="store_true",
                         help="Map coded field names / values to human-readable text via the data "
                              "dictionaries (recommended for the LLM encoder; enables the coded-vs-readable ablation). "
@@ -266,4 +277,5 @@ if __name__ == "__main__":
         out_dir=args.out_dir,
         horizon_days=args.horizon_days,
         dic=dic,
+        window_days=args.window_days,
     )

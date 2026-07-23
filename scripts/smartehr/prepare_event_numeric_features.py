@@ -51,15 +51,18 @@ def _is_num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and not (isinstance(v, float) and v != v)
 
 
-def _patient_series(rec: dict, pivot: bool) -> dict[str, list[tuple[float, float]]]:
+def _patient_series(rec: dict, pivot: bool, window_days: int | None = None) -> dict[str, list[tuple[float, float]]]:
     """Collect {feature_name: [(t_years, value) ordered oldest->most recent]} from events.
 
     Times (datediff in years, negative = before baseline) are kept so trajectory
-    aggregators (slope) can regress value on time.
+    aggregators (slope) can regress value on time. `window_days` keeps only events
+    within that many days before baseline.
     """
     events = sorted(rec.get("events", []), key=lambda e: e["datediff"])
     series: dict[str, list[tuple[float, float]]] = {}
     for ev in events:
+        if window_days is not None and not (-window_days <= ev["datediff"] <= 0):
+            continue
         t = ev["datediff"] / 365.0
         consumed = set()
         if pivot:
@@ -127,7 +130,7 @@ def _baseline_features(rec: dict) -> dict[str, float]:
     return out
 
 
-def _rows_for_split(jsonl_path: Path, pivot, aggs, include_baseline, horizon, only_baseline):
+def _rows_for_split(jsonl_path: Path, pivot, aggs, include_baseline, horizon, only_baseline, window_days):
     rows, durations, events = [], [], []
     with open(jsonl_path) as f:
         for line in f:
@@ -140,7 +143,7 @@ def _rows_for_split(jsonl_path: Path, pivot, aggs, include_baseline, horizon, on
             if only_baseline:
                 feats = _baseline_features(rec)  # baseline numeric only — fair comparison, same pipeline
             else:
-                feats = _aggregate(_patient_series(rec, pivot), aggs)
+                feats = _aggregate(_patient_series(rec, pivot, window_days), aggs)
                 if include_baseline:
                     feats.update(_baseline_features(rec))
             rows.append(feats)
@@ -150,13 +153,14 @@ def _rows_for_split(jsonl_path: Path, pivot, aggs, include_baseline, horizon, on
     return rows, durations, events
 
 
-def main(jsonl_dir, out_dir, pivot, aggs, include_baseline, horizon, only_baseline):
+def main(jsonl_dir, out_dir, pivot, aggs, include_baseline, horizon, only_baseline, window_days):
     jsonl_dir, out_dir = Path(jsonl_dir), Path(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     split_rows, split_dur, split_evt = {}, {}, {}
     for split in ["train", "validation", "test"]:
-        r, d, e = _rows_for_split(jsonl_dir / f"{split}.jsonl", pivot, aggs, include_baseline, horizon, only_baseline)
+        r, d, e = _rows_for_split(jsonl_dir / f"{split}.jsonl", pivot, aggs, include_baseline,
+                                  horizon, only_baseline, window_days)
         split_rows[split], split_dur[split], split_evt[split] = r, d, e
 
     # Feature vocabulary fixed from TRAIN; count columns fill 0 (absent), others NaN -> mean.
@@ -221,9 +225,11 @@ if __name__ == "__main__":
                    help="Extract ONLY the numeric SMART baseline fields (no events) — a baseline-only run through "
                         "the exact same pipeline (standardization, censoring, schema) for a fair comparison.")
     p.add_argument("--horizon-days", type=int, default=1825)
+    p.add_argument("--window-days", type=int, default=None,
+                   help="Keep only events within this many days before baseline (e.g. 180 = last 6 months).")
     args = p.parse_args()
 
     aggs = [a.strip() for a in args.aggregators.split(",") if a.strip()]
     assert all(a in _AGGS for a in aggs), f"aggregators must be a subset of {_AGGS}"
     main(args.jsonl_dir, args.out_dir, args.pivot_codes, aggs, args.include_baseline, args.horizon_days,
-         args.only_baseline)
+         args.only_baseline, args.window_days)

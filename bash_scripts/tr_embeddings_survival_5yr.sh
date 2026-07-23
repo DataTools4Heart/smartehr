@@ -86,6 +86,28 @@
 #   #   feature (real data). aggregators incl. trajectory: last,mean,min,max,count,delta,slope
 #   #   (delta/slope capture "is it rising?" — the thing a single baseline snapshot can't).
 #
+# FREE-TEXT EXPERIMENT (expert-picked sources: radiologie_verslag, ok_verslag, consult;
+# last 6 months before baseline). Definitive test of whether these reports predict risk,
+# using TWO representations so "no signal" isn't confounded by one bad encoder.
+#   # 1. Build a JSONL from ONLY those 3 source CSVs (so only their fields are present):
+#   python scripts/smartehr/smartehr_pipeline.py --smart_csv <smart.csv> \
+#       --event_csv_folder <folder_with_only_the_3_csvs> --split_json <splits.json> \
+#       --output_dir <3SRC_JSONL> --windowed_output_dir <3SRC_JSONL_win> --baseline_time 0 --legacy
+#   # 2a. TF-IDF (litmus: signal in the words, no token budget):
+#   python scripts/smartehr/prepare_text_tfidf_features.py --jsonl-dir <3SRC_JSONL> \
+#       --out-dir <TF_text> --window-days 180                       # text only
+#   python scripts/smartehr/prepare_text_tfidf_features.py --jsonl-dir <3SRC_JSONL> \
+#       --out-dir <TF_bt> --window-days 180 --include-baseline      # baseline+text
+#   # 2b. LLM-embed of the same window (reuses the extractor; --exclude-baseline = events only):
+#   python scripts/smartehr/preprocess_smartehr_longitudinal_survival.py --jsonl-dir <3SRC_JSONL> \
+#       --out-dir <3SRC_TEXT> --window-days 180 --enrich
+#   python scripts/smartehr/extract_qwen_embeddings_longitudinal.py --parquet-dir <3SRC_TEXT> \
+#       --out-dir <3SRC_EMB> --model-name Qwen/Qwen3-Embedding-0.6B --dtype float16 --device cuda \
+#       --joint --exclude-baseline --max-tokens-per-block 64
+#   # 3. Fair baseline (same pipeline): prepare_event_numeric_features --only-baseline.
+#   # 4. Train model=mlp on each (model.input_size printed by each builder), then compare with the
+#   #    significance test below (baseline vs baseline+text).
+#
 # SIGNIFICANCE — is the baseline+events improvement real, not noise?
 #   # dump per-patient test survival curves from each run's checkpoint:
 #   python scripts/predict_survival.py <same dataset/model/training args as the run> \
