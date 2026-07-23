@@ -98,6 +98,9 @@
 #       --out-dir <TF_text> --window-days 180                       # text only
 #   python scripts/smartehr/prepare_text_tfidf_features.py --jsonl-dir <3SRC_JSONL> \
 #       --out-dir <TF_bt> --window-days 180 --include-baseline      # baseline+text
+#   #  SVD explained-var is LOW for real text LSA (~0.4 at 256 dims) — normal, not "no signal".
+#   #  If val CI keeps rising, raise --svd-components (512/1024); or --svd-components 0 (--no-svd:
+#   #  full TF-IDF dense, no compression) with a smaller --max-features (e.g. 5000) if memory tight.
 #   # 2b. LLM-embed of the same window (reuses the extractor; --exclude-baseline = events only):
 #   python scripts/smartehr/preprocess_smartehr_longitudinal_survival.py --jsonl-dir <3SRC_JSONL> \
 #       --out-dir <3SRC_TEXT> --window-days 180 --enrich

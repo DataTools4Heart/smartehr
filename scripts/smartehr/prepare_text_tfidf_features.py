@@ -103,18 +103,31 @@ def main(jsonl_dir, out_dir, window_days, include_baseline, horizon,
     tfidf = TfidfVectorizer(max_features=max_features, ngram_range=(1, ngram_max), min_df=min_df,
                             sublinear_tf=True, strip_accents="unicode", lowercase=True)
     Xtr = tfidf.fit_transform(train_texts)
-    k = min(n_components, Xtr.shape[1] - 1)
-    svd = TruncatedSVD(n_components=k, random_state=42).fit(Xtr)
-    print(f"TF-IDF vocab={len(tfidf.vocabulary_):,} -> SVD dim={k} "
-          f"(explained var={svd.explained_variance_ratio_.sum():.2f})")
+    vocab = len(tfidf.vocabulary_)
+
+    if n_components == 0:  # --no-svd: feed the full TF-IDF vocabulary (dense) to the MLP
+        svd, k = None, vocab
+        print(f"TF-IDF vocab={vocab:,} | no SVD (dense {vocab}-dim input)")
+        if vocab > 8000:
+            print(f"  NOTE: {vocab} dense features is large — lower --max-features (e.g. 5000) if memory is tight.")
+    else:
+        k = min(n_components, Xtr.shape[1] - 1)
+        svd = TruncatedSVD(n_components=k, random_state=42).fit(Xtr)
+        print(f"TF-IDF vocab={vocab:,} -> SVD dim={k} "
+              f"(explained var={svd.explained_variance_ratio_.sum():.2f}; low % is normal for text LSA)")
 
     # baseline feature vocabulary fixed from train
     base_cols = sorted({c for row in splits["train"][1] for c in row}) if include_baseline else []
 
     def features_for(split):
         texts, base_rows, dur, evt = split
-        T = svd.transform(tfidf.transform(texts))
-        cols = [f"svd_{i}" for i in range(T.shape[1])]
+        X = tfidf.transform(texts)
+        if svd is None:
+            T = X.toarray()
+            cols = [f"tf_{i}" for i in range(T.shape[1])]
+        else:
+            T = svd.transform(X)
+            cols = [f"svd_{i}" for i in range(T.shape[1])]
         df = pd.DataFrame(T, columns=cols)
         if include_baseline:
             B = pd.DataFrame(base_rows, columns=base_cols)
@@ -143,7 +156,7 @@ def main(jsonl_dir, out_dir, window_days, include_baseline, horizon,
             "representation": "tfidf_text" + ("+baseline" if include_baseline else ""),
             "window_days": window_days, "include_baseline": include_baseline, "horizon_days": horizon,
             "tfidf_max_features": max_features, "ngram_max": ngram_max, "min_df": min_df,
-            "svd_components": int(k), "n_features": n_features,
+            "svd_components": (0 if svd is None else int(k)), "no_svd": svd is None, "n_features": n_features,
         }, f, indent=2)
 
     print(f"\nSaved to {out_dir}")
@@ -161,7 +174,9 @@ if __name__ == "__main__":
     p.add_argument("--max-features", type=int, default=50000)
     p.add_argument("--ngram-max", type=int, default=2, help="Use word n-grams up to this length (2 = unigrams+bigrams).")
     p.add_argument("--min-df", type=int, default=5, help="Ignore terms in fewer than this many patients.")
-    p.add_argument("--svd-components", type=int, default=256)
+    p.add_argument("--svd-components", type=int, default=256,
+                   help="TruncatedSVD dimensionality. Raise (512/1024) if downstream CI keeps improving; "
+                        "set 0 for --no-svd (feed the full TF-IDF vocabulary dense — no compression bottleneck).")
     args = p.parse_args()
     main(args.jsonl_dir, args.out_dir, args.window_days, args.include_baseline, args.horizon_days,
          args.max_features, args.ngram_max, args.min_df, args.svd_components)
