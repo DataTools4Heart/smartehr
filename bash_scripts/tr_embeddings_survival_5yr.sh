@@ -81,8 +81,19 @@
 # uses the actual values. Compare vs baseline and vs the embedding-based runs.
 #   python scripts/smartehr/prepare_event_numeric_features.py \
 #       --jsonl-dir <JSONL> --out-dir <NUM_events> --pivot-codes           # events only
-#   #   add --include-baseline for baseline+events; --pivot-codes makes each lab/measurement
-#   #   its own feature (recommended on real data). --aggregators last,mean,min,max,count
+#   #   --include-baseline: baseline+events additivity. --only-baseline: baseline through the
+#   #   SAME pipeline (fair comparison target). --pivot-codes: each lab/measurement its own
+#   #   feature (real data). aggregators incl. trajectory: last,mean,min,max,count,delta,slope
+#   #   (delta/slope capture "is it rising?" — the thing a single baseline snapshot can't).
+#
+# SIGNIFICANCE — is the baseline+events improvement real, not noise?
+#   # dump per-patient test survival curves from each run's checkpoint:
+#   python scripts/predict_survival.py <same dataset/model/training args as the run> \
+#       training.resume_ckpt_path=<lightning_logs/.../checkpoints/xxx.ckpt>   # -> *_test_predictions.parquet
+#   # bootstrap the concordance difference (95% CI excludes 0 => significant):
+#   python scripts/smartehr/bootstrap_ci_compare.py \
+#       --pred-a <baseline>_test_predictions.parquet \
+#       --pred-b <baseline+events>_test_predictions.parquet --times 12,24,36,48,57
 #   python scripts/train_lightning_model.py \
 #       dataset=smartehr_embeddings dataset.root_path=<NUM_events> \
 #       model=mlp model.input_size=<n_features printed by the script> \

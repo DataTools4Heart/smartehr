@@ -33,7 +33,9 @@ from datasets import Dataset
 
 # code_field -> value_field, for --pivot-codes (each code value becomes its own feature)
 _PIVOT = {"lab_testcode": "lab_result", "label": "data1", "MeasName_ECHO": "Value_ECHO"}
-_AGGS = ["last", "mean", "min", "max", "count"]
+# last/mean/min/max/count = level & frequency; delta/slope = trajectory (what a single
+# baseline snapshot cannot encode — e.g. a rising creatinine).
+_AGGS = ["last", "mean", "min", "max", "count", "delta", "slope"]
 
 
 def apply_censoring(first_event: float, cd_event: int, horizon: int) -> tuple[float, int]:
@@ -49,41 +51,65 @@ def _is_num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool) and not (isinstance(v, float) and v != v)
 
 
-def _patient_series(rec: dict, pivot: bool) -> dict[str, list[float]]:
-    """Collect {feature_name: [values ordered oldest->most recent]} from a patient's events."""
+def _patient_series(rec: dict, pivot: bool) -> dict[str, list[tuple[float, float]]]:
+    """Collect {feature_name: [(t_years, value) ordered oldest->most recent]} from events.
+
+    Times (datediff in years, negative = before baseline) are kept so trajectory
+    aggregators (slope) can regress value on time.
+    """
     events = sorted(rec.get("events", []), key=lambda e: e["datediff"])
-    series: dict[str, list[float]] = {}
+    series: dict[str, list[tuple[float, float]]] = {}
     for ev in events:
+        t = ev["datediff"] / 365.0
         consumed = set()
         if pivot:
             for code_field, value_field in _PIVOT.items():
                 if code_field in ev and value_field in ev and _is_num(ev[value_field]):
-                    series.setdefault(f"{value_field}[{ev[code_field]}]", []).append(float(ev[value_field]))
+                    series.setdefault(f"{value_field}[{ev[code_field]}]", []).append((t, float(ev[value_field])))
                     consumed.update((code_field, value_field))
         for k, v in ev.items():
             if k == "datediff" or k in consumed:
                 continue
             if _is_num(v):
-                series.setdefault(k, []).append(float(v))
+                series.setdefault(k, []).append((t, float(v)))
     return series
 
 
-def _aggregate(series: dict[str, list[float]], aggs: list[str]) -> dict[str, float]:
-    """Reduce each feature's value list to the requested aggregates (last = most recent)."""
+def _slope(t: np.ndarray, v: np.ndarray) -> float:
+    """Least-squares slope of value vs time (per year); 0 if <2 points or no time spread."""
+    if t.size < 2:
+        return 0.0
+    tc = t - t.mean()
+    denom = float((tc * tc).sum())
+    if denom == 0.0:
+        return 0.0
+    return float((tc * (v - v.mean())).sum() / denom)
+
+
+def _aggregate(series: dict[str, list[tuple[float, float]]], aggs: list[str]) -> dict[str, float]:
+    """Reduce each feature's time series to the requested aggregates.
+
+    last = most recent value; delta = last - first; slope = trend per year.
+    """
     out = {}
-    for feat, vals in series.items():
-        arr = np.asarray(vals, dtype=np.float64)
+    for feat, pairs in series.items():
+        t = np.asarray([p[0] for p in pairs], dtype=np.float64)
+        v = np.asarray([p[1] for p in pairs], dtype=np.float64)
         for a in aggs:
             if a == "last":
-                out[f"{feat}__last"] = arr[-1]
+                out[f"{feat}__last"] = v[-1]
             elif a == "mean":
-                out[f"{feat}__mean"] = arr.mean()
+                out[f"{feat}__mean"] = v.mean()
             elif a == "min":
-                out[f"{feat}__min"] = arr.min()
+                out[f"{feat}__min"] = v.min()
             elif a == "max":
-                out[f"{feat}__max"] = arr.max()
+                out[f"{feat}__max"] = v.max()
             elif a == "count":
-                out[f"{feat}__count"] = float(arr.size)
+                out[f"{feat}__count"] = float(v.size)
+            elif a == "delta":
+                out[f"{feat}__delta"] = v[-1] - v[0]
+            elif a == "slope":
+                out[f"{feat}__slope"] = _slope(t, v)
     return out
 
 
@@ -101,7 +127,7 @@ def _baseline_features(rec: dict) -> dict[str, float]:
     return out
 
 
-def _rows_for_split(jsonl_path: Path, pivot: bool, aggs: list[str], include_baseline: bool, horizon: int):
+def _rows_for_split(jsonl_path: Path, pivot, aggs, include_baseline, horizon, only_baseline):
     rows, durations, events = [], [], []
     with open(jsonl_path) as f:
         for line in f:
@@ -111,9 +137,12 @@ def _rows_for_split(jsonl_path: Path, pivot: bool, aggs: list[str], include_base
                 continue
             cd = rec["smart"].get("cd_event")
             cd = int(cd) if cd is not None else 1
-            feats = _aggregate(_patient_series(rec, pivot), aggs)
-            if include_baseline:
-                feats.update(_baseline_features(rec))
+            if only_baseline:
+                feats = _baseline_features(rec)  # baseline numeric only — fair comparison, same pipeline
+            else:
+                feats = _aggregate(_patient_series(rec, pivot), aggs)
+                if include_baseline:
+                    feats.update(_baseline_features(rec))
             rows.append(feats)
             d, e = apply_censoring(first_event, cd, horizon)
             durations.append(d)
@@ -121,20 +150,21 @@ def _rows_for_split(jsonl_path: Path, pivot: bool, aggs: list[str], include_base
     return rows, durations, events
 
 
-def main(jsonl_dir, out_dir, pivot, aggs, include_baseline, horizon):
+def main(jsonl_dir, out_dir, pivot, aggs, include_baseline, horizon, only_baseline):
     jsonl_dir, out_dir = Path(jsonl_dir), Path(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     split_rows, split_dur, split_evt = {}, {}, {}
     for split in ["train", "validation", "test"]:
-        r, d, e = _rows_for_split(jsonl_dir / f"{split}.jsonl", pivot, aggs, include_baseline, horizon)
+        r, d, e = _rows_for_split(jsonl_dir / f"{split}.jsonl", pivot, aggs, include_baseline, horizon, only_baseline)
         split_rows[split], split_dur[split], split_evt[split] = r, d, e
 
     # Feature vocabulary fixed from TRAIN; count columns fill 0 (absent), others NaN -> mean.
     feature_names = sorted({k for row in split_rows["train"] for k in row})
     count_cols = {f for f in feature_names if f.endswith("__count")}
+    mode = "baseline-only" if only_baseline else (f"events+baseline" if include_baseline else "events-only")
     print(f"Feature vocabulary: {len(feature_names)} columns "
-          f"(pivot={pivot}, aggs={aggs}, include_baseline={include_baseline})")
+          f"(mode={mode}, pivot={pivot and not only_baseline}, aggs={aggs if not only_baseline else '-'})")
 
     def to_frame(rows):
         df = pd.DataFrame(rows, columns=feature_names)
@@ -160,8 +190,11 @@ def main(jsonl_dir, out_dir, pivot, aggs, include_baseline, horizon):
 
     with open(out_dir / "metadata.json", "w") as f:
         json.dump({
-            "representation": "event_numeric_features",
-            "pivot_codes": pivot, "aggregators": aggs, "include_baseline": include_baseline,
+            "representation": "baseline_numeric" if only_baseline else "event_numeric_features",
+            "only_baseline": only_baseline,
+            "pivot_codes": pivot and not only_baseline,
+            "aggregators": [] if only_baseline else aggs,
+            "include_baseline": include_baseline or only_baseline,
             "horizon_days": horizon, "n_features": n_features,
             "feature_names": feature_names,
             "feature_means": means.reindex(feature_names).fillna(0.0).tolist(),
@@ -184,9 +217,13 @@ if __name__ == "__main__":
                         "(recommended for real data; otherwise lab_result etc. is conflated across test types).")
     p.add_argument("--include-baseline", action="store_true",
                    help="Also concatenate the numeric SMART baseline fields (test baseline+events additivity).")
+    p.add_argument("--only-baseline", action="store_true",
+                   help="Extract ONLY the numeric SMART baseline fields (no events) — a baseline-only run through "
+                        "the exact same pipeline (standardization, censoring, schema) for a fair comparison.")
     p.add_argument("--horizon-days", type=int, default=1825)
     args = p.parse_args()
 
     aggs = [a.strip() for a in args.aggregators.split(",") if a.strip()]
     assert all(a in _AGGS for a in aggs), f"aggregators must be a subset of {_AGGS}"
-    main(args.jsonl_dir, args.out_dir, args.pivot_codes, aggs, args.include_baseline, args.horizon_days)
+    main(args.jsonl_dir, args.out_dir, args.pivot_codes, aggs, args.include_baseline, args.horizon_days,
+         args.only_baseline)
