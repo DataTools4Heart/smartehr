@@ -101,6 +101,17 @@
 #   #  SVD explained-var is LOW for real text LSA (~0.4 at 256 dims) — normal, not "no signal".
 #   #  If val CI keeps rising, raise --svd-components (512/1024); or --svd-components 0 (--no-svd:
 #   #  full TF-IDF dense, no compression) with a smaller --max-features (e.g. 5000) if memory tight.
+#   #
+#   #  WHY text-only may fail while baseline+text works: patients with NO report in the window are
+#   #  baseline-only -> all-zero text vector -> indistinguishable -> text-only CI capped near 0.5.
+#   #  The builder prints the with-text fraction per split. Test text CONTENT fairly on the
+#   #  with-report subcohort (aligned cohorts, so bootstrap is valid):
+#   python scripts/smartehr/prepare_text_tfidf_features.py --jsonl-dir <3SRC_JSONL> \
+#       --out-dir <SUB_base> --window-days 180 --require-text --baseline-only     # baseline-only ref
+#   python scripts/smartehr/prepare_text_tfidf_features.py --jsonl-dir <3SRC_JSONL> \
+#       --out-dir <SUB_bt> --window-days 180 --require-text --include-baseline     # baseline+text
+#   #  Then baseline+text vs baseline-only on this SAME cohort => does the text content add signal
+#   #  for patients who actually have reports? (separates content from mere report-presence).
 #   # 2b. LLM-embed of the same window (reuses the extractor; --exclude-baseline = events only):
 #   python scripts/smartehr/preprocess_smartehr_longitudinal_survival.py --jsonl-dir <3SRC_JSONL> \
 #       --out-dir <3SRC_TEXT> --window-days 180 --enrich
