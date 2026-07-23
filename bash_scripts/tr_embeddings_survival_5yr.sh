@@ -76,6 +76,20 @@
 #       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
 #       training.lr=1e-3 "training.devices=[0]"   # input_size = 2 * embedding_dim (0.6B -> 2048)
 #
+# NUMERIC EVENTS (no serialization, no LLM) — aggregate numeric event fields into a fixed
+# feature vector and train the MLP. Frozen text embeddings blur numeric magnitude/trend; this
+# uses the actual values. Compare vs baseline and vs the embedding-based runs.
+#   python scripts/smartehr/prepare_event_numeric_features.py \
+#       --jsonl-dir <JSONL> --out-dir <NUM_events> --pivot-codes           # events only
+#   #   add --include-baseline for baseline+events; --pivot-codes makes each lab/measurement
+#   #   its own feature (recommended on real data). --aggregators last,mean,min,max,count
+#   python scripts/train_lightning_model.py \
+#       dataset=smartehr_embeddings dataset.root_path=<NUM_events> \
+#       model=mlp model.input_size=<n_features printed by the script> \
+#       model.num_nodes='[128,128]' model.dropout=0.5 \
+#       training=lightning_survival_5yr training.precision=32 training.weight_decay=1e-2 \
+#       training.lr=1e-3 "training.devices=[0]"
+#
 # Stage 3 — train the time-aware LSTM head over the cached embedding SEQUENCES.
 # precision=32 (T4 has no bf16). If it overfits: keep the small hidden_dim/time_delta_dim
 # defaults (model config), raise weight_decay / input_dropout, and/or coarsen the PMF bins
