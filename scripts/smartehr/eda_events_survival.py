@@ -280,7 +280,7 @@ class ColStats:
 
 # ---------------------------------------------------------------- CSV scanning
 
-def scan_csv(path, min_show, want_text_terms, forced_text=()):
+def scan_csv(path, min_show, want_text_terms, forced_text=(), origin=0):
     """Stream one event CSV; return column stats, per-patient aggregates, dup info."""
     head = pd.read_csv(path, nrows=0)
     cols = list(head.columns)
@@ -295,7 +295,8 @@ def scan_csv(path, min_show, want_text_terms, forced_text=()):
     n_rows = n_post_baseline = 0
     patients = set()
     rows_per_patient = Counter()
-    day_keys = Counter()          # (pid, datediff) -> n rows  (same-day collapse)
+    day_keys = Counter()          # (pid, datediff) -> n rows  (same-day collapse, all rows)
+    day_keys_pre = Counter()      # ... restricted to pre-baseline rows (what the pipeline merges)
     per_patient_days = defaultdict(set)
     text_chars = Counter()        # pid -> chars in columns classified free_text
     str_chars = Counter()         # pid -> chars in ANY string column (fallback for §7)
@@ -322,28 +323,38 @@ def scan_csv(path, min_show, want_text_terms, forced_text=()):
         if has_id:
             patients.update(pids.dropna().astype("int64").tolist())
             rows_per_patient.update(pids.dropna().astype("int64").tolist())
+        # PRE-BASELINE MASK: every FEATURE aggregate below must use only rows the model is
+        # allowed to see (datediff < origin). Post-baseline rows are the outcome window —
+        # using them would leak the future. Descriptive column stats still cover all rows.
         if has_time:
             dd = pd.to_numeric(chunk[TIME], errors="coerce")
+            pre = dd.notna() & (dd < origin)
             valid = dd.dropna()
             if len(valid):
                 dd_min, dd_max = min(dd_min, float(valid.min())), max(dd_max, float(valid.max()))
                 dd_res.add_many(valid.tolist())
-                n_post_baseline += int((valid >= 0).sum())
+                n_post_baseline += int((valid >= origin).sum())
             if has_id:
                 pair = pd.Series(list(zip(pids.tolist(), dd.tolist())))
                 day_keys.update(pair.value_counts().to_dict())
-                for p, d in zip(pids.tolist(), dd.tolist()):
+                ppre, dpre = pids[pre], dd[pre]
+                if len(ppre):
+                    day_keys_pre.update(pd.Series(list(zip(ppre.tolist(), dpre.tolist())))
+                                        .value_counts().to_dict())
+                for p, d in zip(ppre.tolist(), dpre.tolist()):
                     if not (pd.isna(p) or pd.isna(d)):
                         per_patient_days[int(p)].add(int(d))
+        else:
+            pre = pd.Series(False, index=chunk.index)
         for c, st in stats.items():
             if c in chunk.columns:
                 st.update(chunk[c], pids)
-        # per-patient text volume + vocabulary
-        if has_id and str_cols:
+        # per-patient text volume + vocabulary (pre-baseline rows only)
+        if has_id and str_cols and pre.any():
             for c in str_cols:
                 if c not in chunk.columns:
                     continue
-                s = chunk[c].dropna().astype(str)
+                s = chunk[c][pre].dropna().astype(str)
                 if not len(s):
                     continue
                 sub = pids.loc[s.index]
@@ -365,15 +376,15 @@ def scan_csv(path, min_show, want_text_terms, forced_text=()):
                         for w in set(WORD_PAT.findall(txt.lower())):
                             if len(term_patients) < 200_000 or w in term_patients:
                                 term_patients[w].add(int(p))
-        # per-patient last numeric value (most recent = largest datediff, all are < 0)
-        if has_id and has_time and num_cols:
-            dd = pd.to_numeric(chunk[TIME], errors="coerce")
+        # per-patient last numeric value: the most recent PRE-baseline row (largest
+        # datediff among datediff < origin, i.e. closest to baseline without crossing it)
+        if has_id and has_time and num_cols and pre.any():
             for c in num_cols:
                 if c not in chunk.columns:
                     continue
                 v = pd.to_numeric(chunk[c], errors="coerce")
-                sub = pd.DataFrame({"p": pids.to_numpy(), "t": dd.to_numpy(),
-                                    "v": v.to_numpy()}).dropna()
+                sub = pd.DataFrame({"p": pids[pre].to_numpy(), "t": dd[pre].to_numpy(),
+                                    "v": v[pre].to_numpy()}).dropna()
                 if not len(sub):
                     continue
                 # keep only each patient's most recent row in this chunk, then reconcile
@@ -387,7 +398,12 @@ def scan_csv(path, min_show, want_text_terms, forced_text=()):
     gc.collect()
 
     multi_row_days = sum(1 for k, v in day_keys.items() if v > 1)
+    multi_row_days_pre = sum(1 for k, v in day_keys_pre.items() if v > 1)
     return {
+        "n_rows_pre_baseline": n_rows - n_post_baseline,
+        "n_day_groups_pre": len(day_keys_pre),
+        "n_day_groups_multirow_pre": multi_row_days_pre,
+        "max_rows_one_day_pre": max(day_keys_pre.values()) if day_keys_pre else 0,
         "path": str(path),
         "name": Path(path).stem,
         "n_rows": n_rows,
@@ -533,7 +549,7 @@ def main(args):
     for p in csvs:
         print(f"  - {p.name}", flush=True)
         try:
-            scans.append(scan_csv(p, args.min_show_count, not args.no_text_terms, forced))
+            scans.append(scan_csv(p, args.min_show_count, not args.no_text_terms, forced, args.origin_datediff))
         except Exception as exc:  # keep going: one bad CSV shouldn't kill the report
             w(f"> **ERROR scanning {p.name}: {type(exc).__name__}: {exc}**")
             print(f"    ERROR: {exc}", flush=True)
@@ -545,7 +561,9 @@ def main(args):
     days_per_patient = defaultdict(set)
     src_patients = {}
     for s in scans:
-        src_patients[s["name"]] = s["patients"] & cohort_ids
+        # patients with >=1 PRE-baseline event from this source (per_patient_days is
+        # already pre-baseline only); s["patients"] counts all rows and would leak future
+        src_patients[s["name"]] = set(s["per_patient_days"]) & cohort_ids
         for pid, days in s["per_patient_days"].items():
             if pid in cohort_ids:
                 days_per_patient[pid] |= days
@@ -558,7 +576,7 @@ def main(args):
     w("## §2 Event coverage — the ceiling for a baseline-free model")
     w()
     w(f"- cohort patients: **{len(cohort_ids):,}**")
-    w(f"- with >= 1 pre-baseline event: **{len(any_event):,} "
+    w(f"- with >= 1 pre-baseline event (datediff < 0): **{len(any_event):,} "
       f"({100*len(any_event)/max(len(cohort_ids),1):.1f}%)**")
     w(f"- **with NO events at all: {n_no_event:,} "
       f"({100*n_no_event/max(len(cohort_ids),1):.1f}%)** <- with no baseline these have an "
@@ -581,21 +599,23 @@ def main(args):
     w("Coverage per source and per look-back window (patients with >=1 event):")
     w()
     wins = [90, 180, 365, 730, 1825, 3650, None]
-    w("| source | rows | patients | " + " | ".join(f"<={x}d" if x else "all history" for x in wins) + " |")
-    w("|---" * (3 + len(wins)) + "|")
+    w("| source | rows | pre-baseline rows | patients (pre) | "
+      + " | ".join(f"<={x}d" if x else "all pre-bl history" for x in wins) + " |")
+    w("|---" * (4 + len(wins)) + "|")
     for s in scans:
         cells = []
         for x in wins:
             c = sum(1 for pid, days in s["per_patient_days"].items()
                     if pid in cohort_ids and any((x is None) or (-x <= d <= 0) for d in days))
             cells.append(f"{c:,}")
-        w(f"| {s['name']} | {s['n_rows']:,} | {len(src_patients[s['name']]):,} | " + " | ".join(cells) + " |")
+        w(f"| {s['name']} | {s['n_rows']:,} | {s['n_rows_pre_baseline']:,} | "
+          f"{len(src_patients[s['name']]):,} | " + " | ".join(cells) + " |")
     union_cells = []
     for x in wins:
         c = sum(1 for pid, days in days_per_patient.items()
                 if any((x is None) or (-x <= d <= 0) for d in days))
         union_cells.append(f"{c:,}")
-    w(f"| **UNION** | | **{len(any_event):,}** | " + " | ".join(f"**{c}**" for c in union_cells) + " |")
+    w(f"| **UNION** | | | **{len(any_event):,}** | " + " | ".join(f"**{c}**" for c in union_cells) + " |")
     w()
     n_src = Counter(sum(1 for s in scans if p in src_patients[s["name"]]) for p in cohort_ids)
     w(f"- #sources contributing per patient: {dict(sorted(n_src.items()))}")
@@ -670,12 +690,36 @@ def main(args):
             w(f"   - ... and {len(shared)-25} more")
     else:
         w("   - none: every CSV uses distinct column names, so no cross-source clobbering.")
-    tot_groups = sum(s["n_day_groups"] for s in scans)
-    tot_multi = sum(s["n_day_groups_multirow"] for s in scans)
-    w(f"2. **Same-day multi-row groups: {tot_multi:,} of {tot_groups:,} "
-      f"({100*tot_multi/max(tot_groups,1):.1f}%)** — within one CSV these collapse to the LAST row's "
-      "value per column, so e.g. several radiology reports on one day keep only one text.")
+    tot_groups = sum(s["n_day_groups_pre"] for s in scans)
+    tot_multi = sum(s["n_day_groups_multirow_pre"] for s in scans)
+    w(f"2. **Same-day multi-row groups (pre-baseline rows only, i.e. what the pipeline actually "
+      f"merges): {tot_multi:,} of {tot_groups:,} ({100*tot_multi/max(tot_groups,1):.1f}%)** — within "
+      "one CSV these collapse to the LAST row's value per column.")
     w()
+    w("| source | pre-bl day-groups | with >1 row | % | max rows/day | shape |")
+    w("|---|---|---|---|---|---|")
+    long_fmt = []
+    for s in scans:
+        g, m = s["n_day_groups_pre"], s["n_day_groups_multirow_pre"]
+        # A key-value ("long") source pairs a name column with a value column, so one day
+        # holds many rows that are DIFFERENT variables — merging by column name keeps one.
+        kinds = s["col_kinds"]
+        cat_cols = [c for c, k in kinds.items() if k == "categorical"]
+        val_cols = [c for c, k in kinds.items() if k in ("numeric", "numeric_discrete")]
+        pct = 100 * m / max(g, 1)
+        is_long = bool(cat_cols) and bool(val_cols) and pct >= 50
+        if is_long:
+            long_fmt.append(s["name"])
+        w(f"| {s['name']} | {g:,} | {m:,} | {pct:.1f} | {s['max_rows_one_day_pre']:,} | "
+          f"{'**LONG (key-value)**' if is_long else 'wide'} |")
+    w()
+    if long_fmt:
+        w(f"3. **Long-format sources detected: {', '.join(long_fmt)}.** These store one "
+          "measurement per row as (name, value) pairs, so a single day legitimately holds many "
+          "DIFFERENT variables. `merged[col] = val` keyed on the column name therefore keeps only "
+          "ONE (name, value) pair per day and silently discards the rest of the panel. These "
+          "sources need **pivoting** (name -> its own column) before merging, not overwriting.")
+        w()
     if args.jsonl_dir:
         jd = Path(args.jsonl_dir)
         post = 0
@@ -725,15 +769,24 @@ def main(args):
     # ---------------- §6 univariate signal screen
     w("## §6 Univariate signal screen (Harrell's C, no model trained)")
     w()
-    w(f"Each row uses ONE feature as the risk score at the {H}-day horizon. C=0.5 is chance; "
-      "**|C-0.5| >= 0.02 means the feature alone already orders patients**, so a model has "
-      "something to learn. `n_comparable` is the number of comparable pairs behind the estimate.")
+    n_ev = int(e_h.sum())
+    thr = 2.0 * math.sqrt(0.25 / max(n_ev, 1))  # ~2 SE of C under the null
+    w(f"Each row uses ONE feature (from PRE-baseline rows only) as the risk score at the "
+      f"{H}-day horizon. C=0.5 is chance.")
+    w()
+    w(f"With **{n_ev:,} events**, the standard error of C under the null is "
+      f"~{thr/2:.4f}, so only **|C-0.5| >= {thr:.3f}** (2 SE) is distinguishable from noise. "
+      f"Values are flagged against that threshold, NOT a fixed 0.02. `n_comparable` counts "
+      "pairs, which is far larger than the effective sample size (the event count) — do not "
+      "read it as precision.")
     w()
     ids = cohort[ID].astype(int).to_numpy()
     tmap = {p: (a, b) for p, a, b in zip(ids, t_h, e_h)}
     feats = {}
     feats["has_any_event"] = np.array([1.0 if p in any_event else 0.0 for p in ids])
     feats["n_event_days"] = np.array([float(len(days_per_patient.get(p, ()))) for p in ids])
+    # days_per_patient holds only pre-baseline (negative) offsets, so max() is the event
+    # closest to baseline; as a risk score, more recent (closer to 0) = higher risk.
     feats["recency(-days_since_last)"] = np.array(
         [float(max(days_per_patient[p])) if days_per_patient.get(p) else np.nan for p in ids])
     feats["history_span_days"] = np.array(
@@ -762,24 +815,50 @@ def main(args):
             ci, n = harrell_c(t_h, e_h, vals)
             if ci is not None:
                 num_rows.append((abs(ci - 0.5), f"last[{s['name']}.{c}]", ci, cov, n))
+    # second, better-observed horizon: a 15y estimate can rest on a thin at-risk tail
+    H2 = args.extra_horizon_days
+    cens2 = [apply_censoring(t, e, H2) for t, e in zip(t_raw, e_raw)]
+    t_h2 = np.array([c[0] for c in cens2])
+    e_h2 = np.array([c[1] for c in cens2])
+    n_ev2 = int(e_h2.sum())
+    thr2 = 2.0 * math.sqrt(0.25 / max(n_ev2, 1))
+    c2 = {}
+    for name, v in feats.items():
+        c2[name] = harrell_c(t_h2, e_h2, v)[0]
+    for s in scans:
+        for c in s["numeric_cols"]:
+            vals = np.array([s["numeric_last"].get(p, {}).get(c, (None, np.nan))[1] for p in ids], float)
+            if int((~np.isnan(vals)).sum()) < max(args.min_coverage, 30):
+                continue
+            c2[f"last[{s['name']}.{c}]"] = harrell_c(t_h2, e_h2, vals)[0]
+
+    def fmt2(name):
+        v = c2.get(name)
+        if v is None:
+            return "-"
+        return f"{v:.4f}" + (" **<-**" if abs(v - 0.5) >= thr2 else "")
+
     rows.sort(reverse=True)
     num_rows.sort(reverse=True)
-    w("| feature | C-index | patients with value | n_comparable |")
+    w(f"| feature | C @ {H}d ({n_ev:,} ev) | C @ {H2}d ({n_ev2:,} ev) | patients with value |")
     w("|---|---|---|---|")
     for _, name, c, cov, n in rows:
-        flag = " **<-**" if abs(c - 0.5) >= 0.02 else ""
-        w(f"| {name} | {c:.4f}{flag} | {cov:,} | {n:,} |")
+        flag = " **<-**" if abs(c - 0.5) >= thr else ""
+        w(f"| {name} | {c:.4f}{flag} | {fmt2(name)} | {cov:,} |")
     w()
-    w(f"Top numeric event columns by |C-0.5| (last value before baseline, "
+    w(f"Top numeric event columns by |C-0.5| (last PRE-baseline value, "
       f">= {max(args.min_coverage,30)} patients):")
     w()
-    w("| feature | C-index | patients with value | n_comparable |")
+    w(f"| feature | C @ {H}d | C @ {H2}d | patients with value |")
     w("|---|---|---|---|")
     for _, name, c, cov, n in num_rows[:40]:
-        flag = " **<-**" if abs(c - 0.5) >= 0.02 else ""
-        w(f"| {name} | {c:.4f}{flag} | {cov:,} | {n:,} |")
+        flag = " **<-**" if abs(c - 0.5) >= thr else ""
+        w(f"| {name} | {c:.4f}{flag} | {fmt2(name)} | {cov:,} |")
     if not num_rows:
         w("| (no numeric column met the coverage threshold) | | | |")
+    w()
+    w(f"- 2-SE noise floor: |C-0.5| >= {thr:.3f} at {H}d, >= {thr2:.3f} at {H2}d. "
+      "A feature flagged at BOTH horizons is far more credible than one flagged at either alone.")
     w()
     # presence vs content: KM split by has-any-event
     have = np.array([p in any_event for p in ids])
@@ -882,5 +961,11 @@ if __name__ == "__main__":
     p.add_argument("--force-text-cols", default=None,
                    help="Comma-separated columns to treat as free text regardless of the heuristic, "
                         "as 'col' or 'source.col' (e.g. radiologie.verslag,ok_verslag.verslag).")
+    p.add_argument("--origin-datediff", type=int, default=0,
+                   help="Prediction origin: only rows with datediff < this are usable as FEATURES "
+                        "(matches the pipeline's --baseline_time). Default 0 = the SMART baseline.")
+    p.add_argument("--extra-horizon-days", type=int, default=3650,
+                   help="Second horizon for the signal screen (default 3650 = 10 years), so a "
+                        "weakly-observed 15y horizon can be compared against a better-observed one.")
     p.add_argument("--full", action="store_true", help="Do not truncate long column tables.")
     main(p.parse_args())
