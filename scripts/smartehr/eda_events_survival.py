@@ -24,13 +24,30 @@ whether the events can even support that, so this reports:
 Runs on the remote VM with only pandas + numpy. All CSVs are streamed in chunks, so
 multi-million-row lab/med files are fine.
 
+LANDMARKING (--landmark-days). Most rows in these CSVs are POST-baseline, and they are
+not automatically unusable — but admitting them requires moving the prediction origin,
+not just the feature cutoff. `--landmark-days 180` does all three parts together:
+
+  1. features may use events with datediff < 180 (so post-baseline up to 6 months),
+  2. patients whose outcome occurred at/before day 180 are EXCLUDED — otherwise their
+     features would describe their own outcome (its admission, imaging, medication),
+  3. survival is measured FROM day 180, so horizons are landmark-relative.
+
+Doing (1) without (2) and (3) is the classic leak: it also makes "few post-baseline
+events" a proxy for "died early". §5 asserts the invariant that zero feature events are
+dated at/after a patient's own outcome; it must print 0.
+
+Run several landmarks (0 / 90 / 180) and compare §6: a signal that appears only at the
+longest landmark is more likely outcome contamination than prognosis, so the landmark
+sensitivity curve doubles as a leakage detector.
+
 PRIVACY: no raw free text, no row-level values, and no rare category values are ever
 written to the report. Any value or term is shown only if it occurs in at least
 --min-show-count patients/rows (default 20), so nothing patient-identifying is emitted.
 
     python scripts/smartehr/eda_events_survival.py \
         --smart-csv <smart.csv> --event-csv-folder <folder_with_ALL_event_csvs> \
-        --split-json <splits.json> --legacy --out-dir eda_out
+        --split-json <splits.json> --legacy --landmark-days 180 --out-dir eda_out_lm180
 
 Then paste eda_out/eda_report.md back into the chat.
 """
@@ -484,13 +501,32 @@ def main(args):
 
     # ---------------- §1 cohort + target feasibility
     cohort, notes = build_cohort(args.smart_csv, args.legacy, args.censoring_time)
+    cohort["first_event_abs"] = cohort["first_event"]  # unshifted, for the §5 leakage check
+    LM = args.landmark_days
+    if LM > 0:
+        # LANDMARK ANALYSIS. Using events in [0, LM] as features is only fair if the
+        # prediction origin also moves to LM: patients whose outcome falls inside the
+        # window must be dropped (their features would describe their own outcome) and
+        # survival must be measured FROM the landmark. Doing one without the other leaks.
+        n_before = len(cohort)
+        ev_before = int((cohort["cd_event"] == 1).sum())
+        cohort = cohort[cohort["first_event"] > LM].copy()
+        cohort["first_event"] = cohort["first_event"] - LM
+        n_drop = n_before - len(cohort)
+        ev_drop = ev_before - int((cohort["cd_event"] == 1).sum())
+        notes.append(
+            f"**landmark = {LM}d**: features may use events with datediff < {LM} (incl. "
+            f"post-baseline up to the landmark); dropped {n_drop:,} patients whose outcome "
+            f"occurred at/before the landmark ({ev_drop:,} of them events), and survival is "
+            f"now measured FROM day {LM}, so all horizons below are landmark-relative")
     t_raw = cohort["first_event"].to_numpy(float)
     e_raw = cohort["cd_event"].to_numpy(int)
     cens = [apply_censoring(t, e, H) for t, e in zip(t_raw, e_raw)]
     t_h = np.array([c[0] for c in cens])
     e_h = np.array([c[1] for c in cens])
 
-    w("## §1 Cohort and 15-year target feasibility")
+    w(f"## §1 Cohort and target feasibility"
+      + (f" (landmark {LM}d)" if LM else ""))
     w()
     for n in notes:
         w(f"- {n}")
@@ -549,7 +585,7 @@ def main(args):
     for p in csvs:
         print(f"  - {p.name}", flush=True)
         try:
-            scans.append(scan_csv(p, args.min_show_count, not args.no_text_terms, forced, args.origin_datediff))
+            scans.append(scan_csv(p, args.min_show_count, not args.no_text_terms, forced, LM))
         except Exception as exc:  # keep going: one bad CSV shouldn't kill the report
             w(f"> **ERROR scanning {p.name}: {type(exc).__name__}: {exc}**")
             print(f"    ERROR: {exc}", flush=True)
@@ -576,7 +612,7 @@ def main(args):
     w("## §2 Event coverage — the ceiling for a baseline-free model")
     w()
     w(f"- cohort patients: **{len(cohort_ids):,}**")
-    w(f"- with >= 1 pre-baseline event (datediff < 0): **{len(any_event):,} "
+    w(f"- with >= 1 usable event (datediff < {LM}): **{len(any_event):,} "
       f"({100*len(any_event)/max(len(cohort_ids),1):.1f}%)**")
     w(f"- **with NO events at all: {n_no_event:,} "
       f"({100*n_no_event/max(len(cohort_ids),1):.1f}%)** <- with no baseline these have an "
@@ -593,27 +629,27 @@ def main(args):
         buckets["0" if n == 0 else "1" if n == 1 else "2-5" if n <= 5 else
                 "6-20" if n <= 20 else "21-100" if n <= 100 else ">100"] += 1
     w(f"- patients by #event-days: { {k: buckets[k] for k in ['0','1','2-5','6-20','21-100','>100'] if k in buckets} }")
-    spans = [max(0, -min(days_per_patient[p])) for p in any_event if days_per_patient[p]]
-    w(f"- history span (days before baseline of the OLDEST event): {q(spans, (5,50,95,100))}")
+    spans = [max(0, LM - min(days_per_patient[p])) for p in any_event if days_per_patient[p]]
+    w(f"- history span (days before the origin of the OLDEST event): {q(spans, (5,50,95,100))}")
     w()
     w("Coverage per source and per look-back window (patients with >=1 event):")
     w()
     wins = [90, 180, 365, 730, 1825, 3650, None]
     w("| source | rows | pre-baseline rows | patients (pre) | "
-      + " | ".join(f"<={x}d" if x else "all pre-bl history" for x in wins) + " |")
+      + " | ".join(f"<={x}d" if x else "all usable history" for x in wins) + " |")
     w("|---" * (4 + len(wins)) + "|")
     for s in scans:
         cells = []
         for x in wins:
             c = sum(1 for pid, days in s["per_patient_days"].items()
-                    if pid in cohort_ids and any((x is None) or (-x <= d <= 0) for d in days))
+                    if pid in cohort_ids and any((x is None) or (LM - x <= d < LM) for d in days))
             cells.append(f"{c:,}")
         w(f"| {s['name']} | {s['n_rows']:,} | {s['n_rows_pre_baseline']:,} | "
           f"{len(src_patients[s['name']]):,} | " + " | ".join(cells) + " |")
     union_cells = []
     for x in wins:
         c = sum(1 for pid, days in days_per_patient.items()
-                if any((x is None) or (-x <= d <= 0) for d in days))
+                if any((x is None) or (LM - x <= d < LM) for d in days))
         union_cells.append(f"{c:,}")
     w(f"| **UNION** | | | **{len(any_event):,}** | " + " | ".join(f"**{c}**" for c in union_cells) + " |")
     w()
@@ -759,11 +795,12 @@ def main(args):
              if d.get("rows_with_iso_date")]
     w(f"- columns containing ISO dates in their values: {len(dated)}"
       + (f" ({', '.join(dated[:12])}{' ...' if len(dated) > 12 else ''})" if dated else ""))
-    fe = dict(zip(cohort[ID].astype(int), cohort["first_event"]))
+    fe = dict(zip(cohort[ID].astype(int), cohort["first_event_abs"]))
     after = sum(1 for pid, days in days_per_patient.items()
-                for d in days if pid in fe and d > 0 and d >= fe[pid])
-    w(f"- events dated at/after the patient's own `first_event`: {after:,} "
-      "(should be 0 — all events are pre-baseline)")
+                for d in days if pid in fe and d >= fe[pid])
+    w(f"- FEATURE events dated at/after the patient's own outcome: {after:,} "
+      "(must be 0 — otherwise a feature describes the outcome it is meant to predict; "
+      "the landmark exclusion is what guarantees this)")
     w()
 
     # ---------------- §6 univariate signal screen
@@ -790,7 +827,7 @@ def main(args):
     feats["recency(-days_since_last)"] = np.array(
         [float(max(days_per_patient[p])) if days_per_patient.get(p) else np.nan for p in ids])
     feats["history_span_days"] = np.array(
-        [float(-min(days_per_patient[p])) if days_per_patient.get(p) else np.nan for p in ids])
+        [float(LM - min(days_per_patient[p])) if days_per_patient.get(p) else np.nan for p in ids])
     feats["n_sources"] = np.array(
         [float(sum(1 for s in scans if p in src_patients[s["name"]])) for p in ids])
     for s in scans:
@@ -961,9 +998,13 @@ if __name__ == "__main__":
     p.add_argument("--force-text-cols", default=None,
                    help="Comma-separated columns to treat as free text regardless of the heuristic, "
                         "as 'col' or 'source.col' (e.g. radiologie.verslag,ok_verslag.verslag).")
-    p.add_argument("--origin-datediff", type=int, default=0,
-                   help="Prediction origin: only rows with datediff < this are usable as FEATURES "
-                        "(matches the pipeline's --baseline_time). Default 0 = the SMART baseline.")
+    p.add_argument("--landmark-days", type=int, default=0,
+                   help="LANDMARK: move the prediction origin this many days after the SMART "
+                        "baseline. Events with datediff < LANDMARK become usable features (so "
+                        "--landmark-days 180 admits post-baseline events up to 6 months), patients "
+                        "whose outcome falls at/before the landmark are EXCLUDED, and survival is "
+                        "measured from the landmark. All three happen together — setting a feature "
+                        "cutoff without the exclusion and time shift would leak the outcome.")
     p.add_argument("--extra-horizon-days", type=int, default=3650,
                    help="Second horizon for the signal screen (default 3650 = 10 years), so a "
                         "weakly-observed 15y horizon can be compared against a better-observed one.")
