@@ -419,6 +419,14 @@ def build(args):
     train_rows = np.array(sorted(splits["train"]), dtype=np.int64)
     is_train = np.zeros(n_pat, bool)
     is_train[train_rows] = True
+    # An absolute floor is misleading on a cohort this size: --min-patients 200 admits a
+    # code present in 1.5% of patients, which after median-imputation becomes a
+    # near-constant column that dilutes the model, triggers low-variance/zero-division
+    # warnings in Cox, and can only be screened on its own tiny subcohort.
+    args.min_patients = max(args.min_patients,
+                            int(math.ceil(args.min_coverage_frac * len(train_rows))))
+    say(f"  effective coverage floor: {args.min_patients:,} train patients "
+        f"(= max(--min-patients, {args.min_coverage_frac:.0%} of {len(train_rows):,}))")
     say(f"  cohort {n_pat:,} patients | train={len(splits['train']):,} "
         f"val={len(splits['validation']):,} test={len(splits['test']):,}")
 
@@ -594,6 +602,7 @@ def build(args):
 
 
 def screen_raw(X, cohort, train_rows, H, say, top):
+    n_all_pat = len(cohort)
     """Univariate Harrell C on the RAW matrix, BEFORE imputation.
 
     Screening the written parquet is misleading for low-coverage features: filling the
@@ -635,11 +644,34 @@ def screen_raw(X, cohort, train_rows, H, say, top):
         rows.append((best - thr, c, ci, cu, cov, ev_c, thr))
     rows.sort(reverse=True)
     n_clear = sum(1 for r in rows if r[0] >= 0)
-    say(f"  features clearing their own 2-SE floor (either form): {n_clear:,} of {len(rows):,}")
-    say(f"  {'feature':<46s} {'C_mono':>7s} {'C_udev':>7s} {'cov':>7s} {'ev':>6s} {'floor':>6s}")
-    for margin, c, ci, cu, cov, ev_c, thr in rows[:top]:
-        say(f"  {c[:46]:<46s} {ci:7.4f} {(f'{cu:.4f}' if cu else '   -  '):>7s} "
-            f"{cov:7,} {ev_c:6,} {thr:6.3f}" + ("  <-" if margin >= 0 else ""))
+    # Screening hundreds of features at an uncorrected 2 SE guarantees false positives:
+    # ~5% of pure-noise features clear it. Correct before believing any single hit.
+    n_tests = len(rows)
+    pvals = []
+    for margin, c, ci, cu, cov, ev_c, thr in rows:
+        z = (margin + thr) / (thr / 2) if thr > 0 else 0.0
+        pvals.append(math.erfc(z / math.sqrt(2)))
+    order = np.argsort(pvals)
+    bh_cut = 0.0
+    for rank, idx in enumerate(order, start=1):
+        if pvals[idx] <= 0.05 * rank / n_tests:
+            bh_cut = pvals[idx]
+    bonf = 0.05 / max(n_tests, 1)
+    n_bh = sum(1 for pv in pvals if pv <= bh_cut)
+    n_bonf = sum(1 for pv in pvals if pv <= bonf)
+    say(f"  {n_tests:,} features tested | clearing raw 2-SE: {n_clear:,} "
+        f"(~{0.05*n_tests:.0f} expected from noise alone)")
+    say(f"  surviving Benjamini-Hochberg FDR 5%: {n_bh:,} | "
+        f"surviving Bonferroni (p<{bonf:.1e}): {n_bonf:,}  <- believe these, not the raw count")
+    say(f"  {'feature':<40s} {'C_mono':>7s} {'C_udev':>7s} {'cov%':>6s} {'ev':>5s} "
+        f"{'z':>5s} {'sig':>9s}")
+    for (margin, c, ci, cu, cov, ev_c, thr), pv in zip(rows[:top], [pvals[i] for i in range(min(top, n_tests))]):
+        z = (margin + thr) / (thr / 2) if thr > 0 else 0.0
+        tag = "BONF" if pv <= bonf else ("FDR" if pv <= bh_cut else ("raw2SE" if margin >= 0 else ""))
+        say(f"  {c[:40]:<40s} {ci:7.4f} {(f'{cu:.4f}' if cu else '   -  '):>7s} "
+            f"{100*cov/n_all_pat:5.1f}% {ev_c:5,} {z:5.2f} {tag:>9s}")
+    say("  cov% is the share of the cohort carrying the value: a feature covering a few")
+    say("  percent cannot drive a cohort-level model, however real its subcohort signal.")
     exp = 0.05 * len(rows)
     if not n_clear and len(rows) >= 40:
         say(f"  ** 0 of {len(rows):,} features clear the floor, but ~{exp:.0f} would be expected")
@@ -679,6 +711,14 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, 
 
     med = tr.median(numeric_only=True)
     n_missing = int(X.isna().to_numpy().sum())
+    cov_frac = tr.notna().mean()
+    thin = [c for c in X.columns if cov_frac.get(c, 1.0) < args.min_coverage_frac]
+    if thin:
+        X = X.drop(columns=thin)
+        say(f"  dropped {len(thin):,} features covered in <{args.min_coverage_frac:.0%} of train "
+            f"(post-imputation they are near-constant and only add noise)")
+        tr = X.iloc[train_rows]
+        med = tr.median(numeric_only=True)
     X = X.fillna(med).fillna(0.0)
     mean, std = tr.fillna(med).mean(), tr.fillna(med).std().replace(0.0, 1.0)
     Xs = ((X - mean) / std).fillna(0.0)
@@ -744,6 +784,11 @@ if __name__ == "__main__":
                         "(e.g. 4 turns ATC C07AB02 into C07A).")
     p.add_argument("--aggregators", default="last,mean,slope,count",
                    help=f"Subset of {AGGS}. Fewer aggregators means fewer features to overfit.")
+    p.add_argument("--min-coverage-frac", type=float, default=0.10,
+                   help="A code must be present in at least this FRACTION of train patients. "
+                        "An absolute --min-patients floor is misleading on a large cohort: 200 of "
+                        "13k is 1.5%% coverage, so the feature is ~98%% median-imputed, becomes "
+                        "near-constant, and causes low-variance/zero-division warnings in Cox.")
     p.add_argument("--min-patients", type=int, default=200,
                    help="Keep a code only if it occurs in at least this many TRAIN patients.")
     p.add_argument("--max-codes-per-source", type=int, default=150,

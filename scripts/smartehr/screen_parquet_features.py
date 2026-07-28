@@ -93,6 +93,19 @@ def main(args):
             print("    ** inputs and labels have different lengths — alignment is broken **")
 
     Xtr, ttr, etr = data["train"]
+    # Heavily imputed low-coverage features arrive here as near-constant columns. They
+    # explain both the "low variance" / zero-division warnings from Cox and a screen that
+    # reads ~0.5 everywhere despite the RAW screen finding signal.
+    sd = Xtr.std(axis=0)
+    frac_uniq = np.array([len(np.unique(Xtr[:, j])) / max(len(Xtr), 1)
+                          for j in range(Xtr.shape[1])])
+    n_flat = int(((sd < 1e-8) | (frac_uniq < 0.01)).sum())
+    if n_flat:
+        print(f"\n  ** {n_flat:,} of {Xtr.shape[1]:,} features are near-constant "
+              f"(<1% distinct values). **")
+        print("     These are low-coverage codes whose unmeasured majority was median-filled.")
+        print("     They cause the low-variance / zero-division warnings and flatten every C")
+        print("     toward 0.5. Rebuild with a higher --min-coverage-frac rather than tuning.")
     n_ev = int(etr.sum())
     k = calibrate_null_scale(ttr, etr, n_perm=args.permutations)
     thr = null_floor(k, n_ev)
