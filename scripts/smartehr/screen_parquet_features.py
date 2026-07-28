@@ -20,11 +20,15 @@ it needs inputs/duration/event and, optionally, feature_names in metadata.json.
 import argparse
 import json
 import math
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from datasets import Dataset
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from eda_events_survival import calibrate_null_scale, null_floor
 
 
 def harrell_c(time, event, risk):
@@ -90,34 +94,48 @@ def main(args):
 
     Xtr, ttr, etr = data["train"]
     n_ev = int(etr.sum())
-    thr = 2.0 * math.sqrt(0.25 / max(n_ev, 1))
-    print(f"\n  2-SE noise floor on train ({n_ev:,} events): |C-0.5| >= {thr:.3f}")
+    k = calibrate_null_scale(ttr, etr, n_perm=args.permutations)
+    thr = null_floor(k, n_ev)
+    print(f"\n  permutation-calibrated null: SE(C) = {k:.3f}/sqrt(events); 2-SE floor on "
+          f"train ({n_ev:,} events) = {thr:.4f}")
+    print(f"  (the analytic 0.5/sqrt(events) would give {2*math.sqrt(0.25/max(n_ev,1)):.4f} — "
+          "too wide under heavy censoring, which discards real signal)")
 
     # ---- 2. univariate screen on train (the decisive, model-free test)
     print("\n--- univariate Harrell C per feature, TRAIN ---")
+    print("  C_mono = the value itself; C_udev = |value - median|, which catches U-shaped")
+    print("  risk (both extremes harmful) that a monotone C-index reads as 0.50")
     rows = []
     for j, nm in enumerate(names):
         c = harrell_c(ttr, etr, Xtr[:, j])
-        if c is not None:
-            rows.append((abs(c - 0.5), nm, c, j))
+        if c is None:
+            continue
+        v = Xtr[:, j]
+        cu = harrell_c(ttr, etr, np.abs(v - np.nanmedian(v)))
+        best = max(abs(c - 0.5), abs((cu if cu is not None else 0.5) - 0.5))
+        rows.append((best, nm, c, cu, j))
     rows.sort(reverse=True)
     cleared = [r for r in rows if r[0] >= thr]
-    print(f"  features clearing the floor: {len(cleared):,} of {len(rows):,}")
-    print(f"  {'feature':<58s} {'C(train)':>9s} {'C(test)':>9s}")
+    print(f"  features clearing the floor (either form): {len(cleared):,} of {len(rows):,}")
+    print(f"  {'feature':<50s} {'C_mono':>8s} {'C_udev':>8s} {'C_test':>8s}")
     Xte, tte, ete = data.get("test", (None, None, None))
-    for _, nm, c, j in rows[:args.top]:
+    for best, nm, c, cu, j in rows[:args.top]:
         cte = harrell_c(tte, ete, Xte[:, j]) if Xte is not None else None
-        flag = " <-" if abs(c - 0.5) >= thr else ""
-        print(f"  {nm[:58]:<58s} {c:9.4f} {(f'{cte:.4f}' if cte else '   -   '):>9s}{flag}")
-    if not cleared:
-        print("\n  ** NO single feature clears the noise floor on train. The features carry no")
-        print("     detectable univariate signal, so no architecture or tuning can fix this. **")
+        print(f"  {nm[:50]:<50s} {c:8.4f} {(f'{cu:.4f}' if cu else '   -  '):>8s} "
+              f"{(f'{cte:.4f}' if cte else '   -  '):>8s}" + ("  <-" if best >= thr else ""))
+    if not cleared and len(rows) >= 40:
+        print(f"\n  ** 0 of {len(rows):,} features clear the floor, yet pure noise alone would be")
+        print(f"     expected to yield ~{0.05*len(rows):.0f}. That is ANOMALOUS: suspect degenerate or")
+        print("     median-imputed columns rather than concluding the data has no signal. Screen")
+        print("     the RAW features instead (prepare_pivoted_event_features --screen-features). **")
+    elif not cleared:
+        print("\n  ** NO single feature clears the noise floor on train. **")
 
     # ---- 3. overfitting gap: how much did the feature block memorise?
     if Xte is not None and cleared:
         best = cleared[0]
         print(f"\n--- best feature train vs test: {best[1]} ---")
-        print(f"  train C={best[2]:.4f}  test C={harrell_c(tte, ete, Xte[:, best[3]]):.4f}")
+        print(f"  train C={best[2]:.4f}  test C={harrell_c(tte, ete, Xte[:, best[4]]):.4f}")
 
     # ---- 4. properly regularised linear model (the right model class at this n)
     if args.cox:
@@ -125,14 +143,20 @@ def main(args):
             from lifelines import CoxPHFitter
         except ImportError:
             raise SystemExit("lifelines not installed; drop --cox")
-        print("\n--- L2-penalised Cox: tuned on validation, reported on test ---")
+        kind = ("lasso" if args.l1_ratio >= 0.99 else
+                "elastic-net" if args.l1_ratio > 0 else "ridge")
+        print(f"\n--- penalised Cox ({kind}, l1_ratio={args.l1_ratio}): tuned on validation, "
+              "reported on test ---")
+        if args.l1_ratio == 0:
+            print("  NOTE: ridge spreads weight over all features; with a few real signals among")
+            print("  hundreds of nulls, rerun with --l1-ratio 1.0 (lasso), which selects instead.")
         Xva, tva, eva = data.get("validation", (None, None, None))
         cols = [f"x{j}" for j in range(Xtr.shape[1])]
         tr = pd.DataFrame(Xtr, columns=cols).assign(_t=ttr, _e=etr)
         best = None
         for pen in [float(p) for p in args.penalizers.split(",")]:
             try:
-                cph = CoxPHFitter(penalizer=pen, l1_ratio=0.0)
+                cph = CoxPHFitter(penalizer=pen, l1_ratio=args.l1_ratio)
                 cph.fit(tr, duration_col="_t", event_col="_e")
             except Exception as exc:
                 print(f"  penalizer={pen:<8g} fit failed: {type(exc).__name__}")
@@ -165,4 +189,9 @@ if __name__ == "__main__":
     p.add_argument("--top", type=int, default=25, help="How many features to list.")
     p.add_argument("--cox", action="store_true", help="Also fit an L2-penalised Cox model.")
     p.add_argument("--penalizers", default="0.01,0.1,1.0,10.0")
+    p.add_argument("--l1-ratio", type=float, default=0.0,
+                   help="0 = ridge (default), 1 = lasso. Lasso is far better at isolating a few "
+                        "real features among many null ones; ridge dilutes them.")
+    p.add_argument("--permutations", type=int, default=200,
+                   help="Permutations used to calibrate the null SE of the C-index.")
     main(p.parse_args())

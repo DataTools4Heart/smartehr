@@ -117,6 +117,31 @@ def harrell_c(time, event, risk):
     return num / den, int(den)
 
 
+def calibrate_null_scale(time, event, n_perm=200, seed=0):
+    """Empirical null scale k, where SE(C) ~= k / sqrt(n_events).
+
+    The analytic sqrt(0.25/n_events) (k=0.5) is far too wide under heavy censoring: at
+    ~14% events only ~1 in 400 pure-noise features clears its 2-SE band instead of the
+    expected ~5%, so a too-strict floor discards real signal. Measuring k by permutation
+    on the actual (time, event) pattern fixes that; it comes out near 0.32 here.
+    """
+    rng = np.random.default_rng(seed)
+    cs = []
+    for _ in range(n_perm):
+        c, _ = harrell_c(time, event, rng.normal(size=len(time)))
+        if c is not None:
+            cs.append(c)
+    ev = max(int(np.asarray(event).sum()), 1)
+    if len(cs) < 20:
+        return 0.5
+    return float(np.std(cs, ddof=1) * math.sqrt(ev))
+
+
+def null_floor(k, n_events, n_sigma=2.0):
+    """|C-0.5| threshold for a feature whose subcohort contains n_events events."""
+    return n_sigma * k / math.sqrt(max(int(n_events), 1))
+
+
 def km_survival(time, event, eval_times):
     """Kaplan-Meier S(t) at eval_times (plain numpy)."""
     time, event = np.asarray(time, float), np.asarray(event, int)

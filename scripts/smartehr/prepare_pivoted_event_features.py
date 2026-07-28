@@ -95,13 +95,19 @@ def safe(name):
 class Block:
     """Streaming accumulator for one source: (n_patients x n_codes) stats per code."""
 
-    def __init__(self, source, codes, n_patients, kind):
-        self.source, self.kind = source, kind
+    # occurrence blocks only ever produce count/present, so `lean` allocates the single
+    # count array instead of nine — auto-occurrence can add a lot of blocks
+    STATS = ("n", "sum", "min", "max", "last_t", "last_v", "sum_t", "sum_tv", "sum_tt")
+
+    def __init__(self, source, codes, n_patients, kind, lean=False):
+        self.source, self.kind, self.lean = source, kind, lean
         self.codes = list(codes)
         self.cindex = {c: j for j, c in enumerate(self.codes)}
         shape = (n_patients, len(self.codes))
         f = lambda v: np.full(shape, v, dtype=np.float64)
         self.n = f(0.0)
+        if lean:
+            return
         self.sum = f(0.0)
         self.min = f(np.inf)
         self.max = f(-np.inf)
@@ -115,6 +121,12 @@ class Block:
         """Fold a chunk in. (pi, ci) pairs are made unique by the groupby first."""
         df = pd.DataFrame({"pi": pi, "ci": ci, "t": t, "v": v}).dropna()
         if df.empty:
+            return
+        if self.lean:                      # counts only
+            g = df.groupby(["pi", "ci"], sort=False).size()
+            ii = g.index.get_level_values(0).to_numpy(np.int64)
+            jj = g.index.get_level_values(1).to_numpy(np.int64)
+            self.n[ii, jj] += g.to_numpy()
             return
         df["tv"] = df["t"] * df["v"]
         df["tt"] = df["t"] * df["t"]
@@ -152,8 +164,7 @@ class Block:
         if keep is not None and not keep.all():
             idx = np.where(keep)[0]
             self.codes = [self.codes[j] for j in idx]
-            for attr in ("n", "sum", "min", "max", "last_t", "last_v",
-                         "sum_t", "sum_tv", "sum_tt"):
+            for attr in (("n",) if self.lean else self.STATS):
                 setattr(self, attr, getattr(self, attr)[:, idx])
             self.cindex = {c: j for j, c in enumerate(self.codes)}
         if not self.codes:
@@ -194,27 +205,46 @@ def iter_chunks(path, usecols=None):
         yield chunk
 
 
-def source_roles(path, num_specs, occ_specs, probe_rows=50_000):
-    """Decide which columns of one CSV are numeric-pivot / occurrence / wide-numeric."""
+def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
+                 auto_occurrence=False, max_card=5000):
+    """Decide which columns of one CSV are numeric-pivot / occurrence / wide-numeric.
+
+    With auto_occurrence, EVERY remaining categorical column becomes an occurrence block.
+    Without it five real sources (consult, radiologie_verslag, uitgaandebrief, ok_verslag,
+    mri_verslag) contribute nothing at all, because they hold no numeric columns and only
+    one column per source is named in --occurrence-pivot. That silently discards the
+    "what care did this patient receive" signal: which specialism was consulted, which
+    scan was ordered, and ok_verslag.STELLING, whose values include Complication.
+    Long free text is left out — that belongs to the text arm, not a code counter.
+    """
     stem = Path(path).stem
     head = pd.read_csv(path, nrows=0)
     cols = [c for c in head.columns if c not in (ID, TIME)]
     num_spec = match_spec(stem, num_specs)
     occ_spec = match_spec(stem, occ_specs)
     num_spec = num_spec if (num_spec and num_spec[0] in cols and num_spec[1] in cols) else None
-    occ_col = occ_spec[0] if (occ_spec and occ_spec[0] in cols) else None
-    occ_prefix = None
-    if occ_spec and occ_spec[1]:
-        occ_prefix = int(occ_spec[1])
-    used = set()
-    if num_spec:
-        used.update(num_spec)
-    if occ_col:
-        used.add(occ_col)
+    occ_cols = []
+    if occ_spec and occ_spec[0] in cols:
+        occ_cols.append((occ_spec[0], int(occ_spec[1]) if occ_spec[1] else None))
+    used = set(num_spec or ()) | {c for c, _ in occ_cols}
     probe = pd.read_csv(path, nrows=probe_rows, low_memory=False)
     wide = [c for c in cols if c not in used
             and c in probe.columns and pd.api.types.is_numeric_dtype(probe[c])]
-    return stem, num_spec, occ_col, occ_prefix, wide
+    if auto_occurrence:
+        for c in cols:
+            if c in used or c in wide or c not in probe.columns:
+                continue
+            s = probe[c].dropna().astype(str)
+            if s.empty:
+                continue
+            med_len = float(s.str.len().median())
+            med_words = float((s.str.count(r"\s+") + 1).median())
+            if med_len >= 40 and med_words >= 5:
+                continue                      # long free text -> text arm
+            if not (2 <= s.nunique() <= max_card):
+                continue
+            occ_cols.append((c, None))
+    return stem, num_spec, occ_cols, wide
 
 
 def smart_baseline_features(smart_csv, pids):
@@ -294,62 +324,59 @@ def build(args):
     blocks = []
 
     for path in csvs:
-        stem, num_spec, occ_col, occ_prefix, wide = source_roles(path, num_specs, occ_specs)
-        if not (num_spec or occ_col or wide):
+        stem, num_spec, occ_cols, wide = source_roles(
+            path, num_specs, occ_specs,
+            auto_occurrence=args.auto_occurrence, max_card=args.auto_occurrence_max_card)
+        if not (num_spec or occ_cols or wide):
             say(f"  {stem}: no usable columns, skipped")
             continue
 
-        def codes_of(series):
-            s = series.dropna().astype(str).str.strip()
-            if occ_prefix and occ_col is not None and series.name == occ_col:
-                s = s.str.slice(0, occ_prefix)
-            return s
-
         # ---- pass 1: code vocabulary and TRAIN coverage (selection never sees val/test)
-        cov = {"numeric": defaultdict(set), "occurrence": defaultdict(set)}
-        n_pre = 0
-        need = [ID, TIME] + ([num_spec[0], num_spec[1]] if num_spec else []) + \
-               ([occ_col] if occ_col else [])
-        if num_spec or occ_col:
+        cov = defaultdict(lambda: defaultdict(set))   # role_key -> code -> train pids
+        need = [ID, TIME] + ([num_spec[0], num_spec[1]] if num_spec else []) \
+               + [c for c, _ in occ_cols]
+        if num_spec or occ_cols:
             for chunk in iter_chunks(path, usecols=sorted(set(need))):
                 dd = pd.to_numeric(chunk[TIME], errors="coerce")
                 keep = dd.notna() & (dd < LM)
                 if not keep.any():
                     continue
                 pr = chunk[ID][keep].map(pindex)
-                tr = pr.notna() & pr.map(lambda i: bool(is_train[int(i)]) if pd.notna(i) else False)
+                tr = pr.notna() & pr.astype("Float64").apply(
+                    lambda i: bool(is_train[int(i)]) if pd.notna(i) else False)
                 if num_spec:
-                    cc = codes_of(chunk[num_spec[0]][keep])
+                    cc = chunk[num_spec[0]][keep].astype(str).str.strip()
                     vv = pd.to_numeric(chunk[num_spec[1]][keep], errors="coerce")
                     ok = tr & vv.notna() & cc.notna()
                     for code, p in zip(cc[ok], pr[ok].astype(int)):
-                        cov["numeric"][code].add(p)
-                if occ_col:
-                    cc = codes_of(chunk[occ_col][keep])
-                    ok = tr & cc.notna()
+                        cov[("numeric", num_spec[0])][code].add(p)
+                for col, prefix in occ_cols:
+                    cc = chunk[col][keep].astype(str).str.strip()
+                    if prefix:
+                        cc = cc.str.slice(0, prefix)
+                    ok = tr & cc.notna() & (cc != "nan")
                     for code, p in zip(cc[ok], pr[ok].astype(int)):
-                        cov["occurrence"][code].add(p)
-                n_pre += int(keep.sum())
+                        cov[("occurrence", col)][code].add(p)
                 del chunk
             gc.collect()
 
-        for kind, spec_cols in (("numeric", num_spec), ("occurrence", (occ_col,) if occ_col else None)):
-            if not spec_cols:
-                continue
-            counts = {c: len(s) for c, s in cov[kind].items()}
+        roles = ([("numeric", num_spec[0], num_spec)] if num_spec else []) + \
+                [("occurrence", col, (col, prefix)) for col, prefix in occ_cols]
+        for kind, col, spec in roles:
+            counts = {c: len(s) for c, s in cov[(kind, col)].items()}
             kept = sorted((c for c, n in counts.items() if n >= args.min_patients),
                           key=lambda c: (-counts[c], str(c)))
-            n_all = len(counts)
-            dropped_cov = n_all - len(kept)
+            dropped_cov = len(counts) - len(kept)
             if len(kept) > args.max_codes_per_source:
-                say(f"  {stem} [{kind}]: capping {len(kept)} -> {args.max_codes_per_source} codes "
-                    f"by train coverage (dropped codes are listed in metadata)")
+                say(f"  {stem}.{col} [{kind}]: capping {len(kept)} -> "
+                    f"{args.max_codes_per_source} codes by train coverage")
                 kept = kept[:args.max_codes_per_source]
-            say(f"  {stem} [{kind}]: {n_all:,} distinct codes -> kept {len(kept):,} "
+            say(f"  {stem}.{col} [{kind}]: {len(counts):,} distinct codes -> kept {len(kept):,} "
                 f"(>= {args.min_patients} train patients; {dropped_cov:,} below the floor)")
             if kept:
-                blocks.append((Block(f"{stem}.{kind}", kept, n_pat, kind),
-                               path, kind, spec_cols, occ_prefix))
+                # occurrence blocks only ever need counts, so allocate 1 array not 9
+                blocks.append((Block(f"{stem}.{col}", kept, n_pat, kind, lean=(kind == "occurrence")),
+                               path, kind, spec, None))
 
         if wide:
             say(f"  {stem} [wide]: {len(wide)} numeric columns aggregated directly")
@@ -389,8 +416,9 @@ def build(args):
                                  t_years[m].to_numpy(), v[m].to_numpy())
             else:
                 cc = chunk[spec_cols[0]][keep].astype(str).str.strip()
-                if prefix:
-                    cc = cc.str.slice(0, prefix)
+                pfx = spec_cols[1] if kind == "occurrence" else None
+                if pfx:
+                    cc = cc.str.slice(0, int(pfx))
                 ci = cc.map(block.cindex)
                 if kind == "numeric":
                     v = pd.to_numeric(chunk[spec_cols[1]][keep], errors="coerce")
@@ -438,39 +466,51 @@ def screen_raw(X, cohort, train_rows, H, say, top):
     floor). Here the NaNs still exist, so each feature is scored only on the patients who
     actually have it, and its coverage is reported alongside.
     """
-    from eda_events_survival import harrell_c
+    from eda_events_survival import calibrate_null_scale, harrell_c, null_floor
     t_abs = cohort["first_event"].to_numpy(float)[train_rows]
     e_abs = cohort["cd_event"].to_numpy(int)[train_rows]
     cens = [apply_censoring(t, e, H) for t, e in zip(t_abs, e_abs)]
     t = np.array([c[0] for c in cens])
     e = np.array([c[1] for c in cens])
     n_ev = int(e.sum())
+    k = calibrate_null_scale(t, e)
     say(f"\n  --- univariate screen on RAW (un-imputed) features, train, horizon {H}d ---")
-    say(f"  {n_ev:,} events; scored only on patients who HAVE each value")
+    say(f"  {n_ev:,} events; each feature scored only on the patients who HAVE it")
+    say(f"  permutation-calibrated null: SE(C) = {k:.3f}/sqrt(events) "
+        f"(the analytic 0.5/sqrt(events) is ~1.6x too wide under this censoring)")
+    say("  C_mono = raw value; C_udev = |value - median|, which catches U-shaped risk that")
+    say("  a monotone C-index cannot see (a true 0.62 U-shape reads as 0.50 monotone)")
     rows = []
     Xtr = X.iloc[train_rows]
     for c in Xtr.columns:
         v = Xtr[c].to_numpy(float)
-        cov = int((~np.isnan(v)).sum())
+        ok = ~np.isnan(v)
+        cov = int(ok.sum())
         if cov < 50:
             continue
         ci = harrell_c(t, e, v)[0]
         if ci is None:
             continue
-        # the floor scales with the events actually contributing to this feature
-        ev_c = int(e[~np.isnan(v)].sum())
-        thr = 2.0 * math.sqrt(0.25 / max(ev_c, 1))
-        rows.append((abs(ci - 0.5) - thr, c, ci, cov, ev_c, thr))
+        med = np.nanmedian(v)
+        cu = harrell_c(t, e, np.abs(v - med))[0]
+        ev_c = int(e[ok].sum())
+        thr = null_floor(k, ev_c)
+        best = max(abs(ci - 0.5), abs((cu or 0.5) - 0.5))
+        rows.append((best - thr, c, ci, cu, cov, ev_c, thr))
     rows.sort(reverse=True)
     n_clear = sum(1 for r in rows if r[0] >= 0)
-    say(f"  features clearing their own 2-SE floor: {n_clear:,} of {len(rows):,}")
-    say(f"  {'feature':<52s} {'C':>7s} {'cov':>7s} {'events':>7s} {'floor':>7s}")
-    for margin, c, ci, cov, ev_c, thr in rows[:top]:
-        say(f"  {c[:52]:<52s} {ci:7.4f} {cov:7,} {ev_c:7,} {thr:7.3f}"
-            + ("  <-" if margin >= 0 else ""))
-    if not n_clear:
-        say("  ** nothing clears its floor even before imputation: the per-code values carry"
-            " no univariate signal, so this is not an imputation artefact **")
+    say(f"  features clearing their own 2-SE floor (either form): {n_clear:,} of {len(rows):,}")
+    say(f"  {'feature':<46s} {'C_mono':>7s} {'C_udev':>7s} {'cov':>7s} {'ev':>6s} {'floor':>6s}")
+    for margin, c, ci, cu, cov, ev_c, thr in rows[:top]:
+        say(f"  {c[:46]:<46s} {ci:7.4f} {(f'{cu:.4f}' if cu else '   -  '):>7s} "
+            f"{cov:7,} {ev_c:6,} {thr:6.3f}" + ("  <-" if margin >= 0 else ""))
+    exp = 0.05 * len(rows)
+    if not n_clear and len(rows) >= 40:
+        say(f"  ** 0 of {len(rows):,} features clear the floor, but ~{exp:.0f} would be expected")
+        say("     from pure noise alone. That is ANOMALOUS: suspect degenerate/near-constant")
+        say("     columns or over-aggregation rather than concluding 'no signal'. **")
+    elif not n_clear:
+        say("  ** nothing clears its floor even before imputation: not an imputation artefact **")
     say("")
 
 
@@ -574,6 +614,14 @@ if __name__ == "__main__":
                    help="Cap on codes kept per source, by train coverage.")
     p.add_argument("--clip-quantile", type=float, default=0.001,
                    help="Winsorise features at these train quantiles; 0 disables.")
+    p.add_argument("--auto-occurrence", action="store_true",
+                   help="Occurrence-encode EVERY remaining categorical column in EVERY source. "
+                        "Without this, sources holding only categorical columns (consult, "
+                        "radiologie_verslag, uitgaandebrief, ok_verslag, mri_verslag) contribute "
+                        "NO features at all, discarding specialism / exam-type / complication "
+                        "information. Long free text is still excluded.")
+    p.add_argument("--auto-occurrence-max-card", type=int, default=5000,
+                   help="Skip auto-occurrence on columns with more distinct values than this.")
     p.add_argument("--screen-features", action="store_true",
                    help="Print a univariate Harrell C screen of the RAW features before "
                         "imputation, each scored only on the patients who have it. Median-filling "
