@@ -668,7 +668,8 @@ def screen_raw(X, cohort, train_rows, H, say, top):
     floor). Here the NaNs still exist, so each feature is scored only on the patients who
     actually have it, and its coverage is reported alongside.
     """
-    from eda_events_survival import calibrate_null_scale, harrell_c, null_floor
+    from eda_events_survival import (calibrate_null_scale, effective_n_tests,
+                                     harrell_c, null_floor)
     t_abs = cohort["first_event"].to_numpy(float)[train_rows]
     e_abs = cohort["cd_event"].to_numpy(int)[train_rows]
     cens = [apply_censoring(t, e, H) for t, e in zip(t_abs, e_abs)]
@@ -713,11 +714,13 @@ def screen_raw(X, cohort, train_rows, H, say, top):
     for rank, idx in enumerate(order, start=1):
         if pvals[idx] <= 0.05 * rank / n_tests:
             bh_cut = pvals[idx]
-    bonf = 0.05 / max(n_tests, 1)
+    n_eff = effective_n_tests(Xtr.to_numpy(float))
+    bonf = 0.05 / max(n_eff, 1)   # correct for INDEPENDENT tests, not nominal columns
     n_bh = sum(1 for pv in pvals if pv <= bh_cut)
     n_bonf = sum(1 for pv in pvals if pv <= bonf)
-    say(f"  {n_tests:,} features tested | clearing raw 2-SE: {n_clear:,} "
-        f"(~{0.05*n_tests:.0f} expected from noise alone)")
+    say(f"  {n_tests:,} features tested = ~{n_eff:,} independent tests (correlated "
+        f"aggregators of the same code) | clearing raw 2-SE: {n_clear:,} "
+        f"(~{0.05*n_eff:.0f} expected from noise)")
     say(f"  surviving Benjamini-Hochberg FDR 5%: {n_bh:,} | "
         f"surviving Bonferroni (p<{bonf:.1e}): {n_bonf:,}  <- believe these, not the raw count")
     say(f"  {'feature':<40s} {'C_mono':>7s} {'C_udev':>7s} {'cov%':>6s} {'ev':>5s} "
@@ -729,11 +732,9 @@ def screen_raw(X, cohort, train_rows, H, say, top):
             f"{100*cov/n_all_pat:5.1f}% {ev_c:5,} {z:5.2f} {tag:>9s}")
     say("  cov% is the share of the cohort carrying the value: a feature covering a few")
     say("  percent cannot drive a cohort-level model, however real its subcohort signal.")
-    exp = 0.05 * len(rows)
-    if not n_clear and len(rows) >= 40:
-        say(f"  ** 0 of {len(rows):,} features clear the floor, but ~{exp:.0f} would be expected")
-        say("     from pure noise alone. That is ANOMALOUS: suspect degenerate/near-constant")
-        say("     columns or over-aggregation rather than concluding 'no signal'. **")
+    if not n_clear and 0.05 * n_eff >= 3:
+        say(f"  ** 0 cleared vs ~{0.05*n_eff:.0f} expected from noise across {n_eff:,} independent")
+        say("     tests: mildly surprising, check for flattened columns. **")
     elif not n_clear:
         say("  ** nothing clears its floor even before imputation: not an imputation artefact **")
     say("")

@@ -28,7 +28,7 @@ import pandas as pd
 from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from eda_events_survival import calibrate_null_scale, null_floor
+from eda_events_survival import calibrate_null_scale, effective_n_tests, null_floor
 
 
 def harrell_c(time, event, risk):
@@ -143,13 +143,19 @@ def main(args):
         cte = harrell_c(tte, ete, Xte[:, j]) if Xte is not None else None
         print(f"  {nm[:50]:<50s} {c:8.4f} {(f'{cu:.4f}' if cu else '   -  '):>8s} "
               f"{(f'{cte:.4f}' if cte else '   -  '):>8s}" + ("  <-" if best >= thr else ""))
-    if not cleared and len(rows) >= 40:
-        print(f"\n  ** 0 of {len(rows):,} features clear the floor, yet pure noise alone would be")
-        print(f"     expected to yield ~{0.05*len(rows):.0f}. That is ANOMALOUS: suspect degenerate or")
-        print("     median-imputed columns rather than concluding the data has no signal. Screen")
-        print("     the RAW features instead (prepare_pivoted_event_features --screen-features). **")
+    n_eff = effective_n_tests(Xtr)
+    exp_fp = 0.05 * n_eff
+    print(f"\n  {len(rows):,} features are only ~{n_eff:,} INDEPENDENT tests "
+          f"(PCs for 95% of variance): last/mean/slope/count of one code are near-duplicates.")
+    print(f"  Pure noise would therefore clear the floor ~{exp_fp:.0f} times, not "
+          f"~{0.05*len(rows):.0f}.")
+    if not cleared and exp_fp >= 3:
+        print(f"  ** 0 cleared vs ~{exp_fp:.0f} expected from noise: mildly surprising. Check that")
+        print("     features are not flattened by imputation — screen the RAW matrix with")
+        print("     prepare_pivoted_event_features --screen-features. **")
     elif not cleared:
-        print("\n  ** NO single feature clears the noise floor on train. **")
+        print("  ** No feature clears the floor, and with this few independent tests that is")
+        print("     consistent with a genuine absence of univariate signal. **")
 
     # ---- 3. overfitting gap: how much did the feature block memorise?
     if Xte is not None and cleared:

@@ -117,6 +117,27 @@ def harrell_c(time, event, risk):
     return num / den, int(den)
 
 
+def effective_n_tests(X, frac=0.95):
+    """Number of INDEPENDENT tests among correlated features: PCs reaching `frac` variance.
+
+    last/mean/slope/count of one code are near-duplicates, so a nominal 532 features may be
+    only ~250 independent tests. Multiple-testing expectations and Bonferroni thresholds
+    must use this, or "0 features cleared the floor" gets compared against a false
+    expectation and looks anomalous when it is not.
+    """
+    A = np.asarray(X, float)
+    A = A[:, np.isfinite(A).all(axis=0)] if A.ndim == 2 else A
+    if A.ndim != 2 or A.shape[1] < 2:
+        return max(A.shape[1] if A.ndim == 2 else 1, 1)
+    sd = A.std(axis=0)
+    sd[sd < 1e-12] = 1.0
+    R = np.nan_to_num(np.corrcoef(((A - A.mean(axis=0)) / sd).T), nan=0.0)
+    lam = np.sort(np.clip(np.linalg.eigvalsh(R), 0, None))[::-1]
+    if lam.sum() <= 0:
+        return A.shape[1]
+    return int(np.searchsorted(np.cumsum(lam) / lam.sum(), frac) + 1)
+
+
 def calibrate_null_scale(time, event, n_perm=200, seed=0):
     """Empirical null scale k, where SE(C) ~= k / sqrt(n_events).
 
