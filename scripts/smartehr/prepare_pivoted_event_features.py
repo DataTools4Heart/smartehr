@@ -45,7 +45,7 @@ import math
 import os
 import re
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +63,7 @@ AGGS = ("last", "mean", "min", "max", "slope", "count", "present")
 # suffixes (lab_ezis_20250709) need not be spelled out.
 NUMERIC_PIVOT_DEFAULT = ("lab_ezis:lab_testcode:lab_result:lab_result_txt,"
                          "echo:MeasName_ECHO:Value_ECHO,meting:label:data1")
+UNIT_COLS_DEFAULT = "lab_ezis:lab_testunit,echo:UnitName_ECHO,meting:eenheid"
 OCCURRENCE_DEFAULT = "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving,ok:OMSCHR"
 
 
@@ -311,7 +312,8 @@ def iter_chunks(path, usecols=None):
 
 
 def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
-                 auto_occurrence=False, max_card=5000, tokenize_above_card=300):
+                 auto_occurrence=False, max_card=5000, tokenize_above_card=300,
+                 unit_specs=None):
     """Decide which columns of one CSV are numeric-pivot / occurrence / wide-numeric.
 
     With auto_occurrence, EVERY remaining categorical column becomes an occurrence block.
@@ -362,7 +364,12 @@ def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
             if not (2 <= s.nunique() <= max_card):
                 continue
             occ_cols.append((c, None, _tok(c)))
-    return stem, num_spec, occ_cols, wide
+    unit_col = None
+    if unit_specs:
+        u = match_spec(stem, unit_specs)
+        if u and u[0] in cols:
+            unit_col = u[0]
+    return stem, num_spec, occ_cols, wide, unit_col
 
 
 def select_baseline(cols, spec):
@@ -502,16 +509,18 @@ def build(args):
         if a not in AGGS:
             raise SystemExit(f"--aggregators must come from {AGGS}")
 
+    unit_specs = parse_specs(args.unit_cols, 1)
+    unit_of = {}
     csvs = sorted(Path(args.event_csv_folder).glob("*.csv"))
     if not csvs:
         raise SystemExit(f"no CSVs in {args.event_csv_folder}")
     blocks = []
 
     for path in csvs:
-        stem, num_spec, occ_cols, wide = source_roles(
+        stem, num_spec, occ_cols, wide, unit_col = source_roles(
             path, num_specs, occ_specs,
             auto_occurrence=args.auto_occurrence, max_card=args.auto_occurrence_max_card,
-            tokenize_above_card=args.tokenize_above_card)
+            tokenize_above_card=args.tokenize_above_card, unit_specs=unit_specs)
         if not (num_spec or occ_cols or wide):
             say(f"  {stem}: no usable columns, skipped")
             continue
@@ -519,7 +528,8 @@ def build(args):
         # ---- pass 1: code vocabulary and TRAIN coverage (selection never sees val/test)
         cov = defaultdict(lambda: defaultdict(set))   # role_key -> code -> train pids
         need = [ID, TIME] + ([c for c in num_spec if c] if num_spec else []) \
-               + [c for c, _, _ in occ_cols]
+               + [c for c, _, _ in occ_cols] + ([unit_col] if unit_col else [])
+        unit_tally = defaultdict(Counter)
         if num_spec or occ_cols:
             for chunk in iter_chunks(path, usecols=sorted(set(need))):
                 dd = pd.to_numeric(chunk[TIME], errors="coerce")
@@ -532,6 +542,12 @@ def build(args):
                 if num_spec:
                     cc = normalise_codes(chunk[num_spec[0]][keep])
                     vv = numeric_with_text_fallback(chunk, keep, num_spec)[0]
+                    if unit_col:
+                        uu = normalise_codes(chunk[unit_col][keep]).fillna("?")
+                        for code, un in zip(cc[vv.notna()], uu[vv.notna()]):
+                            unit_tally[code][un] += 1
+                        if args.split_by_unit:
+                            cc = cc + "|" + uu
                     ok = tr & vv.notna() & cc.notna()
                     for code, p in zip(cc[ok], pr[ok].astype(int)):
                         cov[("numeric", num_spec[0])][code].add(p)
@@ -547,6 +563,16 @@ def build(args):
                 del chunk
             gc.collect()
 
+        if unit_tally:
+            mixed = {c: t for c, t in unit_tally.items()
+                     if sum(t.values()) >= 200 and max(t.values()) / sum(t.values()) < 0.99}
+            say(f"  {stem}: unit check over {len(unit_tally):,} codes -> "
+                f"{len(mixed):,} report a SECOND unit in >1% of rows"
+                + ("" if args.split_by_unit else "; pass --split-by-unit to separate them"))
+            for c, t in sorted(mixed.items(), key=lambda kv: -sum(kv[1].values()))[:8]:
+                tot = sum(t.values())
+                say(f"    {c[:26]:<26s} n={tot:>8,}  " +
+                    ", ".join(f"{u}:{100*n/tot:.0f}%" for u, n in t.most_common(4)))
         roles = ([("numeric", num_spec[0], num_spec)] if num_spec else []) + \
                 [("occurrence", col, (col, prefix, tok)) for col, prefix, tok in occ_cols]
         for kind, col, spec in roles:
@@ -564,8 +590,10 @@ def build(args):
                 f"{dropped_cov:,} below the floor)")
             if kept:
                 # occurrence blocks only ever need counts, so allocate 1 array not 9
-                blocks.append((Block(f"{stem}.{col}", kept, n_pat, kind, lean=(kind == "occurrence")),
-                               path, kind, spec, None))
+                blk = Block(f"{stem}.{col}", kept, n_pat, kind, lean=(kind == "occurrence"))
+                if kind == "numeric" and unit_col:
+                    unit_of[blk.source] = unit_col
+                blocks.append((blk, path, kind, spec, None))
 
         if wide:
             say(f"  {stem} [wide]: {len(wide)} numeric columns aggregated directly")
@@ -580,7 +608,8 @@ def build(args):
         if kind == "wide":
             need = [ID, TIME] + block.codes
         elif kind == "numeric":
-            need = [ID, TIME] + [c for c in spec_cols if c]
+            need = [ID, TIME] + [c for c in spec_cols if c] + ([unit_of.get(block.source)] or [])
+            need = [c for c in need if c]
         else:
             need = [ID, TIME, spec_cols[0]]
         print(f"  accumulating {block.source} ...", flush=True)
@@ -606,6 +635,9 @@ def build(args):
                                  t_years[m].to_numpy(), v[m].to_numpy())
             elif kind == "numeric":
                 cc = normalise_codes(chunk[spec_cols[0]][keep])
+                ucol = unit_of.get(block.source)
+                if args.split_by_unit and ucol and ucol in chunk.columns:
+                    cc = cc + "|" + normalise_codes(chunk[ucol][keep]).fillna("?")
                 ci = cc.map(block.cindex)
                 v, n_resc = numeric_with_text_fallback(chunk, keep, spec_cols)
                 rescued += n_resc
@@ -892,6 +924,12 @@ if __name__ == "__main__":
                    help="Cap on codes kept per source, by train coverage.")
     p.add_argument("--clip-quantile", type=float, default=0.001,
                    help="Winsorise features at these train quantiles; 0 disables.")
+    p.add_argument("--unit-cols", default=UNIT_COLS_DEFAULT,
+                   help="src:unit_column per numeric-pivot source. Used to REPORT codes reported "
+                        "in more than one unit, which pools incomparable scales into one feature.")
+    p.add_argument("--split-by-unit", action="store_true",
+                   help="Treat code+unit as distinct features, so a test reported in two units "
+                        "does not get pooled into one meaningless column.")
     p.add_argument("--tokenize-above-card", type=int, default=300,
                    help="Occurrence columns with more distinct values than this are encoded per "
                         "WORD instead of per exact string, so a diagnosis written several ways "
