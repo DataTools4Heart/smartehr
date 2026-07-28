@@ -429,6 +429,51 @@ def build(args):
     finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs)
 
 
+def screen_raw(X, cohort, train_rows, H, say, top):
+    """Univariate Harrell C on the RAW matrix, BEFORE imputation.
+
+    Screening the written parquet is misleading for low-coverage features: filling the
+    unmeasured majority with the train median drags a real signal toward 0.5 (at ~43%
+    coverage a true 0.80 presents as ~0.65, and a true 0.65 as ~0.52 — under the noise
+    floor). Here the NaNs still exist, so each feature is scored only on the patients who
+    actually have it, and its coverage is reported alongside.
+    """
+    from eda_events_survival import harrell_c
+    t_abs = cohort["first_event"].to_numpy(float)[train_rows]
+    e_abs = cohort["cd_event"].to_numpy(int)[train_rows]
+    cens = [apply_censoring(t, e, H) for t, e in zip(t_abs, e_abs)]
+    t = np.array([c[0] for c in cens])
+    e = np.array([c[1] for c in cens])
+    n_ev = int(e.sum())
+    say(f"\n  --- univariate screen on RAW (un-imputed) features, train, horizon {H}d ---")
+    say(f"  {n_ev:,} events; scored only on patients who HAVE each value")
+    rows = []
+    Xtr = X.iloc[train_rows]
+    for c in Xtr.columns:
+        v = Xtr[c].to_numpy(float)
+        cov = int((~np.isnan(v)).sum())
+        if cov < 50:
+            continue
+        ci = harrell_c(t, e, v)[0]
+        if ci is None:
+            continue
+        # the floor scales with the events actually contributing to this feature
+        ev_c = int(e[~np.isnan(v)].sum())
+        thr = 2.0 * math.sqrt(0.25 / max(ev_c, 1))
+        rows.append((abs(ci - 0.5) - thr, c, ci, cov, ev_c, thr))
+    rows.sort(reverse=True)
+    n_clear = sum(1 for r in rows if r[0] >= 0)
+    say(f"  features clearing their own 2-SE floor: {n_clear:,} of {len(rows):,}")
+    say(f"  {'feature':<52s} {'C':>7s} {'cov':>7s} {'events':>7s} {'floor':>7s}")
+    for margin, c, ci, cov, ev_c, thr in rows[:top]:
+        say(f"  {c[:52]:<52s} {ci:7.4f} {cov:7,} {ev_c:7,} {thr:7.3f}"
+            + ("  <-" if margin >= 0 else ""))
+    if not n_clear:
+        say("  ** nothing clears its floor even before imputation: the per-code values carry"
+            " no univariate signal, so this is not an imputation artefact **")
+    say("")
+
+
 def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, ctrl=False):
     """Clip, impute, standardise (train-only statistics) and write the split parquets.
 
@@ -436,6 +481,9 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, 
     target, split and alignment code — that is what makes the control informative.
     """
     say(f"  raw feature matrix: {X.shape[0]:,} patients x {X.shape[1]:,} features")
+
+    if args.screen_features:
+        screen_raw(X, cohort, train_rows, H, say, args.screen_top)
 
     tr = X.iloc[train_rows]
     if args.clip_quantile > 0:
@@ -526,6 +574,12 @@ if __name__ == "__main__":
                    help="Cap on codes kept per source, by train coverage.")
     p.add_argument("--clip-quantile", type=float, default=0.001,
                    help="Winsorise features at these train quantiles; 0 disables.")
+    p.add_argument("--screen-features", action="store_true",
+                   help="Print a univariate Harrell C screen of the RAW features before "
+                        "imputation, each scored only on the patients who have it. Median-filling "
+                        "a low-coverage feature drags its C toward 0.5, so screening the written "
+                        "parquet can hide real signal; this does not.")
+    p.add_argument("--screen-top", type=int, default=30)
     p.add_argument("--positive-control", action="store_true",
                    help="DIAGNOSTIC: emit ONLY the numeric SMART baseline variables through the "
                         "identical cohort/landmark/split/target code. If this also scores ~0.5 the "
