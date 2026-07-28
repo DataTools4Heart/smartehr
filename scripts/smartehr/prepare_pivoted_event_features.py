@@ -759,9 +759,12 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
         say(f"  winsorised at train quantiles [{args.clip_quantile}, {1-args.clip_quantile}]")
         tr = X.iloc[train_rows]
 
+    # Appended baseline columns are the reference signal; dropping one silently would make
+    # the arm look like a null when it is really a plumbing failure.
+    protected = {f"smart_baseline.{c}" for c in baseline_cols}
     # drop features that are constant or entirely missing on train (no information)
     nunique = tr.nunique(dropna=True)
-    dead = [c for c in X.columns if nunique.get(c, 0) < 2]
+    dead = [c for c in X.columns if nunique.get(c, 0) < 2 and c not in protected]
     if dead:
         X = X.drop(columns=dead)
         say(f"  dropped {len(dead):,} features constant or all-missing on train")
@@ -770,7 +773,8 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
     med = tr.median(numeric_only=True)
     n_missing = int(X.isna().to_numpy().sum())
     cov_frac = tr.notna().mean()
-    thin = [c for c in X.columns if cov_frac.get(c, 1.0) < args.min_coverage_frac]
+    thin = [c for c in X.columns
+            if cov_frac.get(c, 1.0) < args.min_coverage_frac and c not in protected]
     if thin:
         X = X.drop(columns=thin)
         say(f"  dropped {len(thin):,} features covered in <{args.min_coverage_frac:.0%} of train "
@@ -778,12 +782,34 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
         tr = X.iloc[train_rows]
         med = tr.median(numeric_only=True)
     X = X.fillna(med).fillna(0.0)
-    mean, std = tr.fillna(med).mean(), tr.fillna(med).std().replace(0.0, 1.0)
+    mean = tr.fillna(med).mean()
+    std = tr.fillna(med).std()
+    n_tiny = int((std <= 1e-8).sum())
+    std = std.where(std > 1e-8, 1.0)   # NOT just ==0: dividing by 1e-9 explodes the column
     Xs = ((X - mean) / std).fillna(0.0)
+    if n_tiny:
+        say(f"  {n_tiny:,} features had ~zero train variance; left unscaled instead of "
+            "divided by ~0 (that would swamp a penalised model)")
     say(f"  imputed {n_missing:,} missing cells with the train median, then standardised")
 
     feat_names = list(Xs.columns)
     n_feat = len(feat_names)
+    if baseline_cols:
+        from eda_events_survival import harrell_c
+        t_a = cohort["first_event"].to_numpy(float)[train_rows]
+        e_a = cohort["cd_event"].to_numpy(int)[train_rows]
+        cs = [apply_censoring(t, e, H) for t, e in zip(t_a, e_a)]
+        tt = np.array([c[0] for c in cs]); ee = np.array([c[1] for c in cs])
+        say("  self-check on the appended baseline columns (each should be clearly off 0.5;")
+        say("  if one is missing or ~0.5 the arm is broken, not null):")
+        for c in baseline_cols:
+            col = f"smart_baseline.{c}"
+            if col not in Xs.columns:
+                say(f"    {col}: ** ABSENT from the final matrix — this arm is INVALID **")
+                continue
+            ci = harrell_c(tt, ee, Xs[col].to_numpy(float)[train_rows])[0]
+            flag = "" if ci is None or abs(ci - 0.5) > 0.03 else "   ** suspiciously flat **"
+            say(f"    {col}: train C={ci:.4f}{flag}")
     dur_abs = cohort["first_event"].to_numpy(float)
     evt_abs = cohort["cd_event"].to_numpy(int)
     for name in ("train", "validation", "test"):

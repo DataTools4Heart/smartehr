@@ -97,15 +97,22 @@ def main(args):
     # explain both the "low variance" / zero-division warnings from Cox and a screen that
     # reads ~0.5 everywhere despite the RAW screen finding signal.
     sd = Xtr.std(axis=0)
-    frac_uniq = np.array([len(np.unique(Xtr[:, j])) / max(len(Xtr), 1)
-                          for j in range(Xtr.shape[1])])
-    n_flat = int(((sd < 1e-8) | (frac_uniq < 0.01)).sum())
+    n_uniq = np.array([len(np.unique(Xtr[:, j])) for j in range(Xtr.shape[1])])
+    # A count feature legitimately takes few distinct values, so a low distinct-COUNT is
+    # not evidence of degeneracy. Only near-zero variance, or a single dominant value
+    # covering almost every patient, actually flattens a column.
+    dominant = np.array([np.max(np.bincount(
+        np.unique(Xtr[:, j], return_inverse=True)[1])) / max(len(Xtr), 1)
+        for j in range(Xtr.shape[1])])
+    flat = (sd < 1e-8) | (dominant > 0.99)
+    n_flat = int(flat.sum())
+    n_lowvar = int((n_uniq <= 10).sum())
+    print(f"\n  feature spread: {n_flat:,} of {Xtr.shape[1]:,} effectively constant "
+          f"(zero variance, or one value in >99% of patients); "
+          f"{n_lowvar:,} take <=10 distinct values (normal for counts)")
     if n_flat:
-        print(f"\n  ** {n_flat:,} of {Xtr.shape[1]:,} features are near-constant "
-              f"(<1% distinct values). **")
-        print("     These are low-coverage codes whose unmeasured majority was median-filled.")
-        print("     They cause the low-variance / zero-division warnings and flatten every C")
-        print("     toward 0.5. Rebuild with a higher --min-coverage-frac rather than tuning.")
+        print("     The effectively-constant ones carry nothing and dilute a penalised model:")
+        print("     raise --min-coverage-frac. Low distinct-count alone is NOT a problem.")
     n_ev = int(etr.sum())
     k = calibrate_null_scale(ttr, etr, n_perm=args.permutations)
     thr = null_floor(k, n_ev)
