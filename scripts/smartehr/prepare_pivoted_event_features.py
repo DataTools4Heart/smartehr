@@ -54,6 +54,7 @@ from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort  # shared definitions
+from smartehr_pipeline import _SMART_OUTCOME_COLS
 
 CHUNK = 200_000
 AGGS = ("last", "mean", "min", "max", "slope", "count", "present")
@@ -216,6 +217,24 @@ def source_roles(path, num_specs, occ_specs, probe_rows=50_000):
     return stem, num_spec, occ_col, occ_prefix, wide
 
 
+def smart_baseline_features(smart_csv, pids):
+    """Numeric SMART baseline columns, aligned to `pids`. DIAGNOSTIC USE ONLY.
+
+    These are the hand-extracted variables the project is trying to do without. Emitting
+    them through the identical cohort/landmark/split/target code is a positive control: if
+    even these score ~0.5 the plumbing is broken, so an event-feature null means nothing.
+    """
+    df = pd.read_csv(smart_csv)
+    if "SmrtRisk" in df.columns:
+        df = df[list(df.columns[:df.columns.get_loc("SmrtRisk")])]
+    drop = set(_SMART_OUTCOME_COLS) | {ID, "first_event", "cd_event"}
+    cols = [c for c in df.columns if c not in drop and pd.api.types.is_numeric_dtype(df[c])]
+    df = df[[ID] + cols].groupby(ID, as_index=True).first()
+    X = df.reindex(pids)
+    X.columns = [f"smart_baseline.{c}" for c in X.columns]
+    return X.reset_index(drop=True)
+
+
 def build(args):
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -254,6 +273,13 @@ def build(args):
     is_train[train_rows] = True
     say(f"  cohort {n_pat:,} patients | train={len(splits['train']):,} "
         f"val={len(splits['validation']):,} test={len(splits['test']):,}")
+
+    if args.positive_control:
+        X = smart_baseline_features(args.smart_csv, pids)
+        say(f"  POSITIVE CONTROL: {X.shape[1]} numeric SMART baseline features "
+            f"(diagnostic reference, not a baseline-free model)")
+        finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, [], ctrl=True)
+        return
 
     num_specs = parse_specs(args.numeric_pivot, 2)
     occ_specs = parse_specs(args.occurrence_pivot, 2)
@@ -400,6 +426,15 @@ def build(args):
         raise SystemExit("no features survived the coverage floor — lower --min-patients")
     X = pd.concat(frames, axis=1)
     X.columns = all_names
+    finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs)
+
+
+def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, ctrl=False):
+    """Clip, impute, standardise (train-only statistics) and write the split parquets.
+
+    Shared by the feature path and --positive-control so both go through byte-identical
+    target, split and alignment code — that is what makes the control informative.
+    """
     say(f"  raw feature matrix: {X.shape[0]:,} patients x {X.shape[1]:,} features")
 
     tr = X.iloc[train_rows]
@@ -447,13 +482,14 @@ def build(args):
 
     with open(out_dir / "metadata.json", "w") as f:
         json.dump({
-            "representation": "pivoted_events",
+            "representation": "smart_baseline_positive_control" if ctrl else "pivoted_events",
             "landmark_days": LM, "horizon_days": H, "aggregators": aggs,
             "min_patients": args.min_patients, "max_codes_per_source": args.max_codes_per_source,
             "clip_quantile": args.clip_quantile,
             "n_features": n_feat, "feature_names": feat_names,
             "dropped_constant_features": dead,
-            "numeric_pivot": args.numeric_pivot, "occurrence_pivot": args.occurrence_pivot,
+            "numeric_pivot": None if ctrl else args.numeric_pivot,
+            "occurrence_pivot": None if ctrl else args.occurrence_pivot,
             "log": log,
         }, f, indent=2)
     print(f"\nSaved to {out_dir}")
@@ -490,4 +526,9 @@ if __name__ == "__main__":
                    help="Cap on codes kept per source, by train coverage.")
     p.add_argument("--clip-quantile", type=float, default=0.001,
                    help="Winsorise features at these train quantiles; 0 disables.")
+    p.add_argument("--positive-control", action="store_true",
+                   help="DIAGNOSTIC: emit ONLY the numeric SMART baseline variables through the "
+                        "identical cohort/landmark/split/target code. If this also scores ~0.5 the "
+                        "plumbing is broken and any event-feature null is uninterpretable; if it "
+                        "scores well, the plumbing is sound. Not a baseline-free model.")
     build(p.parse_args())
