@@ -439,6 +439,16 @@ def build(args):
         print(msg, flush=True)
         log.append(msg)
 
+    # Echo the arm-defining arguments, so a log proves which arm actually ran. Without
+    # this a missing flag is indistinguishable from a null result in the output.
+    say("  ARGS: landmark=%s horizon=%s auto_occurrence=%s add_baseline_cols=%r "
+        "baseline_cols=%r positive_control=%s min_coverage_frac=%s aggregators=%s"
+        % (args.landmark_days, args.horizon_days, args.auto_occurrence,
+           args.add_baseline_cols, args.baseline_cols, args.positive_control,
+           args.min_coverage_frac, args.aggregators))
+    if args.add_baseline_cols is None and not args.positive_control:
+        say("  (no --add-baseline-cols: this arm is EVENTS ONLY)")
+
     # ---- cohort + landmark (identical semantics to the EDA)
     cohort, notes = build_cohort(args.smart_csv, args.legacy, args.censoring_time)
     for n in notes:
