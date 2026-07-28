@@ -365,22 +365,68 @@ def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
     return stem, num_spec, occ_cols, wide
 
 
-def smart_baseline_features(smart_csv, pids):
-    """Numeric SMART baseline columns, aligned to `pids`. DIAGNOSTIC USE ONLY.
+def select_baseline(cols, spec):
+    """Pick baseline columns by case-insensitive substring patterns.
 
-    These are the hand-extracted variables the project is trying to do without. Emitting
-    them through the identical cohort/landmark/split/target code is a positive control: if
-    even these score ~0.5 the plumbing is broken, so an event-feature null means nothing.
+    'leeftijd,geslacht'  -> only those (demographics-only arm)
+    '~leeftijd,geslacht' -> everything EXCEPT those (curation-without-demographics arm)
+    'all' / empty        -> everything
     """
+    if not spec or spec.strip().lower() == "all":
+        return list(cols)
+    negate = spec.strip().startswith("~")
+    pats = [p.strip().lower() for p in spec.lstrip("~").split(",") if p.strip()]
+    if not pats:
+        return list(cols)
+
+    def hit(c):
+        return any(p in c.lower() for p in pats)
+
+    return [c for c in cols if (not hit(c)) == negate]
+
+
+def smart_baseline_numeric(smart_csv):
+    """-> (DataFrame indexed by patient id, column list). Numeric SMART baseline only."""
     df = pd.read_csv(smart_csv)
     if "SmrtRisk" in df.columns:
         df = df[list(df.columns[:df.columns.get_loc("SmrtRisk")])]
     drop = set(_SMART_OUTCOME_COLS) | {ID, "first_event", "cd_event"}
     cols = [c for c in df.columns if c not in drop and pd.api.types.is_numeric_dtype(df[c])]
-    df = df[[ID] + cols].groupby(ID, as_index=True).first()
-    X = df.reindex(pids)
+    return df[[ID] + cols].groupby(ID, as_index=True).first(), cols
+
+
+def smart_baseline_features(smart_csv, pids, spec=None):
+    """Selected numeric SMART baseline columns, aligned to `pids`.
+
+    Used two ways. As --positive-control it validates the cohort/split/target plumbing.
+    With --baseline-cols it also decomposes WHERE the curated variables' skill comes from:
+    the event CSVs contain no age or sex at all, so comparing raw events against the full
+    baseline attributes to "expert curation" whatever is really just demographics. Running
+    demographics-only, curation-minus-demographics, and events+demographics separates them.
+    """
+    df, cols = smart_baseline_numeric(smart_csv)
+    keep = select_baseline(cols, spec)
+    if not keep:
+        raise SystemExit(f"--baseline-cols {spec!r} matched no numeric baseline column; "
+                         "run --list-baseline-cols to see the available names")
+    X = df[keep].reindex(pids)
     X.columns = [f"smart_baseline.{c}" for c in X.columns]
-    return X.reset_index(drop=True)
+    return X.reset_index(drop=True), keep
+
+
+def list_baseline_cols(smart_csv):
+    """Print the numeric baseline columns with coverage, so --baseline-cols can be aimed."""
+    df, cols = smart_baseline_numeric(smart_csv)
+    print(f"{len(cols)} numeric SMART baseline columns in {smart_csv}:\n")
+    print(f"  {'column':<34s} {'non-missing':>11s} {'mean':>12s} {'min':>10s} {'max':>10s}")
+    for c in cols:
+        v = pd.to_numeric(df[c], errors="coerce")
+        print(f"  {c[:34]:<34s} {v.notna().sum():11,} {v.mean():12.3f} "
+              f"{v.min():10.3f} {v.max():10.3f}")
+    print("\nUse these names (case-insensitive substrings) with --baseline-cols /"
+          " --add-baseline-cols,")
+    print("e.g. --baseline-cols 'leeftijd,geslacht'   (demographics only)")
+    print("     --baseline-cols '~leeftijd,geslacht'  (curated variables WITHOUT demographics)")
 
 
 def build(args):
@@ -431,10 +477,12 @@ def build(args):
         f"val={len(splits['validation']):,} test={len(splits['test']):,}")
 
     if args.positive_control:
-        X = smart_baseline_features(args.smart_csv, pids)
-        say(f"  POSITIVE CONTROL: {X.shape[1]} numeric SMART baseline features "
-            f"(diagnostic reference, not a baseline-free model)")
-        finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, [], ctrl=True)
+        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols)
+        say(f"  BASELINE ARM ({args.baseline_cols or 'all'}): {X.shape[1]} numeric SMART "
+            f"baseline features -> {kept}")
+        finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, [],
+               ctrl=True, rep=f"smart_baseline[{args.baseline_cols or 'all'}]",
+               baseline_cols=kept)
         return
 
     num_specs = parse_specs(args.numeric_pivot, 3)
@@ -598,7 +646,16 @@ def build(args):
         raise SystemExit("no features survived the coverage floor — lower --min-patients")
     X = pd.concat(frames, axis=1)
     X.columns = all_names
-    finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs)
+    added = []
+    if args.add_baseline_cols:
+        B, added = smart_baseline_features(args.smart_csv, pids, args.add_baseline_cols)
+        say(f"  appending {B.shape[1]} baseline columns to the event features -> {added}")
+        say("  (age and sex need no chart review, so events+demographics is still a "
+            "baseline-free model in the sense that matters)")
+        X = pd.concat([X.reset_index(drop=True), B.reset_index(drop=True)], axis=1)
+    rep = "pivoted_events" + (f"+baseline[{args.add_baseline_cols}]" if added else "")
+    finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
+           rep=rep, baseline_cols=added)
 
 
 def screen_raw(X, cohort, train_rows, H, say, top):
@@ -682,7 +739,8 @@ def screen_raw(X, cohort, train_rows, H, say, top):
     say("")
 
 
-def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, ctrl=False):
+def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
+           ctrl=False, rep=None, baseline_cols=()):
     """Clip, impute, standardise (train-only statistics) and write the split parquets.
 
     Shared by the feature path and --positive-control so both go through byte-identical
@@ -746,7 +804,9 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs, 
 
     with open(out_dir / "metadata.json", "w") as f:
         json.dump({
-            "representation": "smart_baseline_positive_control" if ctrl else "pivoted_events",
+            "representation": rep or ("smart_baseline_positive_control" if ctrl
+                                      else "pivoted_events"),
+            "baseline_cols_included": list(baseline_cols),
             "landmark_days": LM, "horizon_days": H, "aggregators": aggs,
             "min_patients": args.min_patients, "max_codes_per_source": args.max_codes_per_source,
             "clip_quantile": args.clip_quantile,
@@ -814,9 +874,25 @@ if __name__ == "__main__":
                         "a low-coverage feature drags its C toward 0.5, so screening the written "
                         "parquet can hide real signal; this does not.")
     p.add_argument("--screen-top", type=int, default=30)
+    p.add_argument("--list-baseline-cols", action="store_true",
+                   help="Print the numeric SMART baseline column names (with coverage) and exit, "
+                        "so --baseline-cols can be aimed at the right ones.")
+    p.add_argument("--baseline-cols", default=None,
+                   help="With --positive-control, restrict to these baseline columns "
+                        "(case-insensitive substrings). Prefix the whole spec with ~ to EXCLUDE "
+                        "them instead: 'leeftijd,geslacht' = demographics only, "
+                        "'~leeftijd,geslacht' = curated variables without demographics.")
+    p.add_argument("--add-baseline-cols", default=None,
+                   help="APPEND these baseline columns to the pivoted event features. Use "
+                        "'leeftijd,geslacht' for the fair automatable arm: demographics require "
+                        "no chart review, so events+demographics is still baseline-free.")
     p.add_argument("--positive-control", action="store_true",
                    help="DIAGNOSTIC: emit ONLY the numeric SMART baseline variables through the "
                         "identical cohort/landmark/split/target code. If this also scores ~0.5 the "
                         "plumbing is broken and any event-feature null is uninterpretable; if it "
                         "scores well, the plumbing is sound. Not a baseline-free model.")
-    build(p.parse_args())
+    _a = p.parse_args()
+    if _a.list_baseline_cols:
+        list_baseline_cols(_a.smart_csv)
+    else:
+        build(_a)
