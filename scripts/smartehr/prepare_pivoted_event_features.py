@@ -1,0 +1,493 @@
+"""Pivoted event features from the RAW event CSVs — replaces the pipeline's same-day merge.
+
+Why this exists: `smartehr_pipeline.merge_event_rows` merges rows sharing
+`(m3life_no, datediff)` with `merged[col] = val`, keyed on the COLUMN NAME. The big
+sources are long/key-value (the variable's name is in one column, its value in another),
+so one day legitimately holds many DIFFERENT variables under the same column names and
+all but the last are silently discarded — a 341-lab day collapses to a single test.
+`prepare_event_numeric_features.py --pivot-codes` cannot fix this because it reads the
+already-merged JSONL. So this builder reads the raw CSVs and pivots BEFORE any merge.
+
+Three column roles, and one source may use all three:
+
+  numeric pivot     (name_col, value_col) -> one feature block per distinct name
+                    e.g. lab_testcode/lab_result, MeasName_ECHO/Value_ECHO, label/data1
+  occurrence pivot  code_col              -> per-code event COUNT (no numeric value)
+                    e.g. med_ZIatc (ATC, optionally truncated to a class prefix)
+  wide numeric      every remaining numeric column, aggregated directly
+                    e.g. the 12 ecg_measmatrix columns, hos_nr/hos_duur
+
+Aggregators per feature block: last, mean, min, max, slope (per year), count, present.
+`last` is the value closest to the origin; `slope` is the trajectory.
+
+LANDMARK: --landmark-days L matches eda_events_survival.py exactly — features use events
+with datediff < L, patients whose outcome is at/before L are excluded, and survival is
+measured FROM L. The three move together so the feature window cannot outrun the origin.
+
+DIMENSIONALITY: with ~1.2k training events, thousands of features would overfit outright.
+Codes are therefore kept only if they occur in >= --min-patients TRAIN patients (selection
+on train only, never on val/test), then capped at --max-codes-per-source by coverage.
+Everything dropped is reported, never silently truncated.
+
+    python scripts/smartehr/prepare_pivoted_event_features.py \
+        --smart-csv <smart.csv> --event-csv-folder <ALL_event_csvs> \
+        --split-json <splits.json> --legacy --landmark-days 180 \
+        --horizon-days 3650 --out-dir <PIVOT_OUT>
+
+    # then: dataset=smartehr_embeddings dataset.root_path=<PIVOT_OUT> \
+    #       model=mlp model.input_size=<n_features printed at the end>
+"""
+
+import argparse
+import gc
+import json
+import math
+import os
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from datasets import Dataset
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from eda_events_survival import ID, TIME, apply_censoring, build_cohort  # shared definitions
+
+CHUNK = 200_000
+AGGS = ("last", "mean", "min", "max", "slope", "count", "present")
+
+# Defaults for the SMART EHR extract; keys match a CSV stem by prefix, so the date
+# suffixes (lab_ezis_20250709) need not be spelled out.
+NUMERIC_PIVOT_DEFAULT = "lab_ezis:lab_testcode:lab_result,echo:MeasName_ECHO:Value_ECHO,meting:label:data1"
+OCCURRENCE_DEFAULT = "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving,ok:OMSCHR"
+
+
+def parse_specs(s, n_parts):
+    """'src:colA:colB,src2:colC' -> {src: (colA, colB), src2: (colC, None)}"""
+    out = {}
+    for item in (s or "").split(","):
+        item = item.strip()
+        if not item:
+            continue
+        parts = item.split(":")
+        if len(parts) < 2:
+            raise SystemExit(f"bad spec {item!r}: expected src:col[:col]")
+        key, cols = parts[0], parts[1:]
+        cols = (cols + [None] * n_parts)[:n_parts]
+        out[key] = tuple(cols)
+    return out
+
+
+def match_spec(stem, specs):
+    for key, val in specs.items():
+        if stem == key or stem.startswith(key):
+            return val
+    return None
+
+
+def safe(name):
+    return re.sub(r"\s+", "_", str(name).strip())[:60]
+
+
+class Block:
+    """Streaming accumulator for one source: (n_patients x n_codes) stats per code."""
+
+    def __init__(self, source, codes, n_patients, kind):
+        self.source, self.kind = source, kind
+        self.codes = list(codes)
+        self.cindex = {c: j for j, c in enumerate(self.codes)}
+        shape = (n_patients, len(self.codes))
+        f = lambda v: np.full(shape, v, dtype=np.float64)
+        self.n = f(0.0)
+        self.sum = f(0.0)
+        self.min = f(np.inf)
+        self.max = f(-np.inf)
+        self.last_t = f(-np.inf)
+        self.last_v = f(np.nan)
+        self.sum_t = f(0.0)
+        self.sum_tv = f(0.0)
+        self.sum_tt = f(0.0)
+
+    def update(self, pi, ci, t, v):
+        """Fold a chunk in. (pi, ci) pairs are made unique by the groupby first."""
+        df = pd.DataFrame({"pi": pi, "ci": ci, "t": t, "v": v}).dropna()
+        if df.empty:
+            return
+        df["tv"] = df["t"] * df["v"]
+        df["tt"] = df["t"] * df["t"]
+        g = df.groupby(["pi", "ci"], sort=False)
+        agg = g.agg(cnt=("v", "size"), s=("v", "sum"), mn=("v", "min"), mx=("v", "max"),
+                    st=("t", "sum"), stv=("tv", "sum"), stt=("tt", "sum"))
+        last_rows = df.loc[g["t"].idxmax()]
+        ii = agg.index.get_level_values(0).to_numpy(np.int64)
+        jj = agg.index.get_level_values(1).to_numpy(np.int64)
+        # (ii, jj) unique within the chunk, so plain fancy indexing is safe and fast
+        self.n[ii, jj] += agg["cnt"].to_numpy()
+        self.sum[ii, jj] += agg["s"].to_numpy()
+        self.min[ii, jj] = np.minimum(self.min[ii, jj], agg["mn"].to_numpy())
+        self.max[ii, jj] = np.maximum(self.max[ii, jj], agg["mx"].to_numpy())
+        self.sum_t[ii, jj] += agg["st"].to_numpy()
+        self.sum_tv[ii, jj] += agg["stv"].to_numpy()
+        self.sum_tt[ii, jj] += agg["stt"].to_numpy()
+        li = last_rows["pi"].to_numpy(np.int64)
+        lj = last_rows["ci"].to_numpy(np.int64)
+        lt = last_rows["t"].to_numpy()
+        newer = lt > self.last_t[li, lj]
+        self.last_t[li[newer], lj[newer]] = lt[newer]
+        self.last_v[li[newer], lj[newer]] = last_rows["v"].to_numpy()[newer]
+
+    def train_coverage(self, train_rows):
+        """Number of TRAIN patients with at least one observation, per code."""
+        return (self.n[train_rows] > 0).sum(axis=0)
+
+    def features(self, aggs, keep=None):
+        """-> (DataFrame, feature_names). Absent (patient, code) pairs stay NaN.
+
+        `keep` is a boolean mask over codes, applied uniformly so the coverage floor
+        also reaches wide-numeric columns (which have no pass-1 vocabulary step).
+        """
+        if keep is not None and not keep.all():
+            idx = np.where(keep)[0]
+            self.codes = [self.codes[j] for j in idx]
+            for attr in ("n", "sum", "min", "max", "last_t", "last_v",
+                         "sum_t", "sum_tv", "sum_tt"):
+                setattr(self, attr, getattr(self, attr)[:, idx])
+            self.cindex = {c: j for j, c in enumerate(self.codes)}
+        if not self.codes:
+            return pd.DataFrame(), []
+        present = self.n > 0
+        cols, names = [], []
+        for agg in aggs:
+            if self.kind == "occurrence" and agg not in ("count", "present"):
+                continue  # an occurrence code has no numeric value to summarise
+            if agg == "last":
+                m = np.where(present, self.last_v, np.nan)
+            elif agg == "mean":
+                m = np.where(present, self.sum / np.maximum(self.n, 1), np.nan)
+            elif agg == "min":
+                m = np.where(present, self.min, np.nan)
+            elif agg == "max":
+                m = np.where(present, self.max, np.nan)
+            elif agg == "count":
+                m = np.where(present, self.n, 0.0)  # a count of zero is meaningful
+            elif agg == "present":
+                m = present.astype(float)
+            elif agg == "slope":
+                den = self.n * self.sum_tt - self.sum_t ** 2
+                num = self.n * self.sum_tv - self.sum_t * self.sum
+                with np.errstate(invalid="ignore", divide="ignore"):
+                    m = np.where((self.n >= 2) & (np.abs(den) > 1e-12), num / den, np.nan)
+            else:
+                raise SystemExit(f"unknown aggregator {agg}")
+            cols.append(m)
+            names += [f"{self.source}.{safe(c)}_{agg}" for c in self.codes]
+        if not cols:
+            return pd.DataFrame(), []
+        return pd.DataFrame(np.concatenate(cols, axis=1), columns=names), names
+
+
+def iter_chunks(path, usecols=None):
+    for chunk in pd.read_csv(path, chunksize=CHUNK, low_memory=False, usecols=usecols):
+        yield chunk
+
+
+def source_roles(path, num_specs, occ_specs, probe_rows=50_000):
+    """Decide which columns of one CSV are numeric-pivot / occurrence / wide-numeric."""
+    stem = Path(path).stem
+    head = pd.read_csv(path, nrows=0)
+    cols = [c for c in head.columns if c not in (ID, TIME)]
+    num_spec = match_spec(stem, num_specs)
+    occ_spec = match_spec(stem, occ_specs)
+    num_spec = num_spec if (num_spec and num_spec[0] in cols and num_spec[1] in cols) else None
+    occ_col = occ_spec[0] if (occ_spec and occ_spec[0] in cols) else None
+    occ_prefix = None
+    if occ_spec and occ_spec[1]:
+        occ_prefix = int(occ_spec[1])
+    used = set()
+    if num_spec:
+        used.update(num_spec)
+    if occ_col:
+        used.add(occ_col)
+    probe = pd.read_csv(path, nrows=probe_rows, low_memory=False)
+    wide = [c for c in cols if c not in used
+            and c in probe.columns and pd.api.types.is_numeric_dtype(probe[c])]
+    return stem, num_spec, occ_col, occ_prefix, wide
+
+
+def build(args):
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    LM, H = args.landmark_days, args.horizon_days
+    log = []
+
+    def say(msg):
+        print(msg, flush=True)
+        log.append(msg)
+
+    # ---- cohort + landmark (identical semantics to the EDA)
+    cohort, notes = build_cohort(args.smart_csv, args.legacy, args.censoring_time)
+    for n in notes:
+        say(f"  {n}")
+    if LM > 0:
+        n0, e0 = len(cohort), int((cohort["cd_event"] == 1).sum())
+        cohort = cohort[cohort["first_event"] > LM].copy()
+        cohort["first_event"] = cohort["first_event"] - LM
+        say(f"  landmark {LM}d: dropped {n0-len(cohort):,} patients whose outcome was at/before "
+            f"the landmark ({e0-int((cohort['cd_event']==1).sum()):,} events); survival now "
+            f"measured from day {LM}")
+    cohort = cohort.reset_index(drop=True)
+    pids = cohort[ID].astype(int).to_numpy()
+    pindex = {p: i for i, p in enumerate(pids)}
+    n_pat = len(pids)
+
+    with open(args.split_json) as f:
+        sp = json.load(f)
+    if "val" in sp and "validation" not in sp:
+        sp["validation"] = sp.pop("val")
+    splits = {k: [pindex[int(p)] for p in v if int(p) in pindex] for k, v in sp.items()}
+    for k in ("train", "validation", "test"):
+        splits.setdefault(k, [])
+    train_rows = np.array(sorted(splits["train"]), dtype=np.int64)
+    is_train = np.zeros(n_pat, bool)
+    is_train[train_rows] = True
+    say(f"  cohort {n_pat:,} patients | train={len(splits['train']):,} "
+        f"val={len(splits['validation']):,} test={len(splits['test']):,}")
+
+    num_specs = parse_specs(args.numeric_pivot, 2)
+    occ_specs = parse_specs(args.occurrence_pivot, 2)
+    aggs = [a.strip() for a in args.aggregators.split(",") if a.strip()]
+    for a in aggs:
+        if a not in AGGS:
+            raise SystemExit(f"--aggregators must come from {AGGS}")
+
+    csvs = sorted(Path(args.event_csv_folder).glob("*.csv"))
+    if not csvs:
+        raise SystemExit(f"no CSVs in {args.event_csv_folder}")
+    blocks = []
+
+    for path in csvs:
+        stem, num_spec, occ_col, occ_prefix, wide = source_roles(path, num_specs, occ_specs)
+        if not (num_spec or occ_col or wide):
+            say(f"  {stem}: no usable columns, skipped")
+            continue
+
+        def codes_of(series):
+            s = series.dropna().astype(str).str.strip()
+            if occ_prefix and occ_col is not None and series.name == occ_col:
+                s = s.str.slice(0, occ_prefix)
+            return s
+
+        # ---- pass 1: code vocabulary and TRAIN coverage (selection never sees val/test)
+        cov = {"numeric": defaultdict(set), "occurrence": defaultdict(set)}
+        n_pre = 0
+        need = [ID, TIME] + ([num_spec[0], num_spec[1]] if num_spec else []) + \
+               ([occ_col] if occ_col else [])
+        if num_spec or occ_col:
+            for chunk in iter_chunks(path, usecols=sorted(set(need))):
+                dd = pd.to_numeric(chunk[TIME], errors="coerce")
+                keep = dd.notna() & (dd < LM)
+                if not keep.any():
+                    continue
+                pr = chunk[ID][keep].map(pindex)
+                tr = pr.notna() & pr.map(lambda i: bool(is_train[int(i)]) if pd.notna(i) else False)
+                if num_spec:
+                    cc = codes_of(chunk[num_spec[0]][keep])
+                    vv = pd.to_numeric(chunk[num_spec[1]][keep], errors="coerce")
+                    ok = tr & vv.notna() & cc.notna()
+                    for code, p in zip(cc[ok], pr[ok].astype(int)):
+                        cov["numeric"][code].add(p)
+                if occ_col:
+                    cc = codes_of(chunk[occ_col][keep])
+                    ok = tr & cc.notna()
+                    for code, p in zip(cc[ok], pr[ok].astype(int)):
+                        cov["occurrence"][code].add(p)
+                n_pre += int(keep.sum())
+                del chunk
+            gc.collect()
+
+        for kind, spec_cols in (("numeric", num_spec), ("occurrence", (occ_col,) if occ_col else None)):
+            if not spec_cols:
+                continue
+            counts = {c: len(s) for c, s in cov[kind].items()}
+            kept = sorted((c for c, n in counts.items() if n >= args.min_patients),
+                          key=lambda c: (-counts[c], str(c)))
+            n_all = len(counts)
+            dropped_cov = n_all - len(kept)
+            if len(kept) > args.max_codes_per_source:
+                say(f"  {stem} [{kind}]: capping {len(kept)} -> {args.max_codes_per_source} codes "
+                    f"by train coverage (dropped codes are listed in metadata)")
+                kept = kept[:args.max_codes_per_source]
+            say(f"  {stem} [{kind}]: {n_all:,} distinct codes -> kept {len(kept):,} "
+                f"(>= {args.min_patients} train patients; {dropped_cov:,} below the floor)")
+            if kept:
+                blocks.append((Block(f"{stem}.{kind}", kept, n_pat, kind),
+                               path, kind, spec_cols, occ_prefix))
+
+        if wide:
+            say(f"  {stem} [wide]: {len(wide)} numeric columns aggregated directly")
+            blocks.append((Block(f"{stem}.wide", wide, n_pat, "numeric"), path, "wide", None, None))
+
+    if not blocks:
+        raise SystemExit("no feature blocks survived the coverage floor — lower --min-patients")
+
+    # ---- pass 2: accumulate statistics per (patient, code)
+    for block, path, kind, spec_cols, prefix in blocks:
+        stem = Path(path).stem
+        if kind == "wide":
+            need = [ID, TIME] + block.codes
+        elif kind == "numeric":
+            need = [ID, TIME, spec_cols[0], spec_cols[1]]
+        else:
+            need = [ID, TIME, spec_cols[0]]
+        print(f"  accumulating {block.source} ...", flush=True)
+        for chunk in iter_chunks(path, usecols=sorted(set(need))):
+            dd = pd.to_numeric(chunk[TIME], errors="coerce")
+            keep = dd.notna() & (dd < LM)
+            if not keep.any():
+                continue
+            pr = chunk[ID][keep].map(pindex)
+            ok0 = pr.notna()
+            if not ok0.any():
+                continue
+            t_years = (dd[keep] - LM) / 365.0  # negative: days before the origin
+            if kind == "wide":
+                for c in block.codes:
+                    v = pd.to_numeric(chunk[c][keep], errors="coerce")
+                    m = ok0 & v.notna()
+                    if not m.any():
+                        continue
+                    block.update(pr[m].to_numpy(np.int64),
+                                 np.full(int(m.sum()), block.cindex[c], np.int64),
+                                 t_years[m].to_numpy(), v[m].to_numpy())
+            else:
+                cc = chunk[spec_cols[0]][keep].astype(str).str.strip()
+                if prefix:
+                    cc = cc.str.slice(0, prefix)
+                ci = cc.map(block.cindex)
+                if kind == "numeric":
+                    v = pd.to_numeric(chunk[spec_cols[1]][keep], errors="coerce")
+                else:
+                    v = pd.Series(1.0, index=cc.index)  # occurrence: count the event
+                m = ok0 & ci.notna() & v.notna()
+                if not m.any():
+                    continue
+                block.update(pr[m].to_numpy(np.int64), ci[m].to_numpy(np.int64),
+                             t_years[m].to_numpy(), v[m].to_numpy())
+            del chunk
+        gc.collect()
+
+    # ---- assemble, clip, impute, standardise (all statistics fitted on TRAIN only)
+    frames, all_names = [], []
+    n_floored = 0
+    for block, *_ in blocks:
+        cov = block.train_coverage(train_rows)
+        keep = cov >= args.min_patients
+        n_floored += int((~keep).sum())
+        if not keep.any():
+            say(f"  {block.source}: every code below the {args.min_patients}-train-patient "
+                f"floor, block dropped")
+            continue
+        df, names = block.features(aggs, keep)
+        if len(names):
+            frames.append(df)
+            all_names += names
+    if n_floored:
+        say(f"  coverage floor removed {n_floored:,} codes across all blocks "
+            f"(applies to wide columns too, not just pivoted codes)")
+    if not frames:
+        raise SystemExit("no features survived the coverage floor — lower --min-patients")
+    X = pd.concat(frames, axis=1)
+    X.columns = all_names
+    say(f"  raw feature matrix: {X.shape[0]:,} patients x {X.shape[1]:,} features")
+
+    tr = X.iloc[train_rows]
+    if args.clip_quantile > 0:
+        lo = tr.quantile(args.clip_quantile)
+        hi = tr.quantile(1 - args.clip_quantile)
+        X = X.clip(lower=lo, upper=hi, axis=1)   # tames echo's -2e6 outliers
+        say(f"  winsorised at train quantiles [{args.clip_quantile}, {1-args.clip_quantile}]")
+        tr = X.iloc[train_rows]
+
+    # drop features that are constant or entirely missing on train (no information)
+    nunique = tr.nunique(dropna=True)
+    dead = [c for c in X.columns if nunique.get(c, 0) < 2]
+    if dead:
+        X = X.drop(columns=dead)
+        say(f"  dropped {len(dead):,} features constant or all-missing on train")
+        tr = X.iloc[train_rows]
+
+    med = tr.median(numeric_only=True)
+    n_missing = int(X.isna().to_numpy().sum())
+    X = X.fillna(med).fillna(0.0)
+    mean, std = tr.fillna(med).mean(), tr.fillna(med).std().replace(0.0, 1.0)
+    Xs = ((X - mean) / std).fillna(0.0)
+    say(f"  imputed {n_missing:,} missing cells with the train median, then standardised")
+
+    feat_names = list(Xs.columns)
+    n_feat = len(feat_names)
+    dur_abs = cohort["first_event"].to_numpy(float)
+    evt_abs = cohort["cd_event"].to_numpy(int)
+    for name in ("train", "validation", "test"):
+        rows = np.array(sorted(splits[name]), dtype=np.int64)
+        if not len(rows):
+            say(f"  {name}: EMPTY split, skipped")
+            continue
+        cens = [apply_censoring(t, e, H) for t, e in zip(dur_abs[rows], evt_abs[rows])]
+        ds = Dataset.from_dict({
+            "inputs": Xs.iloc[rows].to_numpy(dtype=np.float32).tolist(),
+            "duration": [c[0] for c in cens],
+            "event": [float(c[1]) for c in cens],
+        })
+        ds.to_parquet(out_dir / f"{name}.parquet")
+        ne = int(sum(c[1] for c in cens))
+        say(f"  {name:11s}: {len(rows):5,} patients | events={ne:,} "
+            f"({100*ne/max(len(rows),1):.1f}%) | features={n_feat}")
+
+    with open(out_dir / "metadata.json", "w") as f:
+        json.dump({
+            "representation": "pivoted_events",
+            "landmark_days": LM, "horizon_days": H, "aggregators": aggs,
+            "min_patients": args.min_patients, "max_codes_per_source": args.max_codes_per_source,
+            "clip_quantile": args.clip_quantile,
+            "n_features": n_feat, "feature_names": feat_names,
+            "dropped_constant_features": dead,
+            "numeric_pivot": args.numeric_pivot, "occurrence_pivot": args.occurrence_pivot,
+            "log": log,
+        }, f, indent=2)
+    print(f"\nSaved to {out_dir}")
+    print(f"Train with:  dataset=smartehr_embeddings dataset.root_path={out_dir} "
+          f"model=mlp model.input_size={n_feat}")
+    print("(feature_names in metadata.json — use them to interpret the fitted model)")
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--smart-csv", required=True, help="Used ONLY for the survival target.")
+    p.add_argument("--event-csv-folder", required=True)
+    p.add_argument("--split-json", required=True)
+    p.add_argument("--out-dir", required=True)
+    p.add_argument("--landmark-days", type=int, default=0,
+                   help="Prediction origin, in days after the SMART baseline. Features use "
+                        "datediff < LANDMARK; patients whose outcome is at/before it are dropped; "
+                        "survival is measured from it. Matches eda_events_survival.py.")
+    p.add_argument("--horizon-days", type=int, default=3650,
+                   help="Administrative censoring horizon, measured FROM the landmark. "
+                        "Default 3650 (10 years), which the follow-up supports better than 15.")
+    p.add_argument("--legacy", action="store_true", help="Use the SMART legacy outcome columns.")
+    p.add_argument("--censoring-time", type=int, default=None)
+    p.add_argument("--numeric-pivot", default=NUMERIC_PIVOT_DEFAULT,
+                   help="Comma-separated src:name_col:value_col. src matches a CSV stem by prefix.")
+    p.add_argument("--occurrence-pivot", default=OCCURRENCE_DEFAULT,
+                   help="Comma-separated src:code_col[:prefix_len]; prefix_len truncates the code "
+                        "(e.g. 4 turns ATC C07AB02 into C07A).")
+    p.add_argument("--aggregators", default="last,mean,slope,count",
+                   help=f"Subset of {AGGS}. Fewer aggregators means fewer features to overfit.")
+    p.add_argument("--min-patients", type=int, default=200,
+                   help="Keep a code only if it occurs in at least this many TRAIN patients.")
+    p.add_argument("--max-codes-per-source", type=int, default=150,
+                   help="Cap on codes kept per source, by train coverage.")
+    p.add_argument("--clip-quantile", type=float, default=0.001,
+                   help="Winsorise features at these train quantiles; 0 disables.")
+    build(p.parse_args())
