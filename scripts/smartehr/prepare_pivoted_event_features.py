@@ -61,8 +61,113 @@ AGGS = ("last", "mean", "min", "max", "slope", "count", "present")
 
 # Defaults for the SMART EHR extract; keys match a CSV stem by prefix, so the date
 # suffixes (lab_ezis_20250709) need not be spelled out.
-NUMERIC_PIVOT_DEFAULT = "lab_ezis:lab_testcode:lab_result,echo:MeasName_ECHO:Value_ECHO,meting:label:data1"
+NUMERIC_PIVOT_DEFAULT = ("lab_ezis:lab_testcode:lab_result:lab_result_txt,"
+                         "echo:MeasName_ECHO:Value_ECHO,meting:label:data1")
 OCCURRENCE_DEFAULT = "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving,ok:OMSCHR"
+
+
+# --- rescuing lab results that live in the TEXT column ---------------------------------
+# lab_result is NaN whenever the result was reported qualitatively or against a threshold,
+# and the value then sits in lab_result_txt: 'neg' (130,488 rows), '>90' (30,407),
+# '>60' (25,678). '>90' is eGFR at or above the reportable ceiling, i.e. NORMAL kidney
+# function — so dropping these silently biases every renal feature toward the abnormal.
+_THRESH = re.compile(r"^\s*([<>]=?)\s*([-+]?[\d.,]+)")
+_NEG_WORDS = {"neg", "negatief", "negative", "afwezig", "niet aantoonbaar", "geen", "n"}
+_POS_WORDS = {"pos", "positief", "positive", "aanwezig", "aangetoond", "p"}
+_UNPARSEABLE = {"<memo>", "memo", "zie opmerking", "nvt", "n.v.t.", "onbekend", ""}
+
+
+_LEADING_NUM = re.compile(r"^[-+]?[\d.,]*\d")
+
+
+def _to_float(txt):
+    """Float from a possibly Dutch-formatted number ('5,2' is five point two).
+
+    Falls back to the leading number so '12.5 mmol/L' still yields 12.5 — results are
+    often stored with the unit appended.
+    """
+    t = txt.strip().replace(" ", "")
+    if t.count(",") == 1 and "." not in t:
+        t = t.replace(",", ".")          # Dutch decimal comma
+    else:
+        t = t.replace(",", "")           # thousands separators
+    try:
+        return float(t)
+    except ValueError:
+        pass
+    m = _LEADING_NUM.match(t)
+    if m:
+        try:
+            return float(m.group(0))
+        except ValueError:
+            return math.nan
+    return math.nan
+
+
+def parse_result_text(v):
+    """'>90' -> 90, '<0.01' -> 0.01, 'neg' -> 0, 'pos' -> 1, '<Memo>' -> NaN.
+
+    A threshold is mapped to the threshold itself: that piles values up at the boundary
+    but preserves the ordering, which is all the C-index and Cox need.
+    """
+    if not isinstance(v, str):
+        return math.nan
+    s = v.strip().lower()
+    if s in _UNPARSEABLE:
+        return math.nan
+    if s in _NEG_WORDS:
+        return 0.0
+    if s in _POS_WORDS:
+        return 1.0
+    m = _THRESH.match(s)
+    if m:
+        return _to_float(m.group(2))
+    return _to_float(s)
+
+
+# --- code normalisation and tokenisation ------------------------------------------------
+# diag_omschrijving holds 9,024 distinct free-text descriptions, so one diagnosis written
+# several ways splits into several low-coverage codes and every variant falls below the
+# --min-patients floor. Encoding per WORD instead makes 'myocardinfarct' one code across
+# all spellings and word orders, which is far more robust than fuzzy string clustering.
+_STOP = {
+    "de", "het", "een", "en", "van", "met", "voor", "op", "in", "te", "ter", "bij", "aan",
+    "of", "na", "zonder", "over", "door", "tot", "is", "zijn", "niet", "geen", "dan",
+    "the", "a", "of", "and", "with", "for", "to", "in", "on", "no", "not",
+    "links", "rechts", "overig", "overige", "anders", "nno", "ongespecificeerd",
+}
+
+
+def normalise_codes(series, prefix=None, tokenize=False, min_token=3):
+    """Lowercase, strip accents, then either truncate to a prefix or split into tokens.
+
+    Returns a Series of strings, or (when tokenize) a Series of token lists to explode.
+    """
+    s = (series.astype(str).str.strip().str.lower()
+         .str.normalize("NFKD").str.encode("ascii", "ignore").str.decode("ascii"))
+    if tokenize:
+        toks = s.str.replace(r"[^a-z0-9]+", " ", regex=True).str.split()
+        return toks.map(lambda ws: sorted({w for w in ws
+                                           if len(w) >= min_token and w not in _STOP})
+                        if isinstance(ws, list) else [])
+    if prefix:
+        s = s.str.slice(0, int(prefix))
+    return s
+
+
+def numeric_with_text_fallback(chunk, keep, num_spec):
+    """Numeric values for a chunk, filling NaNs from the text column. -> (values, n_rescued)."""
+    v = pd.to_numeric(chunk[num_spec[1]][keep], errors="coerce")
+    txt_col = num_spec[2] if len(num_spec) > 2 else None
+    if not txt_col or txt_col not in chunk.columns:
+        return v, 0
+    miss = v.isna()
+    if not miss.any():
+        return v, 0
+    parsed = chunk[txt_col][keep][miss].map(parse_result_text)
+    v = v.copy()
+    v[miss] = parsed
+    return v, int(parsed.notna().sum())
 
 
 def parse_specs(s, n_parts):
@@ -206,7 +311,7 @@ def iter_chunks(path, usecols=None):
 
 
 def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
-                 auto_occurrence=False, max_card=5000):
+                 auto_occurrence=False, max_card=5000, tokenize_above_card=300):
     """Decide which columns of one CSV are numeric-pivot / occurrence / wide-numeric.
 
     With auto_occurrence, EVERY remaining categorical column becomes an occurrence block.
@@ -222,12 +327,25 @@ def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
     cols = [c for c in head.columns if c not in (ID, TIME)]
     num_spec = match_spec(stem, num_specs)
     occ_spec = match_spec(stem, occ_specs)
-    num_spec = num_spec if (num_spec and num_spec[0] in cols and num_spec[1] in cols) else None
+    if num_spec and num_spec[0] in cols and num_spec[1] in cols:
+        txt = num_spec[2] if (num_spec[2] and num_spec[2] in cols) else None
+        num_spec = (num_spec[0], num_spec[1], txt)
+    else:
+        num_spec = None
+    probe0 = pd.read_csv(path, nrows=probe_rows, low_memory=False)
+
+    def _tok(col):
+        """Tokenise a label column once its distinct count shows it is free-text-ish."""
+        if col not in probe0.columns:
+            return False
+        return int(probe0[col].dropna().astype(str).nunique()) > tokenize_above_card
+
     occ_cols = []
     if occ_spec and occ_spec[0] in cols:
-        occ_cols.append((occ_spec[0], int(occ_spec[1]) if occ_spec[1] else None))
-    used = set(num_spec or ()) | {c for c, _ in occ_cols}
-    probe = pd.read_csv(path, nrows=probe_rows, low_memory=False)
+        occ_cols.append((occ_spec[0], int(occ_spec[1]) if occ_spec[1] else None,
+                         _tok(occ_spec[0])))
+    used = set(c for c in (num_spec or ()) if c) | {c for c, _, _ in occ_cols}
+    probe = probe0
     wide = [c for c in cols if c not in used
             and c in probe.columns and pd.api.types.is_numeric_dtype(probe[c])]
     if auto_occurrence:
@@ -243,7 +361,7 @@ def source_roles(path, num_specs, occ_specs, probe_rows=50_000,
                 continue                      # long free text -> text arm
             if not (2 <= s.nunique() <= max_card):
                 continue
-            occ_cols.append((c, None))
+            occ_cols.append((c, None, _tok(c)))
     return stem, num_spec, occ_cols, wide
 
 
@@ -311,7 +429,7 @@ def build(args):
         finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, [], ctrl=True)
         return
 
-    num_specs = parse_specs(args.numeric_pivot, 2)
+    num_specs = parse_specs(args.numeric_pivot, 3)
     occ_specs = parse_specs(args.occurrence_pivot, 2)
     aggs = [a.strip() for a in args.aggregators.split(",") if a.strip()]
     for a in aggs:
@@ -326,15 +444,16 @@ def build(args):
     for path in csvs:
         stem, num_spec, occ_cols, wide = source_roles(
             path, num_specs, occ_specs,
-            auto_occurrence=args.auto_occurrence, max_card=args.auto_occurrence_max_card)
+            auto_occurrence=args.auto_occurrence, max_card=args.auto_occurrence_max_card,
+            tokenize_above_card=args.tokenize_above_card)
         if not (num_spec or occ_cols or wide):
             say(f"  {stem}: no usable columns, skipped")
             continue
 
         # ---- pass 1: code vocabulary and TRAIN coverage (selection never sees val/test)
         cov = defaultdict(lambda: defaultdict(set))   # role_key -> code -> train pids
-        need = [ID, TIME] + ([num_spec[0], num_spec[1]] if num_spec else []) \
-               + [c for c, _ in occ_cols]
+        need = [ID, TIME] + ([c for c in num_spec if c] if num_spec else []) \
+               + [c for c, _, _ in occ_cols]
         if num_spec or occ_cols:
             for chunk in iter_chunks(path, usecols=sorted(set(need))):
                 dd = pd.to_numeric(chunk[TIME], errors="coerce")
@@ -345,23 +464,25 @@ def build(args):
                 tr = pr.notna() & pr.astype("Float64").apply(
                     lambda i: bool(is_train[int(i)]) if pd.notna(i) else False)
                 if num_spec:
-                    cc = chunk[num_spec[0]][keep].astype(str).str.strip()
-                    vv = pd.to_numeric(chunk[num_spec[1]][keep], errors="coerce")
+                    cc = normalise_codes(chunk[num_spec[0]][keep])
+                    vv = numeric_with_text_fallback(chunk, keep, num_spec)[0]
                     ok = tr & vv.notna() & cc.notna()
                     for code, p in zip(cc[ok], pr[ok].astype(int)):
                         cov[("numeric", num_spec[0])][code].add(p)
-                for col, prefix in occ_cols:
-                    cc = chunk[col][keep].astype(str).str.strip()
-                    if prefix:
-                        cc = cc.str.slice(0, prefix)
-                    ok = tr & cc.notna() & (cc != "nan")
-                    for code, p in zip(cc[ok], pr[ok].astype(int)):
+                for col, prefix, tok in occ_cols:
+                    cc = normalise_codes(chunk[col][keep], prefix, tok)
+                    ppr = pr
+                    if tok:
+                        cc = cc.explode()
+                        ppr = pr.reindex(cc.index)
+                    m = cc.notna() & (cc != "nan") & (cc != "") & ppr.notna()
+                    for code, p in zip(cc[m], ppr[m].astype(int)):
                         cov[("occurrence", col)][code].add(p)
                 del chunk
             gc.collect()
 
         roles = ([("numeric", num_spec[0], num_spec)] if num_spec else []) + \
-                [("occurrence", col, (col, prefix)) for col, prefix in occ_cols]
+                [("occurrence", col, (col, prefix, tok)) for col, prefix, tok in occ_cols]
         for kind, col, spec in roles:
             counts = {c: len(s) for c, s in cov[(kind, col)].items()}
             kept = sorted((c for c, n in counts.items() if n >= args.min_patients),
@@ -371,8 +492,10 @@ def build(args):
                 say(f"  {stem}.{col} [{kind}]: capping {len(kept)} -> "
                     f"{args.max_codes_per_source} codes by train coverage")
                 kept = kept[:args.max_codes_per_source]
-            say(f"  {stem}.{col} [{kind}]: {len(counts):,} distinct codes -> kept {len(kept):,} "
-                f"(>= {args.min_patients} train patients; {dropped_cov:,} below the floor)")
+            tokenised = kind == "occurrence" and spec[2]
+            say(f"  {stem}.{col} [{kind}{'/tokenised' if tokenised else ''}]: {len(counts):,} "
+                f"distinct codes -> kept {len(kept):,} (>= {args.min_patients} train patients; "
+                f"{dropped_cov:,} below the floor)")
             if kept:
                 # occurrence blocks only ever need counts, so allocate 1 array not 9
                 blocks.append((Block(f"{stem}.{col}", kept, n_pat, kind, lean=(kind == "occurrence")),
@@ -391,10 +514,11 @@ def build(args):
         if kind == "wide":
             need = [ID, TIME] + block.codes
         elif kind == "numeric":
-            need = [ID, TIME, spec_cols[0], spec_cols[1]]
+            need = [ID, TIME] + [c for c in spec_cols if c]
         else:
             need = [ID, TIME, spec_cols[0]]
         print(f"  accumulating {block.source} ...", flush=True)
+        rescued = 0
         for chunk in iter_chunks(path, usecols=sorted(set(need))):
             dd = pd.to_numeric(chunk[TIME], errors="coerce")
             keep = dd.notna() & (dd < LM)
@@ -414,22 +538,34 @@ def build(args):
                     block.update(pr[m].to_numpy(np.int64),
                                  np.full(int(m.sum()), block.cindex[c], np.int64),
                                  t_years[m].to_numpy(), v[m].to_numpy())
-            else:
-                cc = chunk[spec_cols[0]][keep].astype(str).str.strip()
-                pfx = spec_cols[1] if kind == "occurrence" else None
-                if pfx:
-                    cc = cc.str.slice(0, int(pfx))
+            elif kind == "numeric":
+                cc = normalise_codes(chunk[spec_cols[0]][keep])
                 ci = cc.map(block.cindex)
-                if kind == "numeric":
-                    v = pd.to_numeric(chunk[spec_cols[1]][keep], errors="coerce")
-                else:
-                    v = pd.Series(1.0, index=cc.index)  # occurrence: count the event
+                v, n_resc = numeric_with_text_fallback(chunk, keep, spec_cols)
+                rescued += n_resc
                 m = ok0 & ci.notna() & v.notna()
                 if not m.any():
                     continue
                 block.update(pr[m].to_numpy(np.int64), ci[m].to_numpy(np.int64),
                              t_years[m].to_numpy(), v[m].to_numpy())
+            else:                                    # occurrence, possibly tokenised
+                col, prefix, tok = spec_cols
+                cc = normalise_codes(chunk[col][keep], prefix, tok)
+                ppr, tt = pr, t_years
+                if tok:
+                    cc = cc.explode()
+                    ppr = pr.reindex(cc.index)
+                    tt = t_years.reindex(cc.index)
+                ci = cc.map(block.cindex)
+                m = ci.notna() & ppr.notna() & tt.notna()
+                if not m.any():
+                    continue
+                block.update(ppr[m].to_numpy(np.int64), ci[m].to_numpy(np.int64),
+                             tt[m].to_numpy(), np.ones(int(m.sum())))
             del chunk
+        if rescued:
+            say(f"    rescued {rescued:,} values from the text column "
+                f"(thresholds like '>90', and neg/pos)")
         gc.collect()
 
     # ---- assemble, clip, impute, standardise (all statistics fitted on TRAIN only)
@@ -614,6 +750,11 @@ if __name__ == "__main__":
                    help="Cap on codes kept per source, by train coverage.")
     p.add_argument("--clip-quantile", type=float, default=0.001,
                    help="Winsorise features at these train quantiles; 0 disables.")
+    p.add_argument("--tokenize-above-card", type=int, default=300,
+                   help="Occurrence columns with more distinct values than this are encoded per "
+                        "WORD instead of per exact string, so a diagnosis written several ways "
+                        "stops fragmenting below the coverage floor (diag_omschrijving has 9,024 "
+                        "variants). Set very high to disable.")
     p.add_argument("--auto-occurrence", action="store_true",
                    help="Occurrence-encode EVERY remaining categorical column in EVERY source. "
                         "Without this, sources holding only categorical columns (consult, "
