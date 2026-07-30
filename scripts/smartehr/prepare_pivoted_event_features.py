@@ -439,7 +439,7 @@ def list_baseline_cols(smart_csv):
 def build(args):
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    LM, H = args.landmark_days, args.horizon_days
+    LM, H, LB = args.landmark_days, args.horizon_days, args.lookback_days
     log = []
 
     def say(msg):
@@ -450,7 +450,8 @@ def build(args):
     # this a missing flag is indistinguishable from a null result in the output.
     say("  ARGS: landmark=%s horizon=%s auto_occurrence=%s add_baseline_cols=%r "
         "baseline_cols=%r positive_control=%s min_coverage_frac=%s aggregators=%s"
-        % (args.landmark_days, args.horizon_days, args.auto_occurrence,
+        % (f"{args.landmark_days}/lookback={args.lookback_days}", args.horizon_days,
+           args.auto_occurrence,
            args.add_baseline_cols, args.baseline_cols, args.positive_control,
            args.min_coverage_frac, args.aggregators))
     if args.add_baseline_cols is None and not args.positive_control:
@@ -534,6 +535,8 @@ def build(args):
             for chunk in iter_chunks(path, usecols=sorted(set(need))):
                 dd = pd.to_numeric(chunk[TIME], errors="coerce")
                 keep = dd.notna() & (dd < LM)
+                if LB is not None:
+                    keep &= dd >= (LM - LB)
                 if not keep.any():
                     continue
                 pr = chunk[ID][keep].map(pindex)
@@ -617,6 +620,8 @@ def build(args):
         for chunk in iter_chunks(path, usecols=sorted(set(need))):
             dd = pd.to_numeric(chunk[TIME], errors="coerce")
             keep = dd.notna() & (dd < LM)
+            if LB is not None:
+                keep &= dd >= (LM - LB)
             if not keep.any():
                 continue
             pr = chunk[ID][keep].map(pindex)
@@ -876,7 +881,8 @@ def finish(args, out_dir, X, cohort, splits, train_rows, LM, H, say, log, aggs,
             "representation": rep or ("smart_baseline_positive_control" if ctrl
                                       else "pivoted_events"),
             "baseline_cols_included": list(baseline_cols),
-            "landmark_days": LM, "horizon_days": H, "aggregators": aggs,
+            "landmark_days": LM, "lookback_days": args.lookback_days,
+            "horizon_days": H, "aggregators": aggs,
             "min_patients": args.min_patients, "max_codes_per_source": args.max_codes_per_source,
             "clip_quantile": args.clip_quantile,
             "n_features": n_feat, "feature_names": feat_names,
@@ -901,6 +907,13 @@ if __name__ == "__main__":
                    help="Prediction origin, in days after the SMART baseline. Features use "
                         "datediff < LANDMARK; patients whose outcome is at/before it are dropped; "
                         "survival is measured from it. Matches eda_events_survival.py.")
+    p.add_argument("--lookback-days", type=int, default=None,
+                   help="Only use events within this many days BEFORE the landmark. Default is "
+                        "unbounded, which aggregates over each patient's entire history — so a "
+                        "'mean' or 'slope' spans 334 days for one patient and 24 years for "
+                        "another, and 'count' becomes a proxy for time in the hospital system "
+                        "rather than physiology. A 365-day lookback keeps 99.8%% of patients here, "
+                        "so it costs almost nothing and makes the aggregates comparable.")
     p.add_argument("--horizon-days", type=int, default=3650,
                    help="Administrative censoring horizon, measured FROM the landmark. "
                         "Default 3650 (10 years), which the follow-up supports better than 15.")
