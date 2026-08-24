@@ -2,7 +2,7 @@
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
 Status: **numeric/structured arm complete (negative). Free-text arm not yet tested.**
-Last updated: 2026-07-28
+Last updated: 2026-08-24
 
 ---
 
@@ -75,6 +75,12 @@ events" a proxy for "died early".
 At LM180: **13,434 patients, 1,827 events (13.6%)**; train 8,599 (1,136 events),
 validation 2,141 (310), test 2,694 (381).
 
+**Feature history is unbounded backwards by default** — the only filter is
+`datediff < landmark`, so aggregates span each patient's entire record (back to
+`datediff = -19,734`, ~54 years). Per-patient span at LM180: p50 **334 days**, p95 8,785,
+p100 19,914. Because that makes `mean`/`slope`/`count` summarise incomparable windows
+across patients, a bounded variant was tested explicitly (H7, §4).
+
 ### 3.2 Feature construction: pivoting before merging
 
 The project pipeline merges rows sharing `(patient, datediff)` via `merged[col] = val`,
@@ -139,7 +145,8 @@ the merge, the signal column does not survive at all (best C=0.528, CI 0.551).
 | H4 | The curated baseline's skill is mostly demographics, making the comparison unfair | Baseline decomposition | **Rejected.** Curated variables *without* age/sex reach **0.7547** vs full 0.7553; demographics alone 0.6883 |
 | H5 | Events add information on top of demographics | events + age/sex vs age/sex | **Rejected.** **0.6890 vs 0.6883 (+0.0007)** |
 | H6 | The null is an artefact of unit heterogeneity within a test code | Per-code unit tally | **Rejected.** 0 of 330 / 682 / 33 codes report a second unit in >1% of rows |
-| H7 | Free text carries signal the structured data does not | — | **Not yet tested** |
+| H7 | The null is an artefact of unbounded history: aggregating over spans of 334 days to 24 years makes one feature mean different things per patient | 365-day lookback (retains 99.8% of patients) | **Rejected.** events+demographics stayed at **~0.689**, unchanged |
+| H8 | Free text carries signal the structured data does not | — | **Not yet tested** |
 
 ---
 
@@ -153,6 +160,7 @@ landmark 180, identical cohort and splits.
 | Full curated SMART baseline | ~20 | **0.7553** |
 | Curated baseline **without** age/sex | ~18 | **0.7547** |
 | Events + demographics | 534 | **0.6890** |
+| Events + demographics, 365-day lookback | — | **~0.6890** |
 | Demographics (age + sex) only | 2 | **0.6883** |
 | Events only | 532 | **≈0.50** |
 
@@ -233,9 +241,10 @@ Three non-exclusive mechanisms:
 1. **Indication bias.** A routine lab is drawn *because* something prompted it, so its
    value is entangled with the clinical reason for ordering it. A protocol measurement is
    unconditional.
-2. **Timing heterogeneity.** The most recent pre-landmark value may be days or years old,
-   drawn during an acute admission or a routine check. The study visit is standardised in
-   time and setting.
+2. ~~**Timing heterogeneity.**~~ **Tested and ruled out.** Restricting every aggregate to
+   the 365 days before the landmark — which retains 99.8% of patients, since median history
+   is only 334 days — left performance unchanged at ~0.689. Heterogeneous observation
+   windows are therefore not what suppresses the signal.
 3. **Acute versus chronic.** A creatinine drawn during an admission reflects transient
    injury, not the stable kidney function SMART's eGFR represents.
 
@@ -253,6 +262,9 @@ not the study's own baseline assessment.
 - **15 years is weakly observed.** 67–69% of patients are censored before the horizon and
   only 2,556 remain at risk at 15 years; 10 years is better supported and was checked as a
   secondary horizon throughout.
+- **Unbounded aggregation is no longer a limitation**: bounding the window to 365 days
+  changed nothing (§4 H7), so the remaining mechanisms are indication bias and the
+  acute-versus-chronic distinction, not window width.
 - **Single centre, single extract.** A different extract that included the baseline visit's
   measurements could plausibly change the result — that is the natural next test of the
   mechanism proposed in §7.
@@ -300,9 +312,9 @@ Structured EHR event data in this cohort carries **no detectable 15-year prognos
 beyond age and sex, while ~20 expert-curated baseline variables reach C=0.755 and ~18 of
 them reach 0.7547 without any demographics. The result survives landmarking at three
 origins, pivoting that recovers the full same-day panels, recovery of thresholded lab
-values, tokenised diagnosis codes, permutation-calibrated significance, multiple-testing
-correction over effective tests, a validated positive control, and an explicit demographics
-decomposition confirming the comparison is fair.
+values, tokenised diagnosis codes, a bounded 365-day feature window, permutation-calibrated
+significance, multiple-testing correction over effective tests, a validated positive
+control, and an explicit demographics decomposition confirming the comparison is fair.
 
 Manual curation is therefore not redundant here, and the likely reason is that the
 information it captures is a *protocol measurement*, not merely a *measurement*. The
