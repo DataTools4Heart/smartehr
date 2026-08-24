@@ -157,7 +157,17 @@ def build_cache(event_csv_folder, specs, LM, LB, cohort_ids, cache_path, say):
 
 # ---------------------------------------------------------------- cleaning
 
-def clean_text(t, strip_dates=True, strip_names=True):
+NAMEISH_PAT = re.compile(r"(?<![.!?]\s)(?<!^)\b[A-Z][a-z]{2,}\b")
+
+
+def clean_text(t, strip_dates=True, strip_names=True, strip_nameish=False):
+    if strip_nameish:
+        # Mid-sentence capitalised words, removed BEFORE lowercasing. Phase 0 measured a
+        # median of 50 such tokens per uitgaandebrief letter; once lowercased they survive
+        # min_df and can encode the treating physician or site rather than the patient.
+        # Blunt by design: it also removes capitalised proper medical nouns, which is why
+        # it is opt-in and paired with a without-it arm.
+        t = NAMEISH_PAT.sub(" ", t)
     t = t.lower()
     if strip_dates:
         t = ISO_DATE_PAT.sub(" ", t)
@@ -171,14 +181,21 @@ def clean_text(t, strip_dates=True, strip_names=True):
 
 
 def take_section(t, wanted):
-    """Return only the named section(s) of a report, or '' if absent."""
+    """Return only the named section(s) of a report, or '' if none are present.
+
+    `wanted` is a list of header prefixes: Phase 0 found `voorgeschiedenis` in 79.9% and
+    `anamnese` in 69.1% of discharge letters (where prior conditions are stated), whereas
+    `conclusie` appears in only 17.6% of radiology reports, so restricting to a single
+    section discards most documents.
+    """
     parts = SECTION_SPLIT.split(t)
     if len(parts) < 3:
         return ""
     out = []
     # split() yields [pre, header, body, header, body, ...]
     for i in range(1, len(parts) - 1, 2):
-        if parts[i].lower().startswith(wanted):
+        h = parts[i].lower()
+        if any(h.startswith(w) for w in wanted):
             out.append(parts[i + 1])
     return " ".join(out).strip()
 
@@ -419,9 +436,10 @@ def main(args):
         # cleaned, per-patient concatenation with a hard document boundary
         docs_by_pid = defaultdict(list)
         for p, src, dd, txt in docs:
-            t = clean_text(txt, args.strip_dates, args.strip_names)
+            t = clean_text(txt, args.strip_dates, args.strip_names, args.strip_nameish)
             if args.section:
-                t = take_section(t, args.section.lower())
+                t = take_section(t, [w.strip().lower()
+                                     for w in args.section.split(",") if w.strip()])
                 if not t:
                     continue
             if t:
@@ -486,6 +504,7 @@ def main(args):
                        "svd_components": args.svd_components, "text_cols": args.text_cols,
                        "require_text": args.require_text,
                        "strip_dates": args.strip_dates, "strip_names": args.strip_names,
+                       "strip_nameish": args.strip_nameish,
                        "expand_terms": args.expand_terms})
 
 
@@ -512,7 +531,13 @@ if __name__ == "__main__":
                         "point every arm at one shared path to stream the CSVs only once.")
     p.add_argument("--rebuild-cache", action="store_true")
     p.add_argument("--section", default=None,
-                   help="Restrict to one report section, e.g. 'conclusie'. Cuts boilerplate.")
+                   help="Restrict to these report sections, comma-separated, e.g. "
+                        "'voorgeschiedenis,anamnese' (where prior conditions are stated) or "
+                        "'conclusie'. Documents lacking every named section are dropped.")
+    p.add_argument("--strip-nameish", action="store_true",
+                   help="Also remove mid-sentence capitalised words before lowercasing. "
+                        "Discharge letters carry ~50 such tokens each, which can encode the "
+                        "treating physician or site; blunt, so pair it with a run without it.")
     p.add_argument("--analyzer", default="word", choices=("word", "char"),
                    help="char uses char_wb 3-N grams, robust to Dutch compounding and typos.")
     p.add_argument("--ngram-max", type=int, default=2)

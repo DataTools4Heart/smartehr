@@ -69,8 +69,9 @@ events" a proxy for "died early".
 | | LM 0 | LM 180 |
 |---|---|---|
 | patients with no usable event | 1,018 (7.4%) | **221 (1.6%)** |
-| patients with any free text | 89.0% | **95.0%** |
-| free-text corpus | 23.1M tokens | **33.7M tokens** |
+| patients with any free text (incl. short label fields) | 89.0% | 95.0% |
+| patients with any *narrative* text (the 4 report columns) | — | **71.8%** |
+| free-text corpus | 23.1M tokens | 33.7M tokens (est.) / **46.4M measured** |
 
 At LM180: **13,434 patients, 1,827 events (13.6%)**; train 8,599 (1,136 events),
 validation 2,141 (310), test 2,694 (381).

@@ -10,7 +10,7 @@ what each result would mean. Companion to the plan and to
 
 | phase | what | script | state |
 |---|---|---|---|
-| 0 | text metadata / corpus measurement | `eda_text_events.py` | **ready** |
+| 0 | text metadata / corpus measurement | `eda_text_events.py` | **DONE — see §1.1** |
 | 1 | document cache + T0 volume | `prepare_text_features.py --mode volume` | **ready** |
 | 1 | T1 TF-IDF (+ variants) | `--mode tfidf` | **ready** |
 | 1 | T2 clinical concepts | `--mode concepts` | **ready** |
@@ -76,6 +76,47 @@ Read, in this order:
    here clears the floor, every later content result must be compared against it, not
    against 0.5.**
 
+### 1.1 Phase 0 results (run 2026-08-24, landmark 180, horizon 5475)
+
+**Corpus**: 46.4M real tokens across 121,778 documents, ~4,815 tokens per text-bearing
+patient. `consult_tekst` 20.8M, `inhoud` 18.8M, `verslagtekst` 6.4M, `rad_report` 0.33M.
+
+Five findings, three of which change the plan:
+
+1. **Coverage is 71.8%, not 95% — the empty-text confound is still present.**
+   9,644/13,434 patients have narrative text; **3,790 (28%) have none** (train 2,389,
+   test 770, validation 631). The earlier 95% figure came from the structured EDA's §7,
+   which counted all ten `free_text`-classified columns including the six short *label*
+   fields (`diag_omschrijving` alone covers 12,287 patients). Those are out of scope here.
+   → **`--require-text` is a PRIMARY arm, not a sensitivity check.** On the full cohort,
+   28% of rows are an all-zero text vector and will dilute every content estimate.
+
+2. **Boilerplate is absent.** 0% of a median document's 8-grams are shared with ≥30% of
+   documents, in all four sources, and 96.2–99.6% of documents are distinct. These are
+   genuinely varied narratives.
+   → the `--max-df` and single-section defences are **demoted to sensitivity arms**; the
+   headline TF-IDF run does not need them. (The metric is not blind: the same code reports
+   71–100% on a templated fixture.)
+
+3. **T0 volume control is inert.** Every volume feature sits at 0.4931–0.4973 against a
+   0.0149 floor; nothing clears it. → **any content gain is attributable to content**, not
+   to note-taking intensity. Gate 0 is satisfied.
+
+4. **De-identification risk is high, and names are not yet removed by default.** NL dates
+   appear in 42.5% (consult) to 94.1% (letters) of documents and clinician tokens in 24.7%
+   to 99.5%; letters carry a median of **50 name-like tokens each**. Dates and titles are
+   stripped by default, but the names themselves are not — once lowercased they survive
+   `min_df` and can encode the treating physician or site.
+   → run the headline arm and a `--strip-nameish` arm and compare.
+
+5. **`rad_report` is truncated** (1024 chars in 59.3% of documents) and small (461
+   patients, 53.7% distinct). → exclude from the primary `--text-cols`; keep as sensitivity.
+
+Section availability (share of documents): `conclusie` 29.3% consult / 64.2% letters /
+17.6% radiology; `voorgeschiedenis` 79.9% letters; `anamnese` 69.1% letters. Prior
+conditions live in `voorgeschiedenis,anamnese`, so prefer those over `conclusie` for the
+concept arm; `conclusie` alone would discard most radiology documents.
+
 ---
 
 ## 2. Phase 1 — build the document cache once
@@ -104,8 +145,12 @@ python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode v
 ### T1 — TF-IDF
 
 ```bash
-python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode tfidf --svd-components 256 --screen-features --out-dir T1_tfidf_word
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode tfidf --require-text --svd-components 256 --screen-features --out-dir T1_tfidf_word
 ```
+
+`--require-text` is included because 28% of patients have no narrative text; without it
+those rows are all-zero and dilute the estimate. Also run it **without** the flag, to see
+the full-cohort number the model would face in deployment.
 
 Variants worth running (each is a separate falsifiable arm, not tuning):
 
@@ -118,9 +163,21 @@ python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode t
 ```
 
 `--analyzer char` uses char_wb 3–N grams, robust to Dutch compounding and typos.
-`--section conclusie` cuts boilerplate by keeping only the conclusion.
-`--max-df 0.8` (default) drops terms appearing in more than 80% of train documents — the
-main lever against templates. Lower it if Phase 0 reports heavy boilerplate.
+`--section` takes a comma-separated list; prefer `voorgeschiedenis,anamnese` over
+`conclusie` (Phase 0: prior conditions are stated there, and `conclusie` is missing from
+82% of radiology reports).
+`--max-df 0.8` (default) drops terms appearing in more than 80% of train documents. Phase 0
+measured **zero** boilerplate, so this is not doing much work here — it is retained as a
+guard, not a needed defence.
+
+De-identification sensitivity arm (letters carry ~50 name-like tokens each):
+
+```bash
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode tfidf --require-text --strip-nameish --svd-components 256 --out-dir T1_tfidf_nonames
+```
+
+If this differs materially from the headline arm, part of the signal was physician or site
+identity rather than clinical content.
 
 ### T2 — clinical concepts (most directly on-question)
 
@@ -155,13 +212,15 @@ failure mode that cost a full cycle in the structured arm.
 
 ### Subcohort and sensitivity arms
 
+Exclude the truncated source (Phase 0: `rad_report` is capped at 1024 chars in 59.3% of
+its documents and covers only 461 patients):
+
 ```bash
-python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode tfidf --require-text --svd-components 256 --out-dir T1_tfidf_requiretext
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode tfidf --require-text --text-cols "consult:consult_tekst,uitgaandebrief:inhoud,radiologie_verslag:verslagtekst" --rebuild-cache --svd-components 256 --out-dir T1_tfidf_3src
 ```
 
-`--require-text` restricts to patients who have text, so a null cannot be the empty-text
-confound. `--keep-dates` and `--keep-names` quantify the calendar-era and
-site/physician confounds instead of assuming them away.
+`--keep-dates` and `--keep-names` quantify the calendar-era and site/physician confounds
+instead of assuming them away. Changing `--text-cols` needs `--rebuild-cache`.
 
 ---
 
