@@ -428,7 +428,43 @@ def main(args):
     say(f"  {len(docs):,} documents, {n_with:,}/{len(pids):,} patients have text "
         f"({100*n_with/max(len(pids),1):.1f}%)")
 
+    # --require-text is applied HERE, before the mode dispatch, and always means "has at
+    # least one narrative document". Defining it once and uniformly is what lets a
+    # demographics-only control be built on exactly the same subcohort, which is the
+    # correct denominator for a require-text arm: 28% of the full cohort has no narrative
+    # text, so 0.6883 (measured on the full cohort) is not the right bar for these arms.
+    if args.require_text:
+        has_doc = set(df[ID].astype(int))
+        mask = np.array([p in has_doc for p in pids])
+        keep_idx = sorted(int(i) for i in np.where(mask)[0])
+        remap = {i: j for j, i in enumerate(keep_idx)}
+        cohort = cohort[mask].reset_index(drop=True)
+        pids = cohort[ID].astype(int).to_numpy()
+        splits = {k: [remap[i] for i in v if i in remap] for k, v in splits.items()}
+        train_rows = np.array(sorted(splits["train"]), dtype=np.int64)
+        ev = int((cohort["cd_event"] == 1).sum())
+        say(f"  --require-text: cohort restricted to {len(pids):,} patients with text "
+            f"({ev:,} events) | train={len(splits['train']):,} "
+            f"val={len(splits['validation']):,} test={len(splits['test']):,}")
+        say("  NOTE: benchmarks measured on the FULL cohort do not apply to this subcohort. "
+            "Build the matched control with --mode baseline --require-text.")
+
     # ---- assemble the requested representation
+    if args.mode == "baseline":
+        # MATCHED CONTROL. Emits only the numeric SMART baseline, but on the cohort the
+        # text flags define, so a --require-text text arm can be compared against
+        # demographics on identical patients rather than against a full-cohort number.
+        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols)
+        say(f"  MATCHED CONTROL ({args.baseline_cols or 'all'}): {X.shape[1]} baseline "
+            f"features -> {kept}")
+        finish(out_dir, X, cohort, splits, train_rows, H, say, log,
+               clip_quantile=args.clip_quantile, min_coverage_frac=args.min_coverage_frac,
+               screen_features=args.screen_features, screen_top=args.screen_top,
+               rep=f"matched_baseline[{args.baseline_cols or 'all'}]", baseline_cols=kept,
+               extra_meta={"landmark_days": LM, "lookback_days": LB, "mode": "baseline",
+                           "require_text": args.require_text,
+                           "text_cols": args.text_cols})
+        return
     if args.mode == "volume":
         X = volume_features(docs, pids, sources)
         rep = "text_volume"
@@ -450,18 +486,10 @@ def main(args):
         kept = len(text_by_pid)
         say(f"  after cleaning{' + section=' + args.section if args.section else ''}: "
             f"{kept:,} patients retain text ({100*kept/max(len(pids),1):.1f}%)")
-        if args.require_text:
-            keep_ids = set(text_by_pid)
-            mask = np.array([p in keep_ids for p in pids])
-            say(f"  --require-text: restricting the cohort to {int(mask.sum()):,} patients "
-                "with text (removes the empty-text confound)")
-            keep_idx = {i for i, m in enumerate(mask) if m}
-            cohort = cohort[mask].reset_index(drop=True)
-            old_pids = pids
-            pids = cohort[ID].astype(int).to_numpy()
-            remap = {i: j for j, i in enumerate(sorted(keep_idx))}
-            splits = {k: [remap[i] for i in v if i in remap] for k, v in splits.items()}
-            train_rows = np.array(sorted(splits["train"]), dtype=np.int64)
+        n_empty = sum(1 for p in pids if not text_by_pid.get(p))
+        if n_empty:
+            say(f"  {n_empty:,} patients have no text after cleaning"
+                f"{'/section' if args.section else ''} and get an all-zero vector")
         texts = [text_by_pid.get(p, "") for p in pids]
 
         if args.mode == "documents":
@@ -517,7 +545,7 @@ if __name__ == "__main__":
     p.add_argument("--split-json", required=True)
     p.add_argument("--out-dir", required=True)
     p.add_argument("--mode", required=True,
-                   choices=("volume", "tfidf", "concepts", "documents"))
+                   choices=("volume", "tfidf", "concepts", "documents", "baseline"))
     p.add_argument("--landmark-days", type=int, default=180)
     p.add_argument("--lookback-days", type=int, default=None)
     p.add_argument("--horizon-days", type=int, default=5475)
@@ -560,6 +588,9 @@ if __name__ == "__main__":
     p.add_argument("--strip-names", action="store_true", default=True)
     p.add_argument("--keep-names", dest="strip_names", action="store_false",
                    help="Sensitivity arm: leave clinician/department tokens in.")
+    p.add_argument("--baseline-cols", default=None,
+                   help="With --mode baseline: which baseline columns the matched control "
+                        "emits, e.g. 'leeftijd,geslacht'. Prefix with ~ to exclude instead.")
     p.add_argument("--add-baseline-cols", default=None,
                    help="Append baseline columns, e.g. 'leeftijd,geslacht' for the fair "
                         "text+demographics arm.")

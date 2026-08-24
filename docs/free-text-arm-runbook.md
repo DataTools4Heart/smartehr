@@ -4,7 +4,10 @@ How to run every phase of the free-text experiment, in order, with what to look 
 what each result would mean. Companion to the plan and to
 `docs/baseline-free-event-survival-report.md` (which records the closed structured arm).
 
-**Keep this file updated as phases land.**
+**This file is the single source of truth for the free-text arm, and is updated whenever
+anything material changes** — a new phase, a corrected figure, a new flag, a revised
+benchmark. See the changelog at the end. If a methodological point is worth saying, it
+belongs here, not only in conversation.
 
 ## Status
 
@@ -15,6 +18,7 @@ what each result would mean. Companion to the plan and to
 | 1 | T1 TF-IDF (+ variants) | `--mode tfidf` | **ready** |
 | 1 | T2 clinical concepts | `--mode concepts` | **ready** |
 | 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | ready, **gated** (see §6) |
+| — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
 
 ---
@@ -39,15 +43,38 @@ Landmark 180 and horizon 5475 are fixed so every arm is comparable with the stru
 results. Landmark 180 is what raises text coverage from 89% to 95%; it excludes patients
 whose outcome falls at or before day 180 and measures survival from there.
 
-**Benchmarks to beat** (all test C, same cohort/splits/horizon):
+**Benchmarks — and which one applies.** There are two denominators, because 28% of the
+cohort has no narrative text (§1.1).
+
+*Full cohort (13,434 patients), measured:*
 
 | reference | test C |
 |---|---|
 | full curated SMART baseline | 0.7553 |
 | curated baseline without age/sex | 0.7547 |
 | structured events + demographics | 0.6890 |
-| **demographics (age+sex) only** | **0.6883** ← the bar a text arm must clear |
+| **demographics (age+sex) only** | **0.6883** ← the bar for a FULL-cohort text arm |
 | structured events only | ~0.50 |
+
+*`--require-text` subcohort (9,644 patients): these numbers DO NOT APPLY.* A text arm run
+with `--require-text` sits on a healthier-or-sicker, differently-sized cohort, so it must be
+compared against a control built on **exactly those patients**:
+
+```bash
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode baseline --baseline-cols "leeftijd,geslacht" --require-text --out-dir CTRL_demo_requiretext
+```
+
+`--mode baseline` emits only the numeric SMART baseline on whatever cohort the text flags
+define, so the control and the text arm contain the identical patients and labels (verified:
+same n and same duration/event vectors in every split). Also build the full-baseline control
+the same way for the upper reference:
+
+```bash
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode baseline --baseline-cols all --require-text --out-dir CTRL_full_requiretext
+```
+
+Comparing a `--require-text` arm against 0.6883 is invalid and was a live trap until
+`--mode baseline` existed.
 
 ---
 
@@ -255,8 +282,10 @@ python scripts/smartehr/bootstrap_ci_compare.py --pred-a <demographics_preds.par
 ## 5. How to read the numbers
 
 - **text-only ≈ 0.50** → no signal in narrative content.
-- **text + demographics ≈ 0.6883** → text adds nothing over age and sex. Same verdict the
-  structured arm reached; the negative result then covers both representations.
+- **text + demographics ≈ the matched demographics control** → text adds nothing over age
+  and sex. Same verdict the structured arm reached; the negative result then covers both
+  representations. Use 0.6883 only for full-cohort arms, and `CTRL_demo_requiretext` for
+  `--require-text` arms.
 - **text + demographics meaningfully > 0.6883** → text carries signal the structured data
   did not. Confirm it exceeds T0 (volume) before claiming content, then bootstrap the
   difference.
@@ -316,6 +345,7 @@ straight in.
 | every univariate C ≈ 0.5 in `screen_parquet_features` but the raw screen found signal | low-coverage features median-imputed into near-constant columns | raise `--min-coverage-frac`; trust the raw screen |
 | Cox "low variance" / zero-division warnings | near-constant columns | raise `--min-coverage-frac` |
 | TF-IDF vocabulary implausibly small | `--max-df` removed the boilerplate, which was most of the text | expected; check Phase 0's boilerplate fraction |
+| a `--require-text` arm looks better/worse than 0.6883 | that benchmark is a full-cohort number and does not apply to the subcohort | build `--mode baseline --require-text` and compare against that |
 | a concept fires implausibly often | a term is matching inside a longer Dutch compound | terms are word-boundary anchored, but check `CONCEPTS` for a short term that is a real substring of a common word |
 | `0 of N features clear the floor, ~M expected` | correlated features are not N independent tests | the screen reports effective tests; compare against that, not N |
 
@@ -332,3 +362,26 @@ standardisation stage, so differences between arms are attributable to the repre
 rather than to plumbing. The positive control
 (`prepare_pivoted_event_features.py --positive-control`) should be re-run once per session
 to confirm that.
+
+---
+
+## 10. Changelog
+
+- **2026-08-24 — matched controls, and two fixes they exposed.** Added
+  `--mode baseline`, which emits only the SMART baseline on whatever cohort the text flags
+  define, so a `--require-text` arm can be compared against demographics on identical
+  patients. Before this no valid comparison existed for subcohort arms. In the process:
+  `--require-text` is now applied before the mode dispatch and always means "has ≥1
+  narrative document", which also fixes it being silently ignored by `--mode volume`.
+  Benchmarks section now separates the full-cohort and subcohort denominators.
+- **2026-08-24 — Phase 0 results recorded (§1.1).** Narrative coverage is **71.8%, not
+  95%**: the earlier figure came from the structured EDA's §7, which counted the six short
+  label fields that are out of scope here. `--require-text` promoted to a primary arm.
+  Boilerplate measured at 0% in all four sources, so `--max-df`/section restriction demoted
+  to sensitivity arms. T0 volume control inert (0.4931–0.4973 vs a 0.0149 floor), so Gate 0
+  is satisfied and content gains are attributable to content. Added `--strip-nameish`
+  (letters carry ~50 name-like tokens each, previously unstripped); `--section` now takes a
+  comma-separated list; `rad_report` dropped from the primary sources (truncated at 1024
+  chars in 59.3% of its documents, 461 patients).
+- **2026-08-24 — initial runbook**, covering Phase 0, the document cache, arms T0/T1/T2,
+  evaluation, gates, and Phase 2 (T3, gated).
