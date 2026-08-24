@@ -126,12 +126,19 @@ def effective_n_tests(X, frac=0.95):
     expectation and looks anomalous when it is not.
     """
     A = np.asarray(X, float)
-    A = A[:, np.isfinite(A).all(axis=0)] if A.ndim == 2 else A
-    if A.ndim != 2 or A.shape[1] < 2:
-        return max(A.shape[1] if A.ndim == 2 else 1, 1)
+    if A.ndim != 2:
+        return 1
+    A = A[:, np.isfinite(A).all(axis=0)]
+    # Constant columns are not tests: they yield C=0.5 exactly and can never be
+    # significant. Worse, keeping them breaks the estimate — centring makes them all-zero,
+    # corrcoef returns NaN, and zeroing the NaN diagonal collapses the eigenvalue mass onto
+    # a single component, so n_eff came out as ~1 and made Bonferroni LOOSER than
+    # uncorrected. Drop them before estimating.
     sd = A.std(axis=0)
-    sd[sd < 1e-12] = 1.0
-    R = np.nan_to_num(np.corrcoef(((A - A.mean(axis=0)) / sd).T), nan=0.0)
+    A = A[:, sd > 1e-12]
+    if A.shape[1] < 2:
+        return max(A.shape[1], 1)
+    R = np.nan_to_num(np.corrcoef(((A - A.mean(axis=0)) / A.std(axis=0)).T), nan=0.0)
     lam = np.sort(np.clip(np.linalg.eigvalsh(R), 0, None))[::-1]
     if lam.sum() <= 0:
         return A.shape[1]
