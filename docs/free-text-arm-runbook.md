@@ -20,6 +20,7 @@ belongs here, not only in conversation.
 | 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | ready, **gated** (see §6) |
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
+| — | **one-file results log** (all scripts append) | `results_log.py` → `$RESULTS` | **ready** |
 
 ---
 
@@ -36,8 +37,32 @@ export SMART=/path/to/smart.csv
 export EVENTS=/path/to/all_event_csvs
 export SPLITS=/path/to/splits.json
 export CACHE=$PWD/text_cache/documents.parquet
-export COMMON="--smart-csv $SMART --event-csv-folder $EVENTS --split-json $SPLITS --legacy --landmark-days 180 --horizon-days 5475"
+export RESULTS=$PWD/results/ALL_RESULTS.md
+export COMMON="--smart-csv $SMART --event-csv-folder $EVENTS --split-json $SPLITS --legacy --landmark-days 180 --horizon-days 5475 --results-file $RESULTS"
 ```
+
+### Getting results off the VM — read this first
+
+Results cannot be copied out of the VM by hand; files must be requested from the admin and
+that is slow. So **every script appends to one shared file**, `$RESULTS`. Run as many arms
+as you like, then make **a single download request for that one file**.
+
+- The file regenerates an **`## Index`** at the top on every run, so its first ~20 lines are
+  the complete summary of every run so far: timestamp, arm, and the headline numbers
+  (`n_features`, cohort/event counts, univariate hits, Cox **test C** and verdict).
+- Full per-run output is kept below in collapsed `<details>` blocks, capped at 400 lines
+  each. Four runs is ~190 lines total, so the whole file stays pasteable for a long time.
+- **Failures are recorded too** — a crashed arm writes `status: FAILED` with its traceback,
+  so a broken run is not lost effort.
+- No raw clinical text is ever written to it.
+- Keep blocks small with `--screen-top` / `--top` if a screen lists hundreds of features.
+
+Because `--results-file` is inside `$COMMON`, every command below already writes there. For
+scripts that do not take `$COMMON` (the screen), pass `--results-file $RESULTS` explicitly —
+the examples do.
+
+When you download it, paste the whole file. If it has grown large, the `## Index` section
+alone is enough for me to decide the next step.
 
 Landmark 180 and horizon 5475 are fixed so every arm is comparable with the structured
 results. Landmark 180 is what raises text coverage from 89% to 95%; it excludes patients
@@ -254,7 +279,7 @@ instead of assuming them away. Changing `--text-cols` needs `--rebuild-cache`.
 ## 4. Evaluate every arm the same way
 
 ```bash
-python scripts/smartehr/screen_parquet_features.py --parquet-dir T1_tfidf_word --cox --l1-ratio 1.0
+python scripts/smartehr/screen_parquet_features.py --parquet-dir T1_tfidf_word --cox --l1-ratio 1.0 --results-file $RESULTS
 ```
 
 Read: label sanity → feature spread → univariate screen (`C_mono` and `C_udev`, the latter
@@ -366,6 +391,14 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-26 — one-file results log.** Every script now appends its run to a single
+  append-only markdown file (`--results-file`, folded into `$COMMON`), because results
+  cannot be copied off the VM by hand and each download is a slow admin request. The file
+  regenerates an index of all runs at the top, hoisting each run's headline numbers
+  (`RESULT:` lines) out of the collapsed full output, and records failures with their
+  traceback. One download now covers arbitrarily many experiments. The canonical arm
+  summary is emitted from the shared `finish()` stage, so every builder reports identically.
 
 - **2026-08-24 — matched controls, and two fixes they exposed.** Added
   `--mode baseline`, which emits only the SMART baseline on whatever cohort the text flags

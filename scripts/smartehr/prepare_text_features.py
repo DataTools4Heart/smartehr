@@ -52,6 +52,7 @@ from datasets import Dataset
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort
 from feature_matrix import finish, list_baseline_cols, smart_baseline_features
+from results_log import add_results_arg, emit, results_block
 
 CHUNK = 50_000
 DOC_SEP = " || "          # hard boundary: negation must not bleed across documents
@@ -425,6 +426,8 @@ def main(args):
 
     docs = list(zip(df[ID].astype(int), df["source"], df[TIME].astype(int), df["text"]))
     n_with = df[ID].nunique()
+    emit("documents={} patients_with_text={}/{} ({:.1f}%)",
+         len(docs), n_with, len(pids), 100*n_with/max(len(pids), 1))
     say(f"  {len(docs):,} documents, {n_with:,}/{len(pids):,} patients have text "
         f"({100*n_with/max(len(pids),1):.1f}%)")
 
@@ -599,8 +602,16 @@ if __name__ == "__main__":
     p.add_argument("--min-coverage-frac", type=float, default=0.10)
     p.add_argument("--screen-features", action="store_true")
     p.add_argument("--screen-top", type=int, default=30)
+    add_results_arg(p)
     a = p.parse_args()
     if a.list_baseline_cols:
         list_baseline_cols(a.smart_csv)
     else:
-        main(a)
+        with results_block(a.results_file, f"text arm: {a.mode}",
+                           {"mode": a.mode, "landmark": a.landmark_days,
+                            "lookback": a.lookback_days, "horizon": a.horizon_days,
+                            "section": a.section, "analyzer": a.analyzer,
+                            "require_text": a.require_text,
+                            "add_baseline": a.add_baseline_cols,
+                            "baseline_cols": a.baseline_cols, "out": a.out_dir}):
+            main(a)

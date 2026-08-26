@@ -51,6 +51,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from results_log import add_results_arg, emit, results_block
 from eda_events_survival import (
     ID,
     TIME,
@@ -362,6 +363,9 @@ def main(args):
     w()
     w(f"- patients with >= 1 narrative document: **{len(with_text):,} / {len(cohort_ids):,} "
       f"({100*len(with_text)/max(len(cohort_ids),1):.1f}%)**")
+    emit("narrative text coverage {}/{} ({:.1f}%); no text for {}",
+         len(with_text), len(cohort_ids), 100*len(with_text)/max(len(cohort_ids),1),
+         len(cohort_ids)-len(with_text))
     w(f"- patients with NO narrative text: **{len(cohort_ids)-len(with_text):,}** "
       "<- these get an all-zero text vector and are unrankable from text alone")
     for k, v in splits.items():
@@ -466,6 +470,10 @@ def main(args):
     J["t0_volume"] = {"null_k": k, "floor": thr, "n_events": n_ev,
                       "features": [{"feature": n, "c_index": round(c, 4)} for _, n, c in rows]}
     n_clear = sum(1 for m, _, _ in rows if m >= thr)
+    emit("T0 volume control: {} of {} features clear the {:.4f} floor -> {}",
+         n_clear, len(rows), thr,
+         "VOLUME IS PROGNOSTIC, compare content arms against it" if n_clear
+         else "INERT, content gains are attributable to content")
     if n_clear:
         w(f"> **{n_clear} volume feature(s) clear the floor.** Text volume alone is prognostic, "
           "so the content arms must be compared against this baseline, not against 0.5.")
@@ -504,4 +512,9 @@ if __name__ == "__main__":
                         "Qwen/Qwen3-Embedding-0.6B). Omit to report chars/words only.")
     p.add_argument("--min-show-count", type=int, default=20)
     p.add_argument("--permutations", type=int, default=200)
-    main(p.parse_args())
+    add_results_arg(p)
+    a = p.parse_args()
+    with results_block(a.results_file, "phase0 text EDA",
+                       {"landmark": a.landmark_days, "lookback": a.lookback_days,
+                        "horizon": a.horizon_days, "out": a.out_dir}):
+        main(a)

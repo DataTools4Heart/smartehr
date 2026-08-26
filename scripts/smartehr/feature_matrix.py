@@ -32,6 +32,7 @@ from eda_events_survival import (
     harrell_c,
     null_floor,
 )
+from results_log import emit
 from smartehr_pipeline import _SMART_OUTCOME_COLS
 
 
@@ -277,6 +278,13 @@ def finish(out_dir, X, cohort, splits, train_rows, H, say, log, *,
         ne = int(sum(c[1] for c in cens))
         say(f"  {name:11s}: {len(rows):5,} patients | events={ne:,} "
             f"({100*ne/max(len(rows),1):.1f}%) | features={n_feat}")
+
+    parts = []
+    for name in ("train", "validation", "test"):
+        rows = np.array(sorted(splits[name]), dtype=np.int64)
+        if len(rows):
+            parts.append(f"{name}={len(rows)}/{int(evt_abs[rows].sum())}ev")
+    emit("arm={} n_features={} {}", rep, n_feat, " ".join(parts))
 
     meta = {
         "representation": rep,

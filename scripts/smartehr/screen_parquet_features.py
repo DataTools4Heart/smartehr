@@ -29,6 +29,7 @@ from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import calibrate_null_scale, effective_n_tests, null_floor
+from results_log import add_results_arg, emit, results_block
 
 
 def harrell_c(time, event, risk):
@@ -137,6 +138,9 @@ def main(args):
     rows.sort(reverse=True)
     cleared = [r for r in rows if r[0] >= thr]
     print(f"  features clearing the floor (either form): {len(cleared):,} of {len(rows):,}")
+    emit("univariate: {} of {} features clear the {:.4f} floor{}",
+         len(cleared), len(rows), thr,
+         f"; strongest {cleared[0][1]} C={cleared[0][2]:.4f}" if cleared else "")
     print(f"  {'feature':<50s} {'C_mono':>8s} {'C_udev':>8s} {'C_test':>8s}")
     Xte, tte, ete = data.get("test", (None, None, None))
     for best, nm, c, cu, j in rows[:args.top]:
@@ -207,6 +211,8 @@ def main(args):
                   f"(test 2-SE band around 0.5 is +/-{2*se:.3f})")
             verdict = ("signal" if abs(c_te - 0.5) >= 2 * se else "indistinguishable from chance")
             print(f"  verdict: {verdict}")
+            emit("COX {} penalizer={:g} TEST C={:.4f} (2-SE band +/-{:.3f}) -> {}",
+                 kind, pen, c_te, 2 * se, verdict)
 
 
 if __name__ == "__main__":
@@ -220,4 +226,9 @@ if __name__ == "__main__":
                         "real features among many null ones; ridge dilutes them.")
     p.add_argument("--permutations", type=int, default=200,
                    help="Permutations used to calibrate the null SE of the C-index.")
-    main(p.parse_args())
+    add_results_arg(p)
+    a = p.parse_args()
+    with results_block(a.results_file, f"screen: {Path(a.parquet_dir).name}",
+                       {"parquet_dir": a.parquet_dir, "cox": a.cox,
+                        "l1_ratio": a.l1_ratio if a.cox else None}):
+        main(a)

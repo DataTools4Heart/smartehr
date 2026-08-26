@@ -53,6 +53,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort  # shared definitions
+from results_log import add_results_arg, results_block
 from feature_matrix import (  # the shared, already-debugged standardise/screen/write stage
     finish,
     list_baseline_cols,
@@ -744,8 +745,16 @@ if __name__ == "__main__":
                         "identical cohort/landmark/split/target code. If this also scores ~0.5 the "
                         "plumbing is broken and any event-feature null is uninterpretable; if it "
                         "scores well, the plumbing is sound. Not a baseline-free model.")
+    add_results_arg(p)
     _a = p.parse_args()
     if _a.list_baseline_cols:
         list_baseline_cols(_a.smart_csv)
     else:
-        build(_a)
+        with results_block(_a.results_file, "structured arm",
+                           {"landmark": _a.landmark_days, "lookback": _a.lookback_days,
+                            "horizon": _a.horizon_days,
+                            "positive_control": _a.positive_control,
+                            "baseline_cols": _a.baseline_cols,
+                            "add_baseline": _a.add_baseline_cols,
+                            "auto_occurrence": _a.auto_occurrence, "out": _a.out_dir}):
+            build(_a)
