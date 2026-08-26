@@ -21,6 +21,7 @@ belongs here, not only in conversation.
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
 | — | **one-file results log** (all scripts append) | `results_log.py` → `$RESULTS` | **ready** |
+| — | **run every phase in order** | `bash_scripts/run_all_phases.sh` | **ready** |
 
 ---
 
@@ -40,6 +41,33 @@ export CACHE=$PWD/text_cache/documents.parquet
 export RESULTS=$PWD/results/ALL_RESULTS.md
 export COMMON="--smart-csv $SMART --event-csv-folder $EVENTS --split-json $SPLITS --legacy --landmark-days 180 --horizon-days 5475 --results-file $RESULTS"
 ```
+
+### Run everything with one script
+
+`bash_scripts/run_all_phases.sh` contains every command below, in order. Export the three
+data paths (above) and run:
+
+```bash
+./bash_scripts/run_all_phases.sh
+```
+
+```bash
+./bash_scripts/run_all_phases.sh t1 t2 screens
+```
+
+- Phases: `p0 t0 t1 t2 ctrl struct screens t3`. With no arguments it runs everything except
+  `t3`.
+- **Arms that already exist are skipped**, so re-running after adding one arm is cheap.
+  `FORCE=1` redoes them.
+- `DRY_RUN=1` prints the commands without running any.
+- **A failing arm does not abort the batch.** The failure is recorded in `$RESULTS` — by the
+  script itself, so even a bad flag or a killed process leaves a trace — and listed in the
+  summary. An unattended overnight batch is never wasted.
+- Overridable: `LANDMARK HORIZON CACHE RESULTS OUT DEMOG SVD TOKENIZER PY`.
+- `t3` needs `RUN_T3=1` plus a GPU and `pip install sentence-transformers`; it stays gated
+  behind §6 Gate 1.
+
+The individual commands are kept below so a single arm can be run or varied by hand.
 
 ### Getting results off the VM — read this first
 
@@ -404,6 +432,15 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-26 — `run_all_phases.sh`.** One script holding all 20 arms plus the screens, in
+  order: phase selection, skip-if-already-built, `DRY_RUN`, and a summary. Two bugs found
+  while smoke-testing it on a fixture: it passed `--screen-top` to the screen (which only
+  has `--top`), and — more importantly — an argparse error exits before the Python
+  `results_block` is entered, so a bad flag left **no trace in the one file that leaves the
+  VM**. The script now captures each step's output with `tee` and writes its own
+  `SHELL FAILURE` block on a non-zero exit, so command-line errors and killed processes are
+  recorded too.
 
 - **2026-08-26 — first text results, and three fixes they exposed.** T0 volume is inert on
   real data (9 features, 0 clear the 0.0149 floor, max z=1.30), so Gate 0 holds and any
