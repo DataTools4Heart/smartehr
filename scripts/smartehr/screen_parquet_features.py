@@ -181,30 +181,51 @@ def main(args):
             print("  NOTE: ridge spreads weight over all features; with a few real signals among")
             print("  hundreds of nulls, rerun with --l1-ratio 1.0 (lasso), which selects instead.")
         Xva, tva, eva = data.get("validation", (None, None, None))
-        cols = [f"x{j}" for j in range(Xtr.shape[1])]
-        tr = pd.DataFrame(Xtr, columns=cols).assign(_t=ttr, _e=etr)
+        # Effectively-constant columns make the design singular and are what broke the fit
+        # on the 183-feature baseline block (21 of them). They carry no information, so
+        # drop them before fitting rather than losing the arm's headline number.
+        keep = np.where(~flat)[0]
+        if len(keep) < Xtr.shape[1]:
+            print(f"  dropped {Xtr.shape[1]-len(keep)} effectively-constant columns before "
+                  "fitting (they make the design singular)")
+        Xtr_c = Xtr[:, keep]
+        Xva_c = Xva[:, keep] if Xva is not None else None
+        Xte_c = Xte[:, keep] if Xte is not None else None
+        cols = [f"x{j}" for j in range(Xtr_c.shape[1])]
+        tr = pd.DataFrame(Xtr_c, columns=cols).assign(_t=ttr, _e=etr)
         best = None
+        used_l1 = args.l1_ratio
         for pen in [float(p) for p in args.penalizers.split(",")]:
-            try:
-                cph = CoxPHFitter(penalizer=pen, l1_ratio=args.l1_ratio)
-                cph.fit(tr, duration_col="_t", event_col="_e")
-            except Exception as exc:
-                print(f"  penalizer={pen:<8g} fit failed: {type(exc).__name__}")
+            cph = None
+            for l1 in (args.l1_ratio, 0.0) if args.l1_ratio > 0 else (0.0,):
+                try:
+                    cph = CoxPHFitter(penalizer=pen, l1_ratio=l1)
+                    cph.fit(tr, duration_col="_t", event_col="_e")
+                    used_l1 = l1
+                    if l1 != args.l1_ratio:
+                        print(f"  penalizer={pen:<8g} lasso did not converge; "
+                              f"fell back to ridge (l1_ratio=0)")
+                    break
+                except Exception as exc:
+                    cph = None
+                    last = type(exc).__name__
+            if cph is None:
+                print(f"  penalizer={pen:<8g} fit failed: {last}")
                 continue
-            risk_tr = cph.predict_partial_hazard(pd.DataFrame(Xtr, columns=cols)).to_numpy()
+            risk_tr = cph.predict_partial_hazard(pd.DataFrame(Xtr_c, columns=cols)).to_numpy()
             c_tr = harrell_c(ttr, etr, risk_tr)
             c_va = None
             if Xva is not None:
-                risk_va = cph.predict_partial_hazard(pd.DataFrame(Xva, columns=cols)).to_numpy()
+                risk_va = cph.predict_partial_hazard(pd.DataFrame(Xva_c, columns=cols)).to_numpy()
                 c_va = harrell_c(tva, eva, risk_va)
             print(f"  penalizer={pen:<8g} train C={c_tr:.4f}  val C="
                   f"{f'{c_va:.4f}' if c_va else '  -   '}")
             score = c_va if c_va is not None else c_tr
             if score is not None and (best is None or score > best[0]):
                 best = (score, pen, cph)
-        if best and Xte is not None:
+        if best and Xte_c is not None:
             _, pen, cph = best
-            risk_te = cph.predict_partial_hazard(pd.DataFrame(Xte, columns=cols)).to_numpy()
+            risk_te = cph.predict_partial_hazard(pd.DataFrame(Xte_c, columns=cols)).to_numpy()
             c_te = harrell_c(tte, ete, risk_te)
             se = math.sqrt(0.25 / max(int(ete.sum()), 1))
             print(f"\n  selected penalizer={pen:g} -> TEST C={c_te:.4f} "
@@ -212,7 +233,12 @@ def main(args):
             verdict = ("signal" if abs(c_te - 0.5) >= 2 * se else "indistinguishable from chance")
             print(f"  verdict: {verdict}")
             emit("COX {} penalizer={:g} TEST C={:.4f} (2-SE band +/-{:.3f}) -> {}",
-                 kind, pen, c_te, 2 * se, verdict)
+                 ("ridge" if used_l1 == 0 else kind), pen, c_te, 2 * se, verdict)
+        elif not best:
+            # Without this the index shows only the univariate line and the missing
+            # headline number is easy to overlook.
+            emit("COX FAILED to converge at every penalizer ({}); no test C for this arm",
+                 args.penalizers)
 
 
 if __name__ == "__main__":
@@ -220,7 +246,8 @@ if __name__ == "__main__":
     p.add_argument("--parquet-dir", required=True)
     p.add_argument("--top", type=int, default=25, help="How many features to list.")
     p.add_argument("--cox", action="store_true", help="Also fit an L2-penalised Cox model.")
-    p.add_argument("--penalizers", default="0.01,0.1,1.0,10.0")
+    p.add_argument("--penalizers", default="0.01,0.1,1.0,10.0,100.0",
+                   help="Penalizer grid. Larger values are included because a wide, partly-collinear\n                        baseline block needs heavy shrinkage to fit at all.")
     p.add_argument("--l1-ratio", type=float, default=0.0,
                    help="0 = ridge (default), 1 = lasso. Lasso is far better at isolating a few "
                         "real features among many null ones; ridge dilutes them.")

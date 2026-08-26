@@ -433,6 +433,18 @@ to confirm that.
 
 ## 10. Changelog
 
+- **2026-08-26 — free-text arm closed (negative), and a Cox convergence fix.** 39 runs.
+  Every text-only arm sits between 0.482 and 0.521; text+demographics reaches 0.6750 against
+  a cohort-identical demographics control at 0.6727 (**+0.0023**, inside a ±0.062 band).
+  0 of 39 concept features clear their floor and 0 of 256 TF-IDF components survive
+  FDR/Bonferroni. Concept extraction is confirmed working (diabetes 28.2%, smoking 39.4%,
+  prior MI 26.2%), so this is not a terminology failure — see the curated-versus-extracted
+  table in the report's §10.1. Fix: lasso Cox failed to converge on all four 183-feature
+  baseline arms, silently removing the most important reference number. The screen now drops
+  effectively-constant columns before fitting (21 of 183 were constant and made the design
+  singular), falls back from lasso to ridge, extends the penalizer grid to 100, and emits an
+  explicit `COX FAILED` line so a missing headline number cannot be overlooked.
+
 - **2026-08-26 — `run_all_phases.sh`.** One script holding all 20 arms plus the screens, in
   order: phase selection, skip-if-already-built, `DRY_RUN`, and a summary. Two bugs found
   while smoke-testing it on a fixture: it passed `--screen-top` to the screen (which only

@@ -1,8 +1,8 @@
 # Can 15-year cardiovascular risk be predicted from raw EHR events, without manually extracted variables?
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
-Status: **numeric/structured arm complete (negative). Free-text arm not yet tested.**
-Last updated: 2026-08-24
+Status: **both arms complete. Structured/numeric: negative. Free-text: negative.**
+Last updated: 2026-08-26
 
 ---
 
@@ -23,8 +23,9 @@ to replace manual curation.
 the curated baseline. The curated baseline is the benchmark, not chance — beating 0.5 is
 not the bar.
 
-**Outcome.** The thesis is **not supported** for structured/numeric event data. Events add
-+0.0007 C over age and sex alone.
+**Outcome.** The thesis is **not supported**, for either representation. Structured events add
+**+0.0007** C over age and sex alone; clinical free text adds **+0.002** on the matched
+subcohort. Fourteen text arms all sit between 0.482 and 0.521.
 
 ---
 
@@ -147,7 +148,8 @@ the merge, the signal column does not survive at all (best C=0.528, CI 0.551).
 | H5 | Events add information on top of demographics | events + age/sex vs age/sex | **Rejected.** **0.6890 vs 0.6883 (+0.0007)** |
 | H6 | The null is an artefact of unit heterogeneity within a test code | Per-code unit tally | **Rejected.** 0 of 330 / 682 / 33 codes report a second unit in >1% of rows |
 | H7 | The null is an artefact of unbounded history: aggregating over spans of 334 days to 24 years makes one feature mean different things per patient | 365-day lookback (retains 99.8% of patients) | **Rejected.** events+demographics stayed at **~0.689**, unchanged |
-| H8 | Free text carries signal the structured data does not | — | **Not yet tested** |
+| H8 | Free text carries signal the structured data does not | 14 text arms (TF-IDF word/char/sections/de-identified, concepts binary/count/sections), matched controls, penalised Cox | **Rejected.** Every text-only arm 0.482–0.521; text+demographics 0.6750 vs demographics-only 0.6727 on the identical subcohort (**+0.0023**, inside a ±0.062 band) |
+| H9 | A concept null means the Dutch terminology failed, not the hypothesis | Per-concept prevalence | **Rejected.** Extraction works at clinically plausible rates (diabetes 28.2%, smoking 39.4%, prior MI 26.2%, hypertension 40.0%); negation behaves sensibly (heart failure negated 1,678 > asserted 1,004). The concepts are found and still do not predict |
 
 ---
 
@@ -307,16 +309,80 @@ Common flags for step 3: `--legacy --landmark-days 180 --horizon-days 5475`.
 
 ---
 
-## 10. Conclusion
+## 10. The free-text arm
 
-Structured EHR event data in this cohort carries **no detectable 15-year prognostic signal**
-beyond age and sex, while ~20 expert-curated baseline variables reach C=0.755 and ~18 of
-them reach 0.7547 without any demographics. The result survives landmarking at three
+Landmark 180, horizon 5475, same cohort and splits. 121,778 narrative documents,
+46.4M tokens, four report columns. Because 28% of the cohort has no narrative text, the
+headline arms run on the **`--require-text` subcohort** (9,644 patients; train 6,210 /
+828 events; test 1,924 / 257 events) against a **cohort-identical** control.
+
+| arm | test C |
+|---|---|
+| demographics (age+sex), matched control | **0.6727** |
+| TF-IDF + demographics | 0.6750 |
+| concepts + demographics | 0.6749 |
+| concepts, history sections | 0.5212 |
+| volume only (T0 gate) | 0.5197 |
+| concepts (binary) | 0.5114 |
+| TF-IDF, conclusion section | 0.5089 |
+| TF-IDF char 3–5 grams | 0.4963 |
+| TF-IDF word | 0.4914 |
+| TF-IDF, history sections | 0.4897 |
+| TF-IDF, 3 sources (no truncated one) | 0.4907 |
+| TF-IDF, physician names stripped | 0.4821 |
+
+Full cohort, for reference: demographics 0.6883, TF-IDF word 0.4957, volume 0.5202.
+
+**Text adds +0.0023 over age and sex**, inside a ±0.062 noise band. Univariately, 0 of 39
+concept features clear their floor; TF-IDF produces 20 of 256 above a raw 2-SE threshold
+against ~12 expected from noise, and **0 survive FDR or Bonferroni**. The T0 volume gate is
+inert (0 of 9, max z=1.44), so this is not a note-volume artefact.
+
+### 10.1 The decisive comparison
+
+Extraction is not the failure. Concepts are found at clinically plausible rates —
+revascularisation 46.4%, hypertension 40.0%, smoking 39.4%, hyperlipidaemia 36.5%,
+stenosis 31.2%, diabetes 28.2%, prior MI 26.2%, angina 22.1%, renal 21.0%, stroke/TIA 17.2%,
+peripheral disease 14.3%, heart failure 10.4%, atrial fibrillation 7.7% — and negation
+behaves sensibly (heart failure negated in 1,678 patients versus asserted in 1,004, which is
+what "geen decompensatie" in a routine letter should produce).
+
+Yet the **same clinical concept** predicts when curated and does not when extracted from
+text, on the same patients, outcome and screen (train C):
+
+| concept | curated variable | text-extracted |
+|---|---|---|
+| diabetes | `vz_DM` 0.5472, `vz_t2d` 0.5480 | `diabetes_present` **0.4859** |
+| smoking | `roken` 0.5654, `packyrs` 0.6066 | `roken_present` **0.5023** |
+| cardiac history | `vz_hart` 0.5635, `vgt_hart` 0.5718 | `myocardinfarct_present` **0.4917** |
+| renal function | `labkrea` 0.6168, `MDRD` 0.3885, `klar_coc` 0.3634 | `nierfunctie_present` **0.4893** |
+| carotid stenosis | `stenACIl` 0.6420, `stenACIr` 0.6400 | `stenose_present` **0.4924** |
+| hypertension | `vz_hypt` 0.5508, `bdsys` 0.5747 | `hypertensie_present` **0.4965** |
+| lipids | `labtrig` 0.5303, `labhdl` 0.4657 | `hyperlipidemie_present` **0.4873** |
+
+**106 of 183** curated features clear the floor; **0 of 39** text concepts do.
+
+The difference is not *which facts* are recorded but *how*. A curated variable is a graded,
+protocol-measured quantity (pack-years, systolic pressure, creatinine, percent stenosis);
+its text counterpart is a binary mention, undated within the window, written for clinical
+communication rather than measurement. Mentioning diabetes does not encode how long or how
+badly; mentioning stenosis does not encode 40% versus 90%. That graded information is what
+the curated variables carry and the prose does not.
+
+## 11. Conclusion
+
+Neither structured EHR events nor clinical free text carries **detectable 15-year
+prognostic signal beyond age and sex** in this cohort: events add +0.0007 and text +0.002,
+while expert-curated baseline variables reach C=0.755 and retain 0.7547 without any
+demographics. Fourteen text arms span 0.482–0.521. The result survives landmarking at three
 origins, pivoting that recovers the full same-day panels, recovery of thresholded lab
 values, tokenised diagnosis codes, a bounded 365-day feature window, permutation-calibrated
 significance, multiple-testing correction over effective tests, a validated positive
 control, and an explicit demographics decomposition confirming the comparison is fair.
 
-Manual curation is therefore not redundant here, and the likely reason is that the
-information it captures is a *protocol measurement*, not merely a *measurement*. The
-untested free-text arm remains the open question.
+Manual curation is therefore not redundant here, and the reason is now specific rather
+than speculative: the same clinical concepts are present in the notes at plausible rates
+(§10.1) and still do not predict, because prose records *that* a condition was mentioned
+while the curated variable records *how much* — pack-years, systolic pressure, creatinine,
+percent stenosis. What curation contributes is graded, protocol measurement, not the
+presence of the fact. Both representations are now closed.
