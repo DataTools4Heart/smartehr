@@ -239,7 +239,7 @@ def compile_concepts(concepts):
             for c, terms in concepts.items()}
 
 
-def concept_features(text_by_pid, pids, concepts, window=6):
+def concept_features(text_by_pid, pids, concepts, window=6, encoding="binary"):
     """Assertion / negation / uncertainty counts per concept.
 
     Negation and uncertainty are scoped to the preceding `window` tokens and never cross a
@@ -269,7 +269,13 @@ def concept_features(text_by_pid, pids, concepts, window=6):
                     data[f"concept.{concept}_uncertain"][i] += 1
                 else:
                     data[f"concept.{concept}_present"][i] += 1
-    return pd.DataFrame(data)
+    out = {}
+    for name, vec in data.items():
+        if encoding in ("count", "both"):
+            out[name + ("_n" if encoding == "both" else "")] = vec
+        if encoding in ("binary", "both"):
+            out[name] = (vec > 0).astype(float)
+    return pd.DataFrame(out)
 
 
 def expand_concepts(concepts, train_texts, top_k, say, min_lift=3.0, min_docs=25):
@@ -384,6 +390,9 @@ def main(args):
 
     say(f"  ARGS: mode={args.mode} landmark={LM} lookback={LB} horizon={H} "
         f"section={args.section} analyzer={args.analyzer} svd={args.svd_components} "
+        f"require_text={args.require_text} strip_dates={args.strip_dates} "
+        f"strip_names={args.strip_names} strip_nameish={args.strip_nameish} "
+        f"concept_encoding={args.concept_encoding} expand_terms={args.expand_terms} "
         f"add_baseline_cols={args.add_baseline_cols!r} min_coverage_frac={args.min_coverage_frac}")
 
     cohort, notes = build_cohort(args.smart_csv, args.legacy, args.censoring_time)
@@ -511,11 +520,33 @@ def main(args):
             concepts = {k: list(v) for k, v in CONCEPTS.items()}
             concepts, added = expand_concepts(
                 concepts, [texts[i] for i in train_rows], args.expand_terms, say)
-            X = concept_features(text_by_pid, pids, concepts)
-            nz = int((X.to_numpy() > 0).any(axis=0).sum())
-            say(f"  {X.shape[1]} concept features ({nz} non-empty) from "
+            X = concept_features(text_by_pid, pids, concepts,
+                                 encoding=args.concept_encoding)
+            # Prevalence is essential to interpret a flat C: a concept that fires for 40
+            # patients and one that fires for 8,000 both produce C ~ 0.5, for opposite
+            # reasons. Without this the concept null cannot be read at all.
+            say(f"  {X.shape[1]} concept features (encoding={args.concept_encoding}) from "
                 f"{len(concepts)} concepts x present/negated/uncertain")
-            rep = "text_concepts"
+            say(f"  {'concept':<26s} {'asserted':>9s} {'negated':>9s} {'uncertain':>9s}"
+                f"   (patients, % of those with text)")
+            n_txt = max(len(text_by_pid), 1)
+            prev = {}
+            for c in sorted(concepts):
+                row = []
+                for k in ("present", "negated", "uncertain"):
+                    col = f"concept.{c}_{k}"
+                    col = col if col in X.columns else col + "_n"
+                    row.append(int((X[col].to_numpy() > 0).sum()) if col in X.columns else 0)
+                prev[c] = row
+                say(f"  {c:<26s} {row[0]:9,} {row[1]:9,} {row[2]:9,}"
+                    f"   ({100*row[0]/n_txt:.1f}% asserted)")
+            top = sorted(prev.items(), key=lambda kv: -kv[1][0])[:4]
+            emit("concept prevalence (asserted, of {} patients with text): {}", n_txt,
+                 ", ".join(f"{c}={v[0]}" for c, v in top))
+            never = [c for c, v in prev.items() if sum(v) == 0]
+            if never:
+                emit("concepts NEVER matched: {}", ",".join(never))
+            rep = f"text_concepts[{args.concept_encoding}]"
         else:
             raise SystemExit(f"unknown --mode {args.mode}")
 
@@ -536,7 +567,8 @@ def main(args):
                        "require_text": args.require_text,
                        "strip_dates": args.strip_dates, "strip_names": args.strip_names,
                        "strip_nameish": args.strip_nameish,
-                       "expand_terms": args.expand_terms})
+                       "expand_terms": args.expand_terms,
+                       "concept_encoding": args.concept_encoding})
 
 
 if __name__ == "__main__":
@@ -579,6 +611,11 @@ if __name__ == "__main__":
                         "main lever against templated boilerplate.")
     p.add_argument("--svd-components", type=int, default=256,
                    help="0 disables SVD and feeds dense TF-IDF (watch the event budget).")
+    p.add_argument("--concept-encoding", default="binary",
+                   choices=("binary", "count", "both"),
+                   help="binary (default) asks whether the patient HAS the concept, which is "
+                        "the clinically meaningful question; a raw count mostly tracks how many "
+                        "notes the patient has (up to 589) and note volume is inert.")
     p.add_argument("--expand-terms", type=int, default=0,
                    help="Unsupervised synonyms per concept, mined from the TRAIN corpus by "
                         "co-occurrence lift. The outcome is never used. 0 disables.")
@@ -612,6 +649,8 @@ if __name__ == "__main__":
                             "lookback": a.lookback_days, "horizon": a.horizon_days,
                             "section": a.section, "analyzer": a.analyzer,
                             "require_text": a.require_text,
+                            "strip_nameish": a.strip_nameish,
+                            "concept_encoding": a.concept_encoding,
                             "add_baseline": a.add_baseline_cols,
                             "baseline_cols": a.baseline_cols, "out": a.out_dir}):
             main(a)

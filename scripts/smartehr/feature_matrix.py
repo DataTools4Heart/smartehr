@@ -111,7 +111,6 @@ def screen_raw(X, cohort, train_rows, H, say, top=30):
     independent tests. Screening the written parquet instead would understate any
     low-coverage feature, because median-filling the unmeasured majority pulls C to 0.5.
     """
-    n_all_pat = len(cohort)
     t_abs = cohort["first_event"].to_numpy(float)[train_rows]
     e_abs = cohort["cd_event"].to_numpy(int)[train_rows]
     cens = [apply_censoring(t, e, H) for t, e in zip(t_abs, e_abs)]
@@ -168,16 +167,18 @@ def screen_raw(X, cohort, train_rows, H, say, top=30):
         f"(~{0.05*n_eff:.0f} expected from noise)")
     say(f"  surviving Benjamini-Hochberg FDR 5%: {n_bh:,} | "
         f"surviving Bonferroni (p<{bonf:.1e}): {n_bonf:,}  <- believe these, not the raw count")
-    say(f"  {'feature':<40s} {'C_mono':>7s} {'C_udev':>7s} {'cov%':>6s} {'ev':>5s} "
+    n_train = max(len(train_rows), 1)
+    say(f"  {'feature':<40s} {'C_mono':>7s} {'C_udev':>7s} {'trn%':>6s} {'ev':>5s} "
         f"{'z':>5s} {'sig':>9s}")
     for (margin, c, ci, cu, cov, ev_c, thr), pv in zip(rows[:top],
                                                        [pvals[i] for i in range(min(top, n_tests))]):
         z = (margin + thr) / (thr / 2) if thr > 0 else 0.0
         tag = "BONF" if pv <= bonf else ("FDR" if pv <= bh_cut else ("raw2SE" if margin >= 0 else ""))
         say(f"  {c[:40]:<40s} {ci:7.4f} {(f'{cu:.4f}' if cu else '   -  '):>7s} "
-            f"{100*cov/n_all_pat:5.1f}% {ev_c:5,} {z:5.2f} {tag:>9s}")
-    say("  cov% is the share of the cohort carrying the value: a feature covering a few")
-    say("  percent cannot drive a cohort-level model, however real its subcohort signal.")
+            f"{100*cov/n_train:5.1f}% {ev_c:5,} {z:5.2f} {tag:>9s}")
+    say("  trn% is the share of the TRAIN split carrying a value (the screen is train-only);")
+    say("  a feature covering a few percent cannot drive a cohort-level model, however real")
+    say("  its subcohort signal. Count/indicator features are never missing, so they read 100%.")
     if not n_clear and 0.05 * n_eff >= 3:
         say(f"  ** 0 cleared vs ~{0.05*n_eff:.0f} expected from noise across {n_eff:,} independent")
         say("     tests: mildly surprising, check for flattened columns. **")

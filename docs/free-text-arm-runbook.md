@@ -234,8 +234,19 @@ identity rather than clinical content.
 ### T2 — clinical concepts (most directly on-question)
 
 ```bash
-python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode concepts --screen-features --out-dir T2_concepts
+python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode concepts --require-text --screen-features --out-dir T2_concepts
 ```
+
+**Read the prevalence table before the C-indices.** The builder prints, per concept, how
+many patients have it asserted / negated / uncertain, and emits a `concepts NEVER matched`
+line. A concept that fires for 40 patients and one that fires for 8,000 both give C ≈ 0.5,
+for opposite reasons — a flat C is uninterpretable without knowing which. If a core SMART
+variable such as diabetes never matched, the terminology is wrong, not the hypothesis.
+
+Encoding defaults to `--concept-encoding binary`: whether the patient *has* the concept.
+A raw count mostly tracks how many notes they have (up to 589 documents per patient) and
+note volume is inert, so counts inject noise. Use `--concept-encoding both` only to check
+whether frequency adds anything.
 
 Optional unsupervised synonym expansion (train corpus only; the outcome is never used, so
 it cannot bias the estimate the way supervised term selection would). Every added term is
@@ -370,6 +381,8 @@ straight in.
 | every univariate C ≈ 0.5 in `screen_parquet_features` but the raw screen found signal | low-coverage features median-imputed into near-constant columns | raise `--min-coverage-frac`; trust the raw screen |
 | Cox "low variance" / zero-division warnings | near-constant columns | raise `--min-coverage-frac` |
 | TF-IDF vocabulary implausibly small | `--max-df` removed the boilerplate, which was most of the text | expected; check Phase 0's boilerplate fraction |
+| `trn%` looks low for a count/indicator feature | it is the share of the TRAIN split with a value; counts are never missing so they read 100%. (Before 2026-08-26 this column was mislabelled `cov%` and divided by the full cohort, understating every value by the train fraction) | none needed; re-read old screens with that scaling in mind |
+| every concept C sits at ~0.5 | may be genuine, or the concept never matched | read the prevalence table and the `concepts NEVER matched` line first |
 | a `--require-text` arm looks better/worse than 0.6883 | that benchmark is a full-cohort number and does not apply to the subcohort | build `--mode baseline --require-text` and compare against that |
 | a concept fires implausibly often | a term is matching inside a longer Dutch compound | terms are word-boundary anchored, but check `CONCEPTS` for a short term that is a real substring of a common word |
 | `0 of N features clear the floor, ~M expected` | correlated features are not N independent tests | the screen reports effective tests; compare against that, not N |
@@ -391,6 +404,22 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-26 — first text results, and three fixes they exposed.** T0 volume is inert on
+  real data (9 features, 0 clear the 0.0149 floor, max z=1.30), so Gate 0 holds and any
+  content gain is attributable to content. T1 TF-IDF word on the text subcohort: 20 of 256
+  components clear the raw 2-SE floor against ~12 expected from noise, but **0 survive
+  FDR or Bonferroni**. T2 concepts: all 39 features between 0.4886 and 0.5045, nothing
+  clearing. Fixes: (1) the screen's coverage column divided train-row counts by the FULL
+  cohort, understating every `cov%` by the train fraction — now reported as `trn%` against
+  the train split; (2) concept features were counts, which mostly track note volume, so
+  `--concept-encoding` now defaults to **binary**; (3) the builder now prints per-concept
+  prevalence and a `concepts NEVER matched` line, without which a flat concept C cannot be
+  interpreted at all. The ARGS echo and results context now include `strip_nameish`,
+  `require_text` and `concept_encoding`, which were previously unverifiable from the log.
+  Note the unsupervised `--expand-terms` output is mixed: plausible additions
+  (`novomix`/`solostar` for diabetes, `chadsvasc`/`aflutter` for atrial fibrillation)
+  alongside clear noise (`uitspreken`, `trials`, `smart1`), so keep it off by default.
 
 - **2026-08-26 — one-file results log.** Every script now appends its run to a single
   append-only markdown file (`--results-file`, folded into `$COMMON`), because results
