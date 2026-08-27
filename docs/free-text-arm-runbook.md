@@ -17,7 +17,7 @@ belongs here, not only in conversation.
 | 1 | document cache + T0 volume | `prepare_text_features.py --mode volume` | **ready** |
 | 1 | T1 TF-IDF (+ variants) | `--mode tfidf` | **ready** |
 | 1 | T2 clinical concepts | `--mode concepts` | **ready** |
-| 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | ready, **gated** (see §6) |
+| 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | **planned — see `docs/t3-frozen-llm-plan.md`** |
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
 | — | **one-file results log** (all scripts append) | `results_log.py` → `$RESULTS` | **ready** |
@@ -438,6 +438,17 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-27 — T3 planned (`docs/t3-frozen-llm-plan.md`).** T3 is motivated by the
+  report's own §10.1 interpretation rather than by model size: the grading that TF-IDF and
+  binary concepts discard *is* present in the prose, so representations preserving it are a
+  falsifiable next test. Two design points matter most. A **headroom check runs first with
+  no GPU** — splitting the curated variables into chart-derivable versus protocol-measured
+  bounds what any text method could achieve, and can end the arm early with a stronger
+  result than another null. And **model, prompt, pooling and dimensionality are selected
+  outcome-blind**, by probing whether an embedding recovers curated variables we already
+  have labels for, which both avoids selecting on 828 events and makes a third null
+  informative rather than inconclusive.
 
 - **2026-08-27 — upper references recovered; arm complete.** Re-screening after the
   convergence fix produced the four numbers that were previously missing: full curated
