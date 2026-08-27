@@ -89,8 +89,12 @@ Because `--results-file` is inside `$COMMON`, every command below already writes
 scripts that do not take `$COMMON` (the screen), pass `--results-file $RESULTS` explicitly —
 the examples do.
 
-When you download it, paste the whole file. If it has grown large, the `## Index` section
-alone is enough for me to decide the next step.
+When you download it, paste the whole file — or drop it into the repo, which is easier and
+avoids the paste limit entirely. `results/` is gitignored, so a snapshot worth keeping goes
+to `docs/results-log.md` and is committed alongside the report it supports.
+
+If the file has grown large, the `## Index` section alone is enough for me to decide the
+next step.
 
 Landmark 180 and horizon 5475 are fixed so every arm is comparable with the structured
 results. Landmark 180 is what raises text coverage from 89% to 95%; it excludes patients
@@ -444,7 +448,8 @@ to confirm that.
   `STRUCT_ctrl` (pivot builder `--positive-control`) both return **0.7576**, identical to
   four decimals from two independently written code paths — the strongest available check
   that the two builders really do share cohort, target, splits and standardisation.
-  The results log is committed at `results/ALL_RESULTS.md` (58 runs) as provenance.
+  `results/` is gitignored (runtime outputs), so the log snapshot is committed at
+  `docs/results-log.md` (58 runs) as provenance for every number in the report.
 
 - **2026-08-26 — free-text arm closed (negative), and a Cox convergence fix.** 39 runs.
   Every text-only arm sits between 0.482 and 0.521; text+demographics reaches 0.6750 against
