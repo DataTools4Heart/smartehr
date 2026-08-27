@@ -103,13 +103,15 @@ cohort has no narrative text (§1.1).
 
 | reference | test C |
 |---|---|
-| full curated SMART baseline | 0.7553 |
+| full curated SMART baseline | 0.7576 |
 | curated baseline without age/sex | 0.7547 |
 | structured events + demographics | 0.6890 |
 | **demographics (age+sex) only** | **0.6883** ← the bar for a FULL-cohort text arm |
 | structured events only | ~0.50 |
 
-*`--require-text` subcohort (9,644 patients): these numbers DO NOT APPLY.* A text arm run
+*`--require-text` subcohort (9,644 patients), measured:* full curated baseline **0.7394**,
+demographics **0.6727**, best text arm 0.6750, text alone 0.482–0.521. The full-cohort
+numbers above DO NOT APPLY to this subcohort. A text arm run
 with `--require-text` sits on a healthier-or-sicker, differently-sized cohort, so it must be
 compared against a control built on **exactly those patients**:
 
@@ -432,6 +434,17 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-27 — upper references recovered; arm complete.** Re-screening after the
+  convergence fix produced the four numbers that were previously missing: full curated
+  baseline **0.7576** (full cohort) and **0.7394** (text subcohort). The cause was confirmed
+  from the log — `dropped 21 effectively-constant columns before fitting` — after which
+  lasso converged at every penalizer, so it was the singular design and not the penalty
+  type. Unplanned bonus: `CTRL_full_full` (text builder `--mode baseline`) and
+  `STRUCT_ctrl` (pivot builder `--positive-control`) both return **0.7576**, identical to
+  four decimals from two independently written code paths — the strongest available check
+  that the two builders really do share cohort, target, splits and standardisation.
+  The results log is committed at `results/ALL_RESULTS.md` (58 runs) as provenance.
 
 - **2026-08-26 — free-text arm closed (negative), and a Cox convergence fix.** 39 runs.
   Every text-only arm sits between 0.482 and 0.521; text+demographics reaches 0.6750 against

@@ -134,6 +134,11 @@ the merge, the signal column does not survive at all (best C=0.528, CI 0.551).
   outcome. Asserted and confirmed **= 0** at landmarks 0, 90 and 180.
 - **Argument echo.** The arm-defining flags are logged, because a flag that never reached
   the process is otherwise indistinguishable in the output from a genuine null.
+- **Cross-path agreement.** The full curated baseline reaches test C = **0.7576** whether
+  built by the pivot builder's `--positive-control` or the text builder's
+  `--mode baseline --baseline-cols all` — two independently written code paths, identical to
+  four decimals. That is the strongest available check that cohort, target, splits and
+  standardisation are shared rather than merely intended to be.
 
 ---
 
@@ -318,6 +323,7 @@ headline arms run on the **`--require-text` subcohort** (9,644 patients; train 6
 
 | arm | test C |
 |---|---|
+| full curated baseline (183 vars), matched control | **0.7394** |
 | demographics (age+sex), matched control | **0.6727** |
 | TF-IDF + demographics | 0.6750 |
 | concepts + demographics | 0.6749 |
@@ -331,7 +337,15 @@ headline arms run on the **`--require-text` subcohort** (9,644 patients; train 6
 | TF-IDF, 3 sources (no truncated one) | 0.4907 |
 | TF-IDF, physician names stripped | 0.4821 |
 
-Full cohort, for reference: demographics 0.6883, TF-IDF word 0.4957, volume 0.5202.
+Full cohort, for reference: full curated baseline **0.7576**, demographics 0.6883,
+TF-IDF word 0.4957, volume 0.5202.
+
+So on the identical subcohort the ladder is **0.7394 curated → 0.6750 text+demographics →
+0.6727 demographics → ~0.49 text alone**: curation adds **+0.064** over text plus
+demographics, while text adds **+0.0023** over demographics.
+
+(The 0.7576 here and the 0.7553 quoted in §5 are the same arm fitted two ways — ridge
+earlier, lasso once the 21 constant columns were dropped. Both are the upper reference.)
 
 **Text adds +0.0023 over age and sex**, inside a ±0.062 noise band. Univariately, 0 of 39
 concept features clear their floor; TF-IDF produces 20 of 256 above a raw 2-SE threshold
@@ -373,8 +387,8 @@ the curated variables carry and the prose does not.
 
 Neither structured EHR events nor clinical free text carries **detectable 15-year
 prognostic signal beyond age and sex** in this cohort: events add +0.0007 and text +0.002,
-while expert-curated baseline variables reach C=0.755 and retain 0.7547 without any
-demographics. Fourteen text arms span 0.482–0.521. The result survives landmarking at three
+while expert-curated baseline variables reach C=0.7576 (0.7394 on the text subcohort) and
+retain 0.7547 without any demographics. Fourteen text arms span 0.482–0.521. The result survives landmarking at three
 origins, pivoting that recovers the full same-day panels, recovery of thresholded lab
 values, tokenised diagnosis codes, a bounded 365-day feature window, permutation-calibrated
 significance, multiple-testing correction over effective tests, a validated positive
