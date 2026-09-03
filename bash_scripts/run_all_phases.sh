@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 t0 t1 t2 ctrl struct screens t3
+# Phases: p0 t0 t1 t2 incr sens ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -53,7 +53,7 @@ TEXT=("${COMMON[@]}" --cache "$CACHE")
 
 mkdir -p "$OUT" "$(dirname "$RESULTS")" "$(dirname "$CACHE")"
 PHASES=("$@")
-[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 ctrl struct screens)
+[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens ctrl struct screens)
 declare -a FAILED=() SKIPPED=() RAN=()
 
 want() { for p in "${PHASES[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
@@ -161,6 +161,28 @@ if want t2; then
   step "t2 concepts history sections" "$OUT/T2_concepts_history" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode concepts --require-text \
       --section "voorgeschiedenis,anamnese" --out-dir "$OUT/T2_concepts_history"
+  # The earlier, conflated term lists: measurement terms such as egfr and cholesterol fire
+  # on NORMAL values, so this arm measures "a quantity was reported" rather than "disease is
+  # present". Kept only to compare against the corrected default.
+  step "t2 concepts all-tiers (conflated)" "$OUT/T2_concepts_alltiers" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode concepts --require-text \
+      --concept-terms "disease,symptom,measurement,medication,procedure" \
+      --screen-features --out-dir "$OUT/T2_concepts_alltiers"
+fi
+
+# ---- incr: does text add anything ON TOP OF the complete curated baseline? This is the
+#            question that matters in practice -- the curated variables already exist, so
+#            the only interesting increment is over all 183 of them, not over age and sex.
+if want incr; then
+  step "incr concepts + FULL baseline" "$OUT/INCR_concepts_full" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode concepts --require-text \
+      --add-baseline-cols all --screen-features --out-dir "$OUT/INCR_concepts_full"
+  step "incr tfidf + FULL baseline" "$OUT/INCR_tfidf_full" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode tfidf --require-text \
+      --svd-components "$SVD" --add-baseline-cols all --out-dir "$OUT/INCR_tfidf_full"
+  step "incr volume + FULL baseline" "$OUT/INCR_volume_full" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode volume --require-text \
+      --add-baseline-cols all --out-dir "$OUT/INCR_volume_full"
 fi
 
 # ---- ctrl: the denominators. A --require-text arm sits on a different cohort, so
@@ -178,6 +200,16 @@ if want ctrl; then
   step "ctrl full baseline (full cohort)" "$OUT/CTRL_full_full" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline \
       --baseline-cols all --out-dir "$OUT/CTRL_full_full"
+fi
+
+# ---- sens: ok.OMSCHR is the OPERATION description, and its median row is +98 days, so it
+#            is mostly post-baseline treatment. Legitimate at a day-180 prediction point,
+#            but this arm quantifies how much of the structured result depends on it.
+if want sens; then
+  step "sens structured without ok.OMSCHR" "$OUT/SENS_no_omschr" \
+    "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
+      --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
+      --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
 fi
 
 # ---- struct: re-confirm the plumbing once per session. If the curated baseline does

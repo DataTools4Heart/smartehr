@@ -354,6 +354,19 @@ inert (0 of 9, max z=1.44), so this is not a note-volume artefact.
 
 ### 10.1 The decisive comparison
 
+**Correction (2026-08-27, after clinical review).** The concept term lists used for the
+numbers below mixed three different kinds of mention. `nierfunctie` included `egfr` and
+`creatinineklaring`, which fire on *"eGFR 95 ml/min"* — i.e. **normal** kidney function — so
+that feature measured "renal function was reported", not "renal disease is present".
+`hyperlipidemie` included `cholesterol` (fires on a normal lipid value) and `statine`;
+`diabetes`, `hypertensie` and `roken` included medication or quantity terms. And
+`perifeer_vaatlijden` included `aneurysma`, which is a **different disease**, not peripheral
+arterial disease. Terms are now tiered (disease / symptom / measurement / medication /
+procedure) with disease+symptom the default, `aneurysma` split into its own concept, and
+`--concept-terms all` retained to reproduce the conflated behaviour. The arms below are
+being re-run; the conflated versions understate the concept arm if anything, because part of
+what they encoded was "a quantity was mentioned" rather than any assertion about the patient.
+
 Extraction is not the failure. Concepts are found at clinically plausible rates —
 revascularisation 46.4%, hypertension 40.0%, smoking 39.4%, hyperlipidaemia 36.5%,
 stenosis 31.2%, diabetes 28.2%, prior MI 26.2%, angina 22.1%, renal 21.0%, stroke/TIA 17.2%,

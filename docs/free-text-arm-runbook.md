@@ -55,8 +55,8 @@ data paths (above) and run:
 ./bash_scripts/run_all_phases.sh t1 t2 screens
 ```
 
-- Phases: `p0 t0 t1 t2 ctrl struct screens t3`. With no arguments it runs everything except
-  `t3`.
+- Phases: `p0 t0 t1 t2 incr sens ctrl struct screens t3`. With no arguments it runs
+  everything except `t3`.
 - **Arms that already exist are skipped**, so re-running after adding one arm is cheap.
   `FORCE=1` redoes them.
 - `DRY_RUN=1` prints the commands without running any.
@@ -438,6 +438,19 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-08-27 — clinical review: tiered concept terms, incremental-value arms, OMSCHR
+  sensitivity.** The concept term lists conflated disease assertions with measurements and
+  medications: `nierfunctie` contained `egfr`/`creatinineklaring`, which fire on a NORMAL
+  eGFR, so the feature measured "renal function was reported" rather than renal disease;
+  `hyperlipidemie` contained `cholesterol`; and `perifeer_vaatlijden` contained `aneurysma`,
+  a different disease. Terms are now tiered (disease / symptom / measurement / medication /
+  procedure), default `disease,symptom`, `aneurysma` is its own concept, and
+  `--concept-terms all` reproduces the old behaviour for comparison. **T2 needs re-running.**
+  New `incr` phase adds text on top of the FULL 183-variable curated baseline — the
+  practically relevant increment, and never previously run. New `sens` phase rebuilds the
+  structured arm without `ok.OMSCHR`, whose median row is +98 days and which therefore
+  contributes mostly post-baseline treatment.
 
 - **2026-08-27 — T3 planned (`docs/t3-frozen-llm-plan.md`).** T3 is motivated by the
   report's own §10.1 interpretation rather than by model size: the grading that TF-IDF and

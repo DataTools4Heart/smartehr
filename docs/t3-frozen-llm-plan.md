@@ -45,6 +45,33 @@ baseline **0.7394**, demographics **0.6727**, best text arm so far **0.6750**, t
 
 ---
 
+## 2b. Prerequisites from clinical review (2026-08-27)
+
+Three items raised by the data manager / clinical researcher come **before** any T3 work,
+because two of them change what the existing numbers mean.
+
+1. **`ok.OMSCHR` — can it be used?** It is the *operation* description (per the project's own
+   data dictionary), and its median row sits at **+98 days**, with 16,671 of 35,117 rows
+   post-baseline. Under the day-180 landmark it is formally available and the leakage
+   invariant prints 0, but it contributes mostly **post-baseline treatment** — "this patient
+   had a CABG two months after enrolment". That is legitimate for a model anchored at day
+   180, which is what every arm here is, and inadmissible for one framed as "risk at
+   enrolment". It is used only in the structured arm's occurrence pivot, never in the text
+   arm, so the practical exposure is small — quantified by the `sens` phase, which rebuilds
+   the structured arm without it.
+2. **`perifeer_vaatlijden` and `nierfunctie` — issue or quantity?** Both were conflated, and
+   the review was right. Fixed by tiering the term lists (see the report's §10.1 correction);
+   `nierfunctie` no longer fires on a normal eGFR, and `aneurysma` is now its own concept
+   rather than being counted as peripheral arterial disease. **T2 must be re-run before T3
+   is interpreted**, since the concept arm was the most on-question of the two nulls.
+3. **T2 + the full curated baseline.** Never run: the concept arm was only ever compared
+   against demographics. The practically relevant increment is over **all 183 curated
+   variables**, because those already exist in this cohort. Added as the `incr` phase, for
+   concepts, TF-IDF and volume alike, against the `CTRL_full_rt` reference of 0.7394.
+
+Item 3 also sharpens T3's own success criterion: if text adds nothing over the full curated
+baseline, then a frozen-LLM arm has to beat 0.7394 rather than 0.6727 to matter clinically.
+
 ## 3. T3-0 — the headroom check (no GPU, do this FIRST)
 
 Before spending GPU time, establish whether *any* text method could help, by asking what

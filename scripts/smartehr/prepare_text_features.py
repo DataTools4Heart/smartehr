@@ -69,25 +69,92 @@ SECTION_SPLIT = re.compile(
     r"lichamelijk onderzoek|samenvatting|advies|klinische gegevens)\b\s*:?", re.I)
 TOKEN_PAT = re.compile(r"[a-z0-9]+")
 
-# --- Dutch clinical concepts: the SMART-adjacent variables that get stated in prose -----
+# --- Dutch clinical concepts, TIERED -----------------------------------------------------
+# Terms are separated by what a mention actually asserts, because mixing the tiers conflates
+# two different questions. `egfr` fires on "eGFR 95 ml/min" — i.e. NORMAL kidney function —
+# so a list containing it measures "renal function was reported", not "renal disease is
+# present". The same held for `cholesterol` (fires on a normal lipid value), for the
+# medication proxies, and for `pakjaren` (a quantity, not a status). `aneurysma` was worse
+# than a tier error: an aneurysm is a different disease from peripheral arterial disease, so
+# it is now its own concept.
+#
+# The default tier set is therefore disease+symptom: what the note ASSERTS about the patient.
+# `--concept-terms all` reproduces the earlier, conflated behaviour for comparison.
 CONCEPTS = {
-    "roken":            ["roken", "roker", "rookt", "nicotine", "sigaretten", "pakjaren"],
-    "diabetes":         ["diabetes", "suikerziekte", "insuline", "metformine", "dm2", "dm ii"],
-    "myocardinfarct":   ["myocardinfarct", "hartinfarct", "stemi", "nstemi", "infarct"],
-    "cva_tia":          ["cva", "herseninfarct", "tia", "beroerte", "hersenbloeding"],
-    "hartfalen":        ["hartfalen", "decompensatio cordis", "decompensatie",
-                         "ejectiefractie verlaagd", "hfref", "hfpef"],
-    "nierfunctie":      ["nierinsufficientie", "nierfalen", "chronische nierschade",
-                         "dialyse", "egfr", "creatinineklaring"],
-    "perifeer_vaatlijden": ["perifeer arterieel vaatlijden", "claudicatio", "etalagebenen",
-                            "pav", "aneurysma"],
-    "hypertensie":      ["hypertensie", "hoge bloeddruk", "antihypertensiva"],
-    "hyperlipidemie":   ["hypercholesterolemie", "dyslipidemie", "statine", "cholesterol"],
-    "atriumfibrilleren": ["atriumfibrilleren", "boezemfibrilleren", "vkf"],
-    "angina":           ["angina pectoris", "thoracale klachten", "pijn op de borst"],
-    "stenose":          ["stenose", "vernauwing", "occlusie"],
-    "revascularisatie": ["pci", "dotter", "stent", "cabg", "bypass"],
+    "roken": {
+        "disease": ["roken", "roker", "rookt", "nicotine", "sigaretten", "rookgedrag"],
+        "measurement": ["pakjaren", "packyears"],
+    },
+    "diabetes": {
+        "disease": ["diabetes", "diabetes mellitus", "suikerziekte", "dm2", "dm ii"],
+        "medication": ["insuline", "metformine", "gliclazide"],
+    },
+    "myocardinfarct": {
+        "disease": ["myocardinfarct", "hartinfarct", "stemi", "nstemi", "infarct"],
+    },
+    "cva_tia": {
+        "disease": ["cva", "herseninfarct", "tia", "beroerte", "hersenbloeding"],
+    },
+    "hartfalen": {
+        "disease": ["hartfalen", "decompensatio cordis", "hfref", "hfpef"],
+        "measurement": ["ejectiefractie verlaagd", "ejectiefractie"],
+    },
+    "nierfunctie": {
+        "disease": ["nierinsufficientie", "nierfalen", "chronische nierschade", "nierschade",
+                    "nierfunctiestoornis"],
+        "procedure": ["dialyse", "hemodialyse", "niertransplantatie"],
+        "measurement": ["egfr", "creatinineklaring", "kreatinineklaring", "mdrd"],
+    },
+    "perifeer_vaatlijden": {
+        "disease": ["perifeer arterieel vaatlijden", "perifeer vaatlijden", "pav",
+                    "claudicatio", "etalagebenen"],
+    },
+    "aneurysma": {          # split out of perifeer_vaatlijden: a distinct disease
+        "disease": ["aneurysma", "aneurysmatisch", "aaa"],
+    },
+    "hypertensie": {
+        "disease": ["hypertensie", "hoge bloeddruk"],
+        "medication": ["antihypertensiva"],
+    },
+    "hyperlipidemie": {
+        "disease": ["hypercholesterolemie", "dyslipidemie", "hyperlipidemie"],
+        "medication": ["statine", "atorvastatine", "simvastatine"],
+        "measurement": ["cholesterol", "ldl"],
+    },
+    "atriumfibrilleren": {
+        "disease": ["atriumfibrilleren", "atriumfibrillatie", "boezemfibrilleren", "vkf"],
+    },
+    "angina": {
+        "disease": ["angina pectoris", "angina"],
+        "symptom": ["thoracale klachten", "pijn op de borst"],
+    },
+    "stenose": {
+        "disease": ["stenose", "vernauwing", "occlusie"],
+    },
+    "revascularisatie": {   # procedure-only: absent under the default disease+symptom tiers
+        "procedure": ["pci", "dotter", "stent", "cabg", "bypass", "endarteriectomie",
+                      "endarterectomie"],
+    },
 }
+CONCEPT_TIERS = ("disease", "symptom", "measurement", "medication", "procedure")
+
+
+def resolve_concepts(tiered, tiers, say=None):
+    """Flatten the tiered definitions down to {concept: [terms]} for the selected tiers."""
+    out, dropped = {}, []
+    for concept, by_tier in tiered.items():
+        terms = [t for tier in tiers for t in by_tier.get(tier, [])]
+        if terms:
+            out[concept] = terms
+        else:
+            dropped.append(concept)
+    if say:
+        say(f"  concept tiers in use: {','.join(tiers)}")
+        if dropped:
+            say(f"  concepts with no terms in these tiers, skipped: {','.join(dropped)}")
+    return out
+
+
 NEG_CUES = {"geen", "niet", "zonder", "negatief", "uitgesloten", "nooit", "afwezig",
             "ontkent", "nee"}
 UNC_CUES = {"mogelijk", "verdenking", "verdacht", "waarschijnlijk", "twijfel",
@@ -392,7 +459,8 @@ def main(args):
         f"section={args.section} analyzer={args.analyzer} svd={args.svd_components} "
         f"require_text={args.require_text} strip_dates={args.strip_dates} "
         f"strip_names={args.strip_names} strip_nameish={args.strip_nameish} "
-        f"concept_encoding={args.concept_encoding} expand_terms={args.expand_terms} "
+        f"concept_encoding={args.concept_encoding} concept_terms={args.concept_terms} "
+        f"expand_terms={args.expand_terms} "
         f"add_baseline_cols={args.add_baseline_cols!r} min_coverage_frac={args.min_coverage_frac}")
 
     cohort, notes = build_cohort(args.smart_csv, args.legacy, args.censoring_time)
@@ -517,7 +585,11 @@ def main(args):
                                args.svd_components, say)
             rep = f"text_tfidf[{args.analyzer}]" + (f"+section:{args.section}" if args.section else "")
         elif args.mode == "concepts":
-            concepts = {k: list(v) for k, v in CONCEPTS.items()}
+            tiers = [t.strip() for t in args.concept_terms.split(",") if t.strip()]
+            for t in tiers:
+                if t not in CONCEPT_TIERS:
+                    raise SystemExit(f"--concept-terms must come from {CONCEPT_TIERS}")
+            concepts = resolve_concepts(CONCEPTS, tiers, say)
             concepts, added = expand_concepts(
                 concepts, [texts[i] for i in train_rows], args.expand_terms, say)
             X = concept_features(text_by_pid, pids, concepts,
@@ -546,7 +618,7 @@ def main(args):
             never = [c for c, v in prev.items() if sum(v) == 0]
             if never:
                 emit("concepts NEVER matched: {}", ",".join(never))
-            rep = f"text_concepts[{args.concept_encoding}]"
+            rep = f"text_concepts[{args.concept_encoding}/{args.concept_terms}]"
         else:
             raise SystemExit(f"unknown --mode {args.mode}")
 
@@ -568,7 +640,8 @@ def main(args):
                        "strip_dates": args.strip_dates, "strip_names": args.strip_names,
                        "strip_nameish": args.strip_nameish,
                        "expand_terms": args.expand_terms,
-                       "concept_encoding": args.concept_encoding})
+                       "concept_encoding": args.concept_encoding,
+                       "concept_terms": args.concept_terms})
 
 
 if __name__ == "__main__":
@@ -611,6 +684,13 @@ if __name__ == "__main__":
                         "main lever against templated boilerplate.")
     p.add_argument("--svd-components", type=int, default=256,
                    help="0 disables SVD and feeds dense TF-IDF (watch the event budget).")
+    p.add_argument("--concept-terms", default="disease,symptom",
+                   help=f"Which term tiers count as a concept mention, from {CONCEPT_TIERS}. "
+                        "Default disease,symptom = what the note ASSERTS about the patient. "
+                        "Measurement terms such as 'egfr' or 'cholesterol' fire on NORMAL "
+                        "values, so including them measures whether a quantity was reported "
+                        "rather than whether disease is present; 'all' reproduces that "
+                        "conflated behaviour for comparison.")
     p.add_argument("--concept-encoding", default="binary",
                    choices=("binary", "count", "both"),
                    help="binary (default) asks whether the patient HAS the concept, which is "
