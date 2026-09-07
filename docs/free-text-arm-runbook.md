@@ -16,7 +16,9 @@ belongs here, not only in conversation.
 | 0 | text metadata / corpus measurement | `eda_text_events.py` | **DONE — see §1.1** |
 | 1 | document cache + T0 volume | `prepare_text_features.py --mode volume` | **ready** |
 | 1 | T1 TF-IDF (+ variants) | `--mode tfidf` | **ready** |
-| 1 | T2 clinical concepts | `--mode concepts` | **ready** |
+| 1 | T2 clinical concepts | `--mode concepts` | **DONE (re-run 2026-09-03 with tiered terms) — see §5.1** |
+| 1 | `incr` — text on top of the FULL curated baseline | `--add-baseline-cols all` | **DONE — see §5.1** |
+| 1 | `sens` — structured arm without `ok.OMSCHR` | `prepare_pivoted_event_features.py` | **DONE — see §5.1** |
 | 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | **planned — see `docs/t3-frozen-llm-plan.md`** |
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
@@ -110,11 +112,14 @@ cohort has no narrative text (§1.1).
 | full curated SMART baseline | 0.7576 |
 | curated baseline without age/sex | 0.7547 |
 | structured events + demographics | 0.6890 |
+| structured events + demographics, **without `ok.OMSCHR`** | 0.6884 |
 | **demographics (age+sex) only** | **0.6883** ← the bar for a FULL-cohort text arm |
 | structured events only | ~0.50 |
 
 *`--require-text` subcohort (9,644 patients), measured:* full curated baseline **0.7394**,
-demographics **0.6727**, best text arm 0.6750, text alone 0.482–0.521. The full-cohort
+demographics **0.6727**, best text arm 0.6750, text alone 0.482–0.520. Text **on top of the
+full curated baseline**: concepts 0.7397, volume 0.7394, TF-IDF 0.7388 — so the bar for any
+future text method that would change practice is **0.7394**, not 0.6727. The full-cohort
 numbers above DO NOT APPLY to this subcohort. A text arm run
 with `--require-text` sits on a healthier-or-sicker, differently-sized cohort, so it must be
 compared against a control built on **exactly those patients**:
@@ -376,6 +381,11 @@ documented in these notes; automating its extraction is the entire point.
 - **Gate 1.** Escalate to T3 (frozen LLM) **only if** T1 or T2 clears its floor on the
   pre-imputation screen, or beats 0.6883 with demographics. If both are null, a null LLM
   arm adds no information.
+  **Status: gate 1 was NOT met** — every T1/T2 variant is null, including after the
+  2026-09-03 concept correction, and text adds +0.0003 over the full curated baseline. T3
+  proceeds as a deliberate override (see `docs/t3-frozen-llm-plan.md`), which is why the
+  plan front-loads the **no-GPU headroom check**: bounding what any text method could
+  achieve is worth more than a fourth null.
 - **Gate 2.** If two consecutive methodology fixes fail to move the verdict, stop. That
   criterion is what closed the structured arm.
 
@@ -438,6 +448,18 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-09-03 — the three clinical-review items are answered; nothing changes the
+  verdict.** 91 runs in the log. (1) **`ok.OMSCHR` never mattered**: the structured arm
+  without it reaches 0.6884 versus 0.6890 with it, so its post-baseline skew (p50 = +98
+  days) has no bearing on the result. (2) **The conflated concept terms were a real defect
+  in meaning and irrelevant to the outcome**: prevalences move as predicted (renal
+  21.0% → 5.2%, PAD 14.3% → 8.4% with aneurysm split out at 10.4%, hyperlipidaemia
+  36.5% → 26.2%) while test C goes 0.5114 → **0.5098**, with the all-tier variant at 0.5092
+  and 0 of 39 features clearing the floor in every variant. (3) **Text adds nothing to the
+  full curated baseline**: 0.7394 → concepts 0.7397, volume 0.7394, TF-IDF 0.7388. That last
+  number is the one that matters for T3 — the bar is **0.7394**, not 0.6727. Report §10.2 and
+  §10.3 are new.
 
 - **2026-08-27 — clinical review: tiered concept terms, incremental-value arms, OMSCHR
   sensitivity.** The concept term lists conflated disease assertions with measurements and

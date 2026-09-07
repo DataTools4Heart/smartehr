@@ -45,7 +45,7 @@ baseline **0.7394**, demographics **0.6727**, best text arm so far **0.6750**, t
 
 ---
 
-## 2b. Prerequisites from clinical review (2026-08-27)
+## 2b. Prerequisites from clinical review (2026-08-27) — **all three resolved 2026-09-03**
 
 Three items raised by the data manager / clinical researcher come **before** any T3 work,
 because two of them change what the existing numbers mean.
@@ -69,8 +69,24 @@ because two of them change what the existing numbers mean.
    variables**, because those already exist in this cohort. Added as the `incr` phase, for
    concepts, TF-IDF and volume alike, against the `CTRL_full_rt` reference of 0.7394.
 
-Item 3 also sharpens T3's own success criterion: if text adds nothing over the full curated
-baseline, then a frozen-LLM arm has to beat 0.7394 rather than 0.6727 to matter clinically.
+**Outcome (run 2026-09-03, 91 runs in the log).** All three are settled and none of them
+rescues the free-text arm:
+
+| item | result | reading |
+|---|---|---|
+| 1. `ok.OMSCHR` | structured arm **0.6884** without it vs 0.6890 with (532 vs 534 features) | the concern is moot — the result never depended on it |
+| 2. tiered concept terms | **0.5098** corrected vs 0.5114 conflated; all-tier variant 0.5092; 0 of 39 clear the floor in every variant | prevalences moved exactly as predicted (renal 21.0% → 5.2%), the verdict did not |
+| 3. text + full curated baseline | 0.7394 → concepts **0.7397**, volume **0.7394**, TF-IDF **0.7388** | text adds +0.0003 to what is already collected |
+
+Item 3 sets T3's success criterion, and it is much harsher than the one this plan was
+drafted against: **a frozen-LLM arm has to beat 0.7394, not 0.6727, to matter clinically.**
+Beating 0.6727 would only show that an LLM can read age and sex out of a letter.
+
+Item 2 also removes the last "the extraction was broken" escape from the concept null. The
+term lists *were* wrong in what they meant, they are now right, and the arm reads the same
+to three decimals — so T3 cannot be justified as fixing concept extraction. Its only
+remaining justification is the one in §1: that TF-IDF and binary concepts discard *grading*,
+which §3's headroom check tests without a GPU.
 
 ## 3. T3-0 — the headroom check (no GPU, do this FIRST)
 

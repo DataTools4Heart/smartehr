@@ -2,7 +2,7 @@
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
 Status: **both arms complete. Structured/numeric: negative. Free-text: negative.**
-Last updated: 2026-08-26
+Last updated: 2026-09-03
 
 ---
 
@@ -25,7 +25,7 @@ not the bar.
 
 **Outcome.** The thesis is **not supported**, for either representation. Structured events add
 **+0.0007** C over age and sex alone; clinical free text adds **+0.002** on the matched
-subcohort. Fourteen text arms all sit between 0.482 and 0.521.
+subcohort. Sixteen text arms all sit between 0.482 and 0.520.
 
 ---
 
@@ -153,8 +153,11 @@ the merge, the signal column does not survive at all (best C=0.528, CI 0.551).
 | H5 | Events add information on top of demographics | events + age/sex vs age/sex | **Rejected.** **0.6890 vs 0.6883 (+0.0007)** |
 | H6 | The null is an artefact of unit heterogeneity within a test code | Per-code unit tally | **Rejected.** 0 of 330 / 682 / 33 codes report a second unit in >1% of rows |
 | H7 | The null is an artefact of unbounded history: aggregating over spans of 334 days to 24 years makes one feature mean different things per patient | 365-day lookback (retains 99.8% of patients) | **Rejected.** events+demographics stayed at **~0.689**, unchanged |
-| H8 | Free text carries signal the structured data does not | 14 text arms (TF-IDF word/char/sections/de-identified, concepts binary/count/sections), matched controls, penalised Cox | **Rejected.** Every text-only arm 0.482–0.521; text+demographics 0.6750 vs demographics-only 0.6727 on the identical subcohort (**+0.0023**, inside a ±0.062 band) |
-| H9 | A concept null means the Dutch terminology failed, not the hypothesis | Per-concept prevalence | **Rejected.** Extraction works at clinically plausible rates (diabetes 28.2%, smoking 39.4%, prior MI 26.2%, hypertension 40.0%); negation behaves sensibly (heart failure negated 1,678 > asserted 1,004). The concepts are found and still do not predict |
+| H8 | Free text carries signal the structured data does not | 16 text arms (TF-IDF word/char/sections/de-identified, concepts binary/count/sections), matched controls, penalised Cox | **Rejected.** Every text-only arm 0.482–0.520; text+demographics 0.6750 vs demographics-only 0.6727 on the identical subcohort (**+0.0023**, inside a ±0.062 band) |
+| H9 | A concept null means the Dutch terminology failed, not the hypothesis | Per-concept prevalence | **Rejected.** Extraction works at clinically plausible rates (diabetes 23.9%, smoking 39.4%, prior MI 26.2%, hypertension 39.8%); negation behaves sensibly (heart failure negated 1,245 > asserted 835). The concepts are found and still do not predict |
+| H10 | The concept null was an artefact of conflated term lists (measurement and medication terms mixed into disease concepts) | Terms tiered to disease+symptom, `aneurysma` split out, both variants re-run | **Rejected.** Corrected concepts **0.5098** vs conflated 0.5114; all-tier variant 0.5092. 0 of 39 (and 0 of 42) clear the floor either way |
+| H11 | Text adds information on top of the *full* curated baseline, not just demographics | 183 curated vars + concepts / TF-IDF / volume, matched subcohort | **Rejected.** 0.7394 → concepts **0.7397**, TF-IDF **0.7388**, volume **0.7394** |
+| H12 | The structured result depends on `ok.OMSCHR`, whose median row is +98 days post-baseline | Structured arm rebuilt without it | **Rejected**, and the concern is moot: **0.6884** without vs 0.6890 with (2 of 534 features) |
 
 ---
 
@@ -327,9 +330,11 @@ headline arms run on the **`--require-text` subcohort** (9,644 patients; train 6
 | demographics (age+sex), matched control | **0.6727** |
 | TF-IDF + demographics | 0.6750 |
 | concepts + demographics | 0.6749 |
-| concepts, history sections | 0.5212 |
+| concepts, history sections | 0.5198 |
 | volume only (T0 gate) | 0.5197 |
-| concepts (binary) | 0.5114 |
+| concepts, all term tiers | 0.5092 |
+| concepts (binary, disease+symptom) | 0.5098 |
+| concepts (present+negated) | 0.5095 |
 | TF-IDF, conclusion section | 0.5089 |
 | TF-IDF char 3–5 grams | 0.4963 |
 | TF-IDF word | 0.4914 |
@@ -354,38 +359,52 @@ inert (0 of 9, max z=1.44), so this is not a note-volume artefact.
 
 ### 10.1 The decisive comparison
 
-**Correction (2026-08-27, after clinical review).** The concept term lists used for the
-numbers below mixed three different kinds of mention. `nierfunctie` included `egfr` and
-`creatinineklaring`, which fire on *"eGFR 95 ml/min"* — i.e. **normal** kidney function — so
-that feature measured "renal function was reported", not "renal disease is present".
+**Correction (2026-08-27, raised at clinical review; resolved 2026-09-03).** The concept
+term lists originally mixed three different kinds of mention. `nierfunctie` included `egfr`
+and `creatinineklaring`, which fire on *"eGFR 95 ml/min"* — i.e. **normal** kidney function —
+so that feature measured "renal function was reported", not "renal disease is present".
 `hyperlipidemie` included `cholesterol` (fires on a normal lipid value) and `statine`;
 `diabetes`, `hypertensie` and `roken` included medication or quantity terms. And
 `perifeer_vaatlijden` included `aneurysma`, which is a **different disease**, not peripheral
 arterial disease. Terms are now tiered (disease / symptom / measurement / medication /
 procedure) with disease+symptom the default, `aneurysma` split into its own concept, and
-`--concept-terms all` retained to reproduce the conflated behaviour. The arms below are
-being re-run; the conflated versions understate the concept arm if anything, because part of
-what they encoded was "a quantity was mentioned" rather than any assertion about the patient.
+`--concept-terms all` retained to reproduce the conflated behaviour.
+
+The correction works and it changes nothing. Prevalences move exactly where the diagnosis
+predicted — renal **21.0% → 5.2%** (33.0% when the measurement tier is re-admitted, which is
+the size of the artefact), peripheral disease 14.3% → 8.4% with aneurysm now separate at
+10.4%, hyperlipidaemia 36.5% → 26.2%, diabetes 28.2% → 23.9%, heart failure 10.4% → 8.7% —
+and the verdict does not: corrected concepts test C **0.5098** vs 0.5114 conflated, with all
+term tiers 0.5092, and **0 of 39** features clearing the floor in every variant. Per feature
+the movement is in the third decimal: `nierfunctie_present` 0.4893 → 0.4900,
+`diabetes_present` 0.4859 → 0.4854, `hyperlipidemie_present` 0.4873 → 0.4908,
+`hypertensie_present` 0.4965 → 0.4979. The conflated lists were a real defect in what the
+features *meant*; they were not what suppressed the signal.
 
 Extraction is not the failure. Concepts are found at clinically plausible rates —
-revascularisation 46.4%, hypertension 40.0%, smoking 39.4%, hyperlipidaemia 36.5%,
-stenosis 31.2%, diabetes 28.2%, prior MI 26.2%, angina 22.1%, renal 21.0%, stroke/TIA 17.2%,
-peripheral disease 14.3%, heart failure 10.4%, atrial fibrillation 7.7% — and negation
-behaves sensibly (heart failure negated in 1,678 patients versus asserted in 1,004, which is
-what "geen decompensatie" in a routine letter should produce).
+hypertension 39.8%, smoking 39.4%, stenosis 31.2%, hyperlipidaemia 26.2%, prior MI 26.2%,
+diabetes 23.9%, angina 22.4%, stroke/TIA 17.2%, aneurysm 10.4%, heart failure 8.7%,
+peripheral arterial disease 8.4%, atrial fibrillation 7.7%, renal disease 5.2% (disease and
+symptom terms only) — and negation behaves sensibly (heart failure negated in 1,245 patients
+versus asserted in 835, which is what "geen decompensatie" in a routine letter should
+produce).
 
 Yet the **same clinical concept** predicts when curated and does not when extracted from
 text, on the same patients, outcome and screen (train C):
 
 | concept | curated variable | text-extracted |
 |---|---|---|
-| diabetes | `vz_DM` 0.5472, `vz_t2d` 0.5480 | `diabetes_present` **0.4859** |
-| smoking | `roken` 0.5654, `packyrs` 0.6066 | `roken_present` **0.5023** |
+| diabetes | `vz_DM` 0.5472, `vz_t2d` 0.5480 | `diabetes_present` **0.4854** |
+| smoking | `roken` 0.5654, `packyrs` 0.6066 | `roken_present` **0.5021** |
 | cardiac history | `vz_hart` 0.5635, `vgt_hart` 0.5718 | `myocardinfarct_present` **0.4917** |
-| renal function | `labkrea` 0.6168, `MDRD` 0.3885, `klar_coc` 0.3634 | `nierfunctie_present` **0.4893** |
+| renal function | `labkrea` 0.6168, `MDRD` 0.3885, `klar_coc` 0.3634 | `nierfunctie_present` **0.4900** |
 | carotid stenosis | `stenACIl` 0.6420, `stenACIr` 0.6400 | `stenose_present` **0.4924** |
-| hypertension | `vz_hypt` 0.5508, `bdsys` 0.5747 | `hypertensie_present` **0.4965** |
-| lipids | `labtrig` 0.5303, `labhdl` 0.4657 | `hyperlipidemie_present` **0.4873** |
+| hypertension | `vz_hypt` 0.5508, `bdsys` 0.5747 | `hypertensie_present` **0.4979** |
+| lipids | `labtrig` 0.5303, `labhdl` 0.4657 | `hyperlipidemie_present` **0.4908** |
+| peripheral disease | `pa_stolmid` 0.5935, `abivrl_n` 0.5839 | `perifeer_vaatlijden_present` **0.4916** |
+
+(Text-extracted values are the corrected disease+symptom terms; the curated column is the
+same screen on the matched subcohort.)
 
 **106 of 183** curated features clear the floor; **0 of 39** text concepts do.
 
@@ -396,16 +415,55 @@ communication rather than measurement. Mentioning diabetes does not encode how l
 badly; mentioning stenosis does not encode 40% versus 90%. That graded information is what
 the curated variables carry and the prose does not.
 
+### 10.2 Incremental value over the full curated baseline
+
+The comparison a clinician actually cares about is not "text versus age and sex" but "text
+*on top of everything already collected*" — those 183 variables exist in this cohort, so
+text only matters if it adds to them. Each arm below is the full 183-variable curated
+baseline plus one text representation, on the matched subcohort, lasso Cox tuned on
+validation:
+
+| arm | n features | test C | Δ vs curated alone |
+|---|---|---|---|
+| curated baseline alone | 183 | **0.7394** | — |
+| + concepts (disease+symptom) | 222 | 0.7397 | **+0.0003** |
+| + volume (T0 features) | 192 | 0.7394 | **+0.0000** |
+| + TF-IDF word, 256 SVD | 439 | 0.7388 | **−0.0006** |
+
+All three land inside ±0.001 of the baseline in a ±0.062 band. Text adds **+0.0023** over
+demographics alone and **+0.0003** over the full curated set: the small increment it has
+over age and sex is information the curated variables already carry.
+
+This also sets the bar for any future model: a frozen-LLM or fine-tuned text arm has to
+clear **0.7394**, not 0.6727, to change clinical practice here.
+
+### 10.3 Sensitivity: `ok.OMSCHR` and post-baseline treatment
+
+`OMSCHR` is the **operation description**, and its rows are mostly post-baseline: `datediff`
+p25 = −42, **p50 = +98**, with 16,671 of 35,117 rows at or after the baseline visit. Under
+the day-180 landmark it is formally admissible (available at the prediction origin; the
+leakage invariant prints 0), but a model that leans on it is partly reading *treatment
+delivered after enrolment*, which is not what "risk at enrolment" means.
+
+Rebuilding the structured arm without it: **test C 0.6884** with 532 features, versus 0.6890
+with 534. The two `ok.OMSCHR` occurrence codes contribute **−0.0006**. The structured result
+does not depend on it, so the interpretive concern does not arise — and this is recorded
+because "we checked and it did not matter" is a different claim from "we did not check".
+
 ## 11. Conclusion
 
 Neither structured EHR events nor clinical free text carries **detectable 15-year
-prognostic signal beyond age and sex** in this cohort: events add +0.0007 and text +0.002,
+prognostic signal beyond age and sex** in this cohort: events add +0.0007 and text +0.0023,
+and against the full curated baseline text adds **+0.0003**,
 while expert-curated baseline variables reach C=0.7576 (0.7394 on the text subcohort) and
-retain 0.7547 without any demographics. Fourteen text arms span 0.482–0.521. The result survives landmarking at three
+retain 0.7547 without any demographics. Sixteen text arms span 0.482–0.520. The result survives landmarking at three
 origins, pivoting that recovers the full same-day panels, recovery of thresholded lab
 values, tokenised diagnosis codes, a bounded 365-day feature window, permutation-calibrated
 significance, multiple-testing correction over effective tests, a validated positive
-control, and an explicit demographics decomposition confirming the comparison is fair.
+control, an explicit demographics decomposition confirming the comparison is fair,
+clinician-reviewed concept terms tiered to separate disease mentions from measurements and
+medications, and a sensitivity arm confirming the structured result does not rest on
+post-baseline operation codes.
 
 Manual curation is therefore not redundant here, and the reason is now specific rather
 than speculative: the same clinical concepts are present in the notes at plausible rates
