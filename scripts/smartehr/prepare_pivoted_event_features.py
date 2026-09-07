@@ -56,7 +56,7 @@ from eda_events_survival import ID, TIME, apply_censoring, build_cohort  # share
 from results_log import add_results_arg, results_block
 from feature_matrix import (  # the shared, already-debugged standardise/screen/write stage
     finish,
-    list_baseline_cols,
+    handle_listing_flags,
     smart_baseline_features,
 )
 
@@ -728,6 +728,10 @@ if __name__ == "__main__":
                         "a low-coverage feature drags its C toward 0.5, so screening the written "
                         "parquet can hide real signal; this does not.")
     p.add_argument("--screen-top", type=int, default=30)
+    p.add_argument("--list-baseline-groups", action="store_true",
+                   help="Print the curated variables split by provenance (chart-derivable / "
+                        "report-derivable imaging / study-protocol-only) and exit. Needs only "
+                        "--smart-csv.")
     p.add_argument("--list-baseline-cols", action="store_true",
                    help="Print the numeric SMART baseline column names (with coverage) and exit, "
                         "so --baseline-cols can be aimed at the right ones.")
@@ -746,10 +750,8 @@ if __name__ == "__main__":
                         "plumbing is broken and any event-feature null is uninterpretable; if it "
                         "scores well, the plumbing is sound. Not a baseline-free model.")
     add_results_arg(p)
-    _a = p.parse_args()
-    if _a.list_baseline_cols:
-        list_baseline_cols(_a.smart_csv)
-    else:
+    if not handle_listing_flags(sys.argv[1:]):
+        _a = p.parse_args()
         with results_block(_a.results_file, "structured arm",
                            {"landmark": _a.landmark_days, "lookback": _a.lookback_days,
                             "horizon": _a.horizon_days,

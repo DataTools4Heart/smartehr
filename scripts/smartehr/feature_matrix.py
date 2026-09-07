@@ -17,6 +17,7 @@ likely way to reintroduce one of them.
     correlated aggregators of one code are not independent columns.
 """
 
+import argparse
 import json
 import math
 
@@ -284,6 +285,28 @@ def list_baseline_cols(smart_csv):
           " --add-baseline-cols,")
     print("e.g. --baseline-cols 'leeftijd,geslacht'   (demographics only)")
     print("     --baseline-cols '~leeftijd,geslacht'  (curated variables WITHOUT demographics)")
+
+
+def handle_listing_flags(argv):
+    """Serve the --list-baseline-* flags from --smart-csv alone, before the main parser.
+
+    These flags only inspect the SMART registry, but both builders mark --out-dir, --mode,
+    --event-csv-folder and --split-json required, so argparse would reject a listing
+    command for missing arguments the listing never uses. Returns True when it handled the
+    request and the caller should stop.
+    """
+    if not ({"--list-baseline-cols", "--list-baseline-groups"} & set(argv)):
+        return False
+    pre = argparse.ArgumentParser(add_help=False)
+    pre.add_argument("--smart-csv", required=True)
+    pre.add_argument("--list-baseline-cols", action="store_true")
+    pre.add_argument("--list-baseline-groups", action="store_true")
+    a, _ = pre.parse_known_args(argv)
+    if a.list_baseline_groups:
+        list_baseline_groups(a.smart_csv)
+    else:
+        list_baseline_cols(a.smart_csv)
+    return True
 
 
 # ---------------------------------------------------------------- raw (pre-imputation) screen

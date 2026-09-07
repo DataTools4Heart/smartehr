@@ -131,8 +131,7 @@ no longer sum to the full baseline whose 0.7394 they are compared against.
 Review it before believing any number it produces:
 
 ```bash
-python scripts/smartehr/prepare_text_features.py --smart-csv $SMART \
-  --event-csv-folder $EVENTS --split-json $SPLITS --list-baseline-groups
+python scripts/smartehr/prepare_text_features.py --smart-csv $SMART --list-baseline-groups
 ```
 
 The generous half is `chart` = chart + imaging. Reporting `chart_strict` alongside it is what

@@ -417,7 +417,7 @@ prefixes, and an unassigned curated column is a hard error (otherwise it would v
 both halves and they would stop summing to the full baseline):
 
 ```bash
-python scripts/smartehr/prepare_text_features.py --smart-csv $SMART --event-csv-folder $EVENTS --split-json $SPLITS --list-baseline-groups
+python scripts/smartehr/prepare_text_features.py --smart-csv $SMART --list-baseline-groups
 ```
 
 | group | n | what it is |
@@ -486,6 +486,7 @@ straight in.
 | `trn%` looks low for a count/indicator feature | it is the share of the TRAIN split with a value; counts are never missing so they read 100%. (Before 2026-08-26 this column was mislabelled `cov%` and divided by the full cohort, understating every value by the train fraction) | none needed; re-read old screens with that scaling in mind |
 | every concept C sits at ~0.5 | may be genuine, or the concept never matched | read the prevalence table and the `concepts NEVER matched` line first |
 | `ABORT: $PY (...) is not Python 3.8+` | the preflight found `python` pointing at Python 2, under which every script dies on f-strings and reads as "the code is broken" | `PY=python3 ./bash_scripts/run_all_phases.sh ...`, or activate the venv |
+| `error: the following arguments are required: --event-csv-folder, --split-json, --out-dir, --mode` on a `--list-baseline-*` command | both builders mark those required for a real run; the listing flags only read the SMART registry | they are served by a pre-parser now, so `--smart-csv` alone is enough — `git pull` if you still see this |
 | `ABORT: a script under scripts/smartehr does not compile` | the preflight naming a file and line. It runs before any arm, because a syntax error otherwise costs a full VM round-trip and — like an argparse failure — exits before `results_block` opens, leaving no trace in `$RESULTS` | fix the reported line; `git pull` if the break came from upstream |
 | a `--require-text` arm looks better/worse than 0.6883 | that benchmark is a full-cohort number and does not apply to the subcohort | build `--mode baseline --require-text` and compare against that |
 | a concept fires implausibly often | a term is matching inside a longer Dutch compound | terms are word-boundary anchored, but check `CONCEPTS` for a short term that is a real substring of a common word |

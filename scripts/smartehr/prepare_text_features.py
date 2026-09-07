@@ -51,8 +51,7 @@ from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort
-from feature_matrix import (finish, list_baseline_cols, list_baseline_groups,
-                            smart_baseline_features)
+from feature_matrix import (finish, handle_listing_flags, smart_baseline_features)
 from results_log import add_results_arg, emit, results_block
 
 CHUNK = 50_000
@@ -645,6 +644,7 @@ def main(args):
                        "concept_terms": args.concept_terms})
 
 
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -728,12 +728,8 @@ if __name__ == "__main__":
     p.add_argument("--screen-features", action="store_true")
     p.add_argument("--screen-top", type=int, default=30)
     add_results_arg(p)
-    a = p.parse_args()
-    if a.list_baseline_groups:
-        list_baseline_groups(a.smart_csv)
-    elif a.list_baseline_cols:
-        list_baseline_cols(a.smart_csv)
-    else:
+    if not handle_listing_flags(sys.argv[1:]):
+        a = p.parse_args()
         with results_block(a.results_file, f"text arm: {a.mode}",
                            {"mode": a.mode, "landmark": a.landmark_days,
                             "lookback": a.lookback_days, "horizon": a.horizon_days,
