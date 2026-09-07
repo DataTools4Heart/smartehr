@@ -731,8 +731,7 @@ if __name__ == "__main__":
     a = p.parse_args()
     if a.list_baseline_groups:
         list_baseline_groups(a.smart_csv)
-        return
-    if a.list_baseline_cols:
+    elif a.list_baseline_cols:
         list_baseline_cols(a.smart_csv)
     else:
         with results_block(a.results_file, f"text arm: {a.mode}",

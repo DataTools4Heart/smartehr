@@ -51,6 +51,32 @@ COMMON=(--smart-csv "$SMART" --event-csv-folder "$EVENTS" --split-json "$SPLITS"
         --results-file "$RESULTS")
 TEXT=("${COMMON[@]}" --cache "$CACHE")
 
+# ---- preflight: check the interpreter, then compile every script ------------
+# Both failures below cost a full round-trip to the VM and back, and they resemble the
+# argparse-level failures that exit BEFORE results_block opens — leaving no trace in the
+# one file that leaves the machine. So they are caught here, before any arm runs.
+#   * $PY must be Python 3: under Python 2 every script dies on f-strings, which reads
+#     as "the code is broken" rather than "the interpreter is wrong".
+#   * compile(), not ast.parse(), is what catches a stray `return` at module level —
+#     that is a compile error, not a parse error, so a parse check passes it through.
+if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' 2>/dev/null; then
+  echo "== ABORT: \$PY ($PY) is not Python 3.8+. Set PY=python3 (or your venv python)." >&2
+  exit 1
+fi
+if ! "$PY" -c '
+import glob, sys
+bad = 0
+for f in sorted(glob.glob(sys.argv[1] + "/*.py")):
+    try:
+        compile(open(f).read(), f, "exec")
+    except SyntaxError as e:
+        print("  %s:%s: %s" % (f, e.lineno, e.msg))
+        bad = 1
+sys.exit(bad)' "$S"; then
+  echo "== ABORT: a script under $S does not compile (see above). Nothing was run." >&2
+  exit 1
+fi
+
 mkdir -p "$OUT" "$(dirname "$RESULTS")" "$(dirname "$CACHE")"
 PHASES=("$@")
 [ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens t3headroom ctrl struct screens)
