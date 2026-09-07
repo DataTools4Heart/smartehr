@@ -47,6 +47,11 @@ baseline **0.7394**, demographics **0.6727**, best text arm so far **0.6750**, t
 
 ## 2b. Prerequisites from clinical review (2026-08-27) — **all three resolved 2026-09-03**
 
+> **Superseded in part by §3.3.** Item 3 set T3's bar at 0.7394. The headroom check shows
+> that bar was wrong: 0.7394 includes protocol measurement a note cannot contain. The
+> defensible target is **0.7310** (chart-derivable ceiling), and the arm is now justified by
+> evidence rather than proceeding as an override.
+
 Three items raised by the data manager / clinical researcher come **before** any T3 work,
 because two of them change what the existing numbers mean.
 
@@ -148,21 +153,69 @@ columns on whatever cohort the text flags define): each half alone, each half pl
 demographics, the strict chart variant, and both halves on the full cohort so the pair is
 comparable to the 0.7576 reference as well as to 0.7394.
 
-### 3.3 What each outcome means
+### 3.3 Outcome (run 2026-09-07): full headroom, gate 0.5 passes
 
-Read `HR_chart_demo_rt` against the **matched** demographics control, 0.6727 — not 0.6883,
-which is a full-cohort number.
+Verified exhaustive on the real data: 113 chart + 68 protocol + 2 demographics = 183, with
+no unassigned column.
 
-| chart-derivable + demographics | meaning |
-|---|---|
-| ≈ 0.673 | Chart-derivable facts carry no signal beyond demographics. **No text method can help**, because even having those facts *perfectly* adds nothing — the ceiling for text is demographics. T3 is unnecessary and the free-text negative becomes structural and mechanistic, which is a stronger result than a fourth null. |
-| 0.69–0.72 | Partial headroom. Text would have to recover these facts *well* to realise it. Worth one embedding arm with a concrete target, not a sweep. |
-| ≈ 0.73–0.74 | Full headroom: nearly all of the curated skill is in principle text-derivable, and T1/T2 simply failed to extract it. T3 is justified and the grading hypothesis in §1 is the thing to test. |
+| arm | n | test C | share of the 0.6727 → 0.7394 gap |
+|---|---|---|---|
+| full curated baseline | 183 | 0.7394 | 100% |
+| chart-derivable + demographics | 115 | 0.7351 | 94% |
+| **chart-derivable alone** | 113 | **0.7310** | **87%** |
+| protocol-measured + demographics | 70 | 0.7198 | 71% |
+| protocol-measured alone | 68 | 0.7196 | 70% |
+| chart-derivable strict (no imaging) | 96 | 0.7024 | 44% |
+| demographics only | 2 | 0.6727 | 0% |
+| *best text arm so far* | *258* | *0.6750* | ***3%*** |
 
-The `protocol` half is the counterpart: if it carries most of the skill (≈ 0.73) while the
-chart half sits at demographics, that **is** the mechanism behind §10.1's "that versus how
-much" claim, stated quantitatively — the prognostic information lives in protocol
-measurement, which no amount of reading the notes can recover.
+**T3 is justified, and the reason is now evidential rather than a deliberate override.**
+Facts a note could plausibly state carry 87% of the curated advantage over demographics with
+no age or sex at all, while the text arms realised 3%. The free-text null is therefore about
+**extraction**, not about the data. Full-cohort counterpart, for reference: chart-derivable
+0.7373 and protocol 0.7288 against 0.7576.
+
+**Revised success criterion: beat 0.6750 (current best text arm), with 0.7310 as the
+ceiling** — or 0.7024 if a reviewer declines to credit imaging reports. That replaces the
+0.7394 bar from §2b: 0.7394 is the *full* baseline including protocol measurement a note
+cannot contain, so it was never the right target for a text method.
+
+### 3.4 What T3 has to recover — and it is not presence
+
+Every top carrier of the chart-derivable half is **graded or dated**:
+
+| feature | train C | prose form it would take | what T1/T2 did with it |
+|---|---|---|---|
+| `stenACIl` / `stenACIr` | 0.6471 / 0.6468 | "70% stenose van de ACI links" | nothing — `stenose_present` 0.4924 |
+| `KliMaYr` / `KliMaDur` / `KliMaC` / `KliMaDrD` | 0.3855(u 0.6313) / 0.6078 / 0.6138 / 0.5976 | "myocardinfarct in 2003" | no dated-onset feature exists |
+| `packyrs` | 0.6182 | "30 pakjaren" | `roken_present` 0.5021; the term `pakjaren` was in the *conflated* list and removed as a quantity |
+| `mht_alln` | 0.5732 | "drie antihypertensiva" | no count feature; medication terms were removed as a non-disease tier |
+| `pa_stolmid` / `pamid` / `mas01` / `aspirine` | 0.5935 – 0.5587 | medication list | removed with the medication tier |
+
+Two of these were **actively removed** by the 2026-09-03 concept correction, which was right
+about meaning and, it now turns out, discarded signal: `pakjaren` and the medication terms
+are not disease assertions, so they do not belong in a *disease* concept — but they belong in
+the feature set. That is a gap in the representation, not in the correction. **Add graded and
+medication features as their own concepts before or alongside T3** — this is cheap, CPU-only,
+and may capture part of the headroom without any embedding at all. Run it first.
+
+### 3.5 Revised probe targets for T3-1
+
+§4's outcome-blind probe should be re-weighted to the carriers above, since those are what
+the headroom is made of. Keep `roken`/`vz_DM`/`vz_hart` as floor tests and
+`leeftijd`/`geslacht` as the leakage probe, and prioritise:
+
+| target | type | why it is now first-rank |
+|---|---|---|
+| `stenACIl` | ordinal | strongest single carrier; the direct grading test |
+| `KliMaYr` | continuous | dated onset — tests whether an embedding reads years out of prose |
+| `KliMaDur` | continuous | derived from the same, and 0.6078 on its own |
+| `packyrs` | continuous | the presence-vs-grading contrast in one variable |
+| `mht_alln` | count | treatment intensity |
+
+Drop `labkrea`, `MDRD`, `bdsys` to second rank: they are protocol-measured, sit in the half
+text cannot be expected to reach, and the protocol half's 0.7196 is largely redundant with
+the chart half anyway.
 
 ## 4. T3-1 — model selection, outcome-blind
 

@@ -19,7 +19,7 @@ belongs here, not only in conversation.
 | 1 | T2 clinical concepts | `--mode concepts` | **DONE (re-run 2026-09-03 with tiered terms) — see §5.1** |
 | 1 | `incr` — text on top of the FULL curated baseline | `--add-baseline-cols all` | **DONE — see §5.1** |
 | 1 | `sens` — structured arm without `ok.OMSCHR` | `prepare_pivoted_event_features.py` | **DONE — see §5.1** |
-| 2 | **T3-0 headroom check (no GPU)** | `--baseline-cols group:chart` / `group:protocol` | **ready — run this before any T3 work, see §7.0** |
+| 2 | **T3-0 headroom check (no GPU)** | `--baseline-cols group:chart` / `group:protocol` | **DONE 2026-09-07 — HEADROOM EXISTS, see §7.0** |
 | 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | **planned — see `docs/t3-frozen-llm-plan.md`** |
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
@@ -385,17 +385,17 @@ documented in these notes; automating its extraction is the entire point.
 - **Gate 0.** T0 runs first. Any later gain must exceed it, or it is note-taking intensity,
   not physiology. This is the `gfr_count` C=0.851 lesson from the structured arm: a
   missingness/volume artifact that looked like strong signal.
-- **Gate 0.5 — the headroom check (§7.0).** Cheaper than T3 and can make it unnecessary:
-  if the chart-derivable curated variables cannot beat demographics, no text method can, and
-  the negative becomes structural rather than another null.
+- **Gate 0.5 — the headroom check (§7.0). PASSED 2026-09-07.** Chart-derivable curated
+  variables reach 0.7310 against demographics' 0.6727, so text has 87% of the curated
+  advantage available to it in principle and the null is an extraction failure. T3 escalation
+  is warranted; Gate 1 below is superseded for this reason.
 - **Gate 1.** Escalate to T3 (frozen LLM) **only if** T1 or T2 clears its floor on the
   pre-imputation screen, or beats 0.6883 with demographics. If both are null, a null LLM
   arm adds no information.
-  **Status: gate 1 was NOT met** — every T1/T2 variant is null, including after the
-  2026-09-03 concept correction, and text adds +0.0003 over the full curated baseline. T3
-  proceeds as a deliberate override (see `docs/t3-frozen-llm-plan.md`), which is why the
-  plan front-loads the **no-GPU headroom check**: bounding what any text method could
-  achieve is worth more than a fourth null.
+  **Status: superseded by Gate 0.5.** Gate 1 was not met on its own terms — every T1/T2
+  variant is null and text adds +0.0003 over the full curated baseline — but the headroom
+  check answers the question Gate 1 was a proxy for, and answers it positively: the
+  information is present and unextracted. Escalate, and aim at grading (plan §3.4).
 - **Gate 2.** If two consecutive methodology fixes fail to move the verdict, stop. That
   criterion is what closed the structured arm.
 
@@ -438,10 +438,27 @@ Two traps this encodes, both of which the first draft of the plan fell into:
   hyperlipidaemia pairs. Substring selection cannot express that, which is why groups match
   exact names.
 
-Compare `HR_chart_demo_rt` against **0.6727** (the matched demographics control), never
-0.6883 (a full-cohort number). `≈ 0.673` means no text method can help and the ceiling for
-text is demographics; `0.69–0.72` means partial headroom; `≈ 0.74` means T1/T2 simply failed
-to extract what is there. Full interpretation table in `docs/t3-frozen-llm-plan.md` §3.3.
+**Result (2026-09-07): full headroom, gate 0.5 passes.** Compare against **0.6727** (the
+matched demographics control), never 0.6883 (a full-cohort number):
+
+| arm | n | test C | share of the 0.6727 → 0.7394 gap |
+|---|---|---|---|
+| chart-derivable + demographics | 115 | 0.7351 | 94% |
+| **chart-derivable alone** | 113 | **0.7310** | **87%** |
+| protocol-measured + demographics | 70 | 0.7198 | 71% |
+| protocol-measured alone | 68 | 0.7196 | 70% |
+| chart-derivable strict (no imaging) | 96 | 0.7024 | 44% |
+| *best text arm so far* | *258* | *0.6750* | ***3%*** |
+
+So the notes plausibly contain most of what the baseline visit records, and the free-text
+null is a failure of **extraction**, not of the data. **The bar for T3 is 0.7310** (0.7024 if
+imaging reports are not credited), and the gap to close from 0.6750 is ~0.056.
+
+What carries it is graded or dated, which is what to aim at: `stenACIl`/`stenACIr` 0.6471 /
+0.6468 (percent stenosis, from radiology reports that are in our corpus), the `KliMa*` onset
+block 0.5976–0.6313 (dated first event), `packyrs` 0.6182 (**pack-years — status `roken` is
+only 0.5674 and the text concept 0.5021**), `mht_alln` 0.5732 (count of antihypertensive
+classes). Full interpretation in `docs/t3-frozen-llm-plan.md` §3.3.
 
 Note `~group:chart` is **not** the protocol half — it also contains demographics and admin
 columns. Use `group:protocol` explicitly; the builder prints which columns sit in neither
@@ -509,6 +526,24 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-09-07 — T3-0 headroom check: THE INFORMATION IS THERE, the extraction failed.**
+  129 runs. Chart-derivable curated variables alone reach **0.7310** (87% of the
+  demographics→full-baseline gap, with no age or sex); protocol-measured alone 0.7196; strict
+  chart without imaging 0.7024; every text arm so far realised **3%**. So the free-text null
+  is about extraction, not the data, and **T3 is justified by evidence rather than as an
+  override**. The bar changes too: **0.7310, not 0.7394** — the full baseline includes
+  protocol measurement a note cannot contain, so it was never the right target.
+  What carries it is graded or dated (`stenACIl` 0.6471, `KliMa*` 0.5976–0.6313, `packyrs`
+  0.6182, `mht_alln` 0.5732), and two of those — pack-years and medication — were *removed*
+  by the 2026-09-03 concept correction. That correction was right about meaning and
+  nonetheless discarded signal: quantities and medications do not belong in a *disease*
+  concept, but they do belong in the feature set. **Cheapest next step is graded and
+  medication concepts, CPU-only, before any GPU work** (`docs/t3-frozen-llm-plan.md` §3.4).
+  Method note: the provenance split was first drafted by name prefix, which put the
+  medication flags, the `KliMa*` block and age/sex on the protocol side — exactly what
+  carries the chart half. Run as drafted it would have said "no headroom, close the arm".
+  Hence the exact-name partition with a hard exhaustiveness error.
 
 - **2026-09-03 — the three clinical-review items are answered; nothing changes the
   verdict.** 91 runs in the log. (1) **`ok.OMSCHR` never mattered**: the structured arm

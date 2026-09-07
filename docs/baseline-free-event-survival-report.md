@@ -1,8 +1,10 @@
 # Can 15-year cardiovascular risk be predicted from raw EHR events, without manually extracted variables?
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
-Status: **both arms complete. Structured/numeric: negative. Free-text: negative.**
-Last updated: 2026-09-03
+Status: **structured/numeric: negative (closed). Free-text: negative for every
+representation tried, but the headroom check (§10.2b) shows the information is present —
+so the null is about extraction, and one further arm (T3) is justified.**
+Last updated: 2026-09-07
 
 ---
 
@@ -157,6 +159,7 @@ the merge, the signal column does not survive at all (best C=0.528, CI 0.551).
 | H9 | A concept null means the Dutch terminology failed, not the hypothesis | Per-concept prevalence | **Rejected.** Extraction works at clinically plausible rates (diabetes 23.9%, smoking 39.4%, prior MI 26.2%, hypertension 39.8%); negation behaves sensibly (heart failure negated 1,245 > asserted 835). The concepts are found and still do not predict |
 | H10 | The concept null was an artefact of conflated term lists (measurement and medication terms mixed into disease concepts) | Terms tiered to disease+symptom, `aneurysma` split out, both variants re-run | **Rejected.** Corrected concepts **0.5098** vs conflated 0.5114; all-tier variant 0.5092. 0 of 39 (and 0 of 42) clear the floor either way |
 | H11 | Text adds information on top of the *full* curated baseline, not just demographics | 183 curated vars + concepts / TF-IDF / volume, matched subcohort | **Rejected.** 0.7394 → concepts **0.7397**, TF-IDF **0.7388**, volume **0.7394** |
+| H13 | The free-text null means the notes lack the information (rather than that our representations fail to extract it) | Curated variables split by provenance: chart-derivable vs protocol-measured | **Rejected.** Chart-derivable curated facts alone reach **0.7310** — 87% of the demographics→full-baseline gap, with no age or sex — while every text arm realised 3%. The information is present; extraction is what failed |
 | H12 | The structured result depends on `ok.OMSCHR`, whose median row is +98 days post-baseline | Structured arm rebuilt without it | **Rejected**, and the concern is moot: **0.6884** without vs 0.6890 with (2 of 534 features) |
 
 ---
@@ -437,6 +440,64 @@ over age and sex is information the curated variables already carry.
 This also sets the bar for any future model: a frozen-LLM or fine-tuned text arm has to
 clear **0.7394**, not 0.6727, to change clinical practice here.
 
+### 10.2b Headroom: how much of the curated skill is text-derivable in principle?
+
+The arms above say text adds nothing. They do not say whether that is because the notes lack
+the information or because TF-IDF and binary concepts fail to extract it. This check
+separates the two without a model, by splitting the 183 curated variables by **provenance**
+and asking what each half achieves.
+
+The split is by exact name in `scripts/smartehr/feature_matrix.py`, reviewable with
+`--list-baseline-groups`, and verified exhaustive on the real data (113 chart + 68 protocol
++ 2 demographics = 183). Age and sex sit in **neither** half — they are the floor both are
+measured against.
+
+| arm | n | test C | share of the demographics → full-baseline gap |
+|---|---|---|---|
+| full curated baseline | 183 | **0.7394** | 100% |
+| chart-derivable + demographics | 115 | 0.7351 | **94%** |
+| **chart-derivable alone** | 113 | **0.7310** | **87%** |
+| protocol-measured + demographics | 70 | 0.7198 | 71% |
+| protocol-measured alone | 68 | 0.7196 | 70% |
+| chart-derivable, strict (no imaging findings) | 96 | 0.7024 | 44% |
+| demographics only | 2 | 0.6727 | 0% |
+| *best text arm (TF-IDF + demographics)* | *258* | *0.6750* | ***3%*** |
+
+**There is substantial headroom, and this reverses the expectation.** Facts a clinical note
+could plausibly state carry **87%** of the curated baseline's advantage over demographics —
+without any age or sex — while the text arms realised **3%** of it. So the free-text null is
+a failure of *extraction*, not an absence of information. Both halves reaching ~0.72–0.73
+separately while together reaching 0.7394 also shows they are largely redundant: the same
+severity is visible through history and through measurement.
+
+What carries the chart-derivable half is specific, and it is almost all **graded or dated**:
+
+| feature | train C | why it matters here |
+|---|---|---|
+| `stenACIl` / `stenACIr` | 0.6471 / 0.6468 | percent carotid stenosis — the strongest features in the half, and radiology reports **are** in our corpus |
+| `KliMaYr` (onset year) | 0.3855, `C_udev` 0.6313 | dated onset, inverse: earlier first event is worse |
+| `KliMaC` / `KliMaDur` / `KliMaDrD` | 0.6138 / 0.6078 / 0.5976 | type and duration of the first manifest event |
+| `packyrs` | 0.6182 | **pack-years, not smoking status.** `roken` (status) reads 0.5674, and the text concept `roken_present` 0.5021 |
+| `mht_alln` | 0.5732 | *count* of antihypertensive classes — treatment intensity, not presence |
+| `pa_stolmid`, `pamid`, `mas01`, `mht_all`, `aspirine` | 0.5935 – 0.5587 | antiplatelet / anticoagulant / antihypertensive use |
+
+Dropping the imaging findings costs 0.7310 → **0.7024**, so grades from radiology reports are
+worth 0.029 on their own. Even the strict half still beats demographics by 0.030.
+
+This is §10.1's "*that* versus *how much*" claim stated quantitatively, and it now cuts the
+other way than a pure null would: the graded facts are prognostic, they are the kind of thing
+prose can carry (a report states "70% stenose", a letter states "myocardinfarct in 2003",
+"30 pakjaren", "drie antihypertensiva"), and no representation tried so far encodes grading
+at all. That is a testable hypothesis rather than a closed question.
+
+**Method note worth recording.** The provenance split was first drafted by name prefix. That
+rule put the 44 medication flags, the four `KliMa*` onset variables, and `leeftijd`/`geslacht`
+on the protocol side — and the table above shows those are precisely what carries the
+chart-derivable half. Run as drafted, the chart half would have held ~36 features, landed
+near demographics, and the conclusion would have been "no headroom, close the arm": the
+opposite of the truth, reached by a rule that happened to confirm the prior. The partition is
+therefore written out by name and audited for exhaustiveness rather than pattern-matched.
+
 ### 10.3 Sensitivity: `ok.OMSCHR` and post-baseline treatment
 
 `OMSCHR` is the **operation description**, and its rows are mostly post-baseline: `datediff`
@@ -464,6 +525,14 @@ control, an explicit demographics decomposition confirming the comparison is fai
 clinician-reviewed concept terms tiered to separate disease mentions from measurements and
 medications, and a sensitivity arm confirming the structured result does not rest on
 post-baseline operation codes.
+
+The free-text half of that conclusion is now narrower than it looks. §10.2b shows the
+chart-derivable curated variables reach **0.7310 without demographics** — 87% of the
+curated advantage — so the notes plausibly contain most of what the baseline visit records.
+What no representation tried so far captures is *grading*: percent stenosis, dated onset,
+pack-years, count of drug classes. The negative therefore stands for TF-IDF and binary
+concepts, and one further arm aimed squarely at graded extraction (T3) is justified rather
+than redundant. Its bar is **0.7310**, not 0.6727.
 
 Manual curation is therefore not redundant here, and the reason is now specific rather
 than speculative: the same clinical concepts are present in the notes at plausible rates
