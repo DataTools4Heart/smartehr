@@ -16,6 +16,7 @@ belongs here, not only in conversation.
 | 0 | text metadata / corpus measurement | `eda_text_events.py` | **DONE — see §1.1** |
 | 1 | document cache + T0 volume | `prepare_text_features.py --mode volume` | **ready** |
 | 1 | T1 TF-IDF (+ variants) | `--mode tfidf` | **ready** |
+| 1 | **T2b graded + medication features** | `--mode graded` | **ready — the response to the headroom check, see §3.5** |
 | 1 | T2 clinical concepts | `--mode concepts` | **DONE (re-run 2026-09-03 with tiered terms) — see §5.1** |
 | 1 | `incr` — text on top of the FULL curated baseline | `--add-baseline-cols all` | **DONE — see §5.1** |
 | 1 | `sens` — structured arm without `ok.OMSCHR` | `prepare_pivoted_event_features.py` | **DONE — see §5.1** |
@@ -58,7 +59,7 @@ data paths (above) and run:
 ./bash_scripts/run_all_phases.sh t1 t2 screens
 ```
 
-- Phases: `p0 t0 t1 t2 incr sens t3headroom ctrl struct screens t3`. With no arguments it
+- Phases: `p0 t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3`. With no arguments it
   runs everything except `t3`.
 - **Arms that already exist are skipped**, so re-running after adding one arm is cheap.
   `FORCE=1` redoes them.
@@ -302,6 +303,57 @@ printed:
 python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode concepts --expand-terms 5 --screen-features --out-dir T2_concepts_expanded
 ```
 
+### T2b — graded and medication features (the response to the headroom check)
+
+T1 and T2 encode **presence**. §7.0 showed every carrier of the chart-derivable half is
+**graded or dated**, so these arms extract quantities on the registry's own scales:
+percent stenosis on the `stenACI*` 0–7 bands, pack-years per `packyrs`'s own definition
+("pakjes (van 20) per dag × jaren"), earliest onset year per `KliMaYr`, aortic diameter per
+`aorta_hg` ("Grootste diameter"), smoking on `roken`'s 0/1/3 codes, alcohol on `AlchlGlz`'s
+bands, and a count of antihypertensive classes mirroring `mht_alln`.
+
+```bash
+./bash_scripts/run_all_phases.sh graded screens
+```
+
+Five arms: graded alone (with validation), a dates-stripped era control, +demographics,
++concepts+demographics (every text feature at once, against the 0.7310 ceiling), and
++full curated baseline (incremental value against 0.7394).
+
+**Read the validation table before any survival number.** `--validate-baseline` compares
+each extracted quantity against the curated variable measuring the same thing, on train
+patients, with the outcome never consulted:
+
+```
+  extracted                    curated             both     rho   exact   sens   spec
+  graded.stenosis_max          stenACIl/stenACIr   ...
+  graded.packyears             packyrs             ...
+  graded.n_antihypertensive_classes  mht_alln      ...
+```
+
+Near-zero agreement means a null survival result is about the **extractor**, not the text —
+which is the ambiguity every previous null left open. This table is also what settles the
+Dutch severity-word→band mapping empirically (`ASSUMPTIONS.md` #4).
+
+Two things to know about these arms:
+
+- **The medication lexicon is derived, not written.** ATC prefixes define each class
+  (`ASSUMPTIONS.md` #1); the Dutch drug *names* come from the cohort's own `med_*.csv`
+  (`med_ZIatc` + `med_genNaam`), train patients only, cached at `$MEDLEX`. Its per-class
+  name counts are printed into `$RESULTS` so the matcher is auditable. A class printed
+  `<- NONE` has no prescription in this cohort and is undetectable in text.
+- **`--date-mode year`** keeps a year while dropping day and month, because full stripping
+  destroys `"CABG op 12-05-2003"` and dated onset is one of the four carriers. It
+  reintroduces calendar era at year granularity, which is why the paired `--date-mode strip`
+  arm exists. **If the two differ materially, believe the stripped one.**
+
+Unstated quantities are `NaN`, not 0, and every quantity has a `_measured` indicator —
+read those first, the way the T0 volume gate is read first. A patient whose notes never
+mention stenosis has not been graded 0; conflating the two is what made `gfr_count` read
+C=0.851 in the structured arm.
+
+---
+
 ### The arm that answers the question — any representation + demographics
 
 ```bash
@@ -526,6 +578,21 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-09-07 — T2b graded + medication features built, in response to the headroom
+  check.** `--mode graded` extracts quantities rather than assertions, every scale taken
+  from `smart.csv`'s own value labels so an extracted feature is directly comparable to the
+  curated variable it mirrors: `stenACI*` bands 0–7, `packyrs` ("pakjes van 20 per dag ×
+  jaren"), `KliMaYr` (earliest year), `aorta_hg` (largest diameter), `roken` 0/1/3,
+  `AlchlGlz` bands, `mht_alln` (count of antihypertensive classes). The medication lexicon
+  is **derived from the cohort's own `med_*.csv`** rather than hand-written; only the
+  ATC-prefix bridge to SMART's `L10`/`L20`/`D20` group codes is assumed, and that plus every
+  other ungrounded decision is written up in **`ASSUMPTIONS.md`**. New `--validate-baseline`
+  reports extracted-vs-curated agreement, train-only and outcome-blind, so "does the
+  extraction work?" stops being an open question behind every null. 57 fixture assertions
+  in `scripts/smartehr/test_graded_concepts.py`; two real bugs found and fixed by them
+  (`"pack-years"` plural, and standalone lesion terms like `occlusie` that have no stenosis
+  noun to sit beside).
 
 - **2026-09-07 — T3-0 headroom check: THE INFORMATION IS THERE, the extraction failed.**
   129 runs. Chart-derivable curated variables alone reach **0.7310** (87% of the

@@ -199,6 +199,16 @@ the feature set. That is a gap in the representation, not in the correction. **A
 medication features as their own concepts before or alongside T3** — this is cheap, CPU-only,
 and may capture part of the headroom without any embedding at all. Run it first.
 
+**Built 2026-09-07 as the `graded` phase** (`--mode graded`, `scripts/smartehr/graded_concepts.py`).
+Every scale is taken from `smart.csv`'s own value labels, so an extracted feature lands on
+the same scale as the curated variable it mirrors; the medication lexicon is derived from the
+cohort's `med_*.csv` rather than hand-written; ungrounded decisions are in `ASSUMPTIONS.md`.
+`--validate-baseline` reports extracted-vs-curated agreement train-only and outcome-blind,
+which is the check that decides whether a null here is about the text or about the extractor.
+**Run `graded` before T3-1**: if the quantities are recovered and still do not predict, that
+is a far stronger result than a frozen-LLM null, and if they are not recovered, T3's job is
+defined by exactly which ones failed.
+
 ### 3.5 Revised probe targets for T3-1
 
 §4's outcome-blind probe should be re-weighted to the carriers above, since those are what

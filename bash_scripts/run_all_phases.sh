@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 t0 t1 t2 incr sens t3headroom ctrl struct screens t3
+# Phases: p0 t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -79,7 +79,7 @@ fi
 
 mkdir -p "$OUT" "$(dirname "$RESULTS")" "$(dirname "$CACHE")"
 PHASES=("$@")
-[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens t3headroom ctrl struct screens)
+[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens graded t3headroom ctrl struct screens)
 declare -a FAILED=() SKIPPED=() RAN=()
 
 want() { for p in "${PHASES[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
@@ -236,6 +236,45 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- graded: the response to the headroom check. T1/T2 encoded PRESENCE; the headroom
+#      check showed every carrier of the chart-derivable half is GRADED or DATED
+#      (stenACIl 0.6471 percent stenosis, KliMa* 0.5976-0.6313 dated onset, packyrs 0.6182
+#      pack-years, mht_alln 0.5732 count of drug classes). So these arms extract quantities
+#      and dates on the registry's own scales. CPU-only; run before any GPU work.
+#
+#      READ THE VALIDATION TABLE FIRST. `--validate-baseline` compares each extracted
+#      quantity against the curated variable measuring the same thing, on train patients,
+#      with the outcome never consulted. If agreement is near zero, a null survival result
+#      is about the extractor and says nothing about the text -- and that table is also
+#      what settles the Dutch severity-word mapping in ASSUMPTIONS.md #4.
+if want graded; then
+  MEDLEX="${MEDLEX:-$OUT/med_lexicon.json}"
+  # date-mode year: a year written as part of a full date is otherwise stripped, and
+  # dated onset is one of the four carriers. The paired strip arm below measures how much
+  # of any gain is calendar era rather than clinical content (plan pitfall #4).
+  step "graded quantities (+validation)" "$OUT/GRADED_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
+      --date-mode year --med-lexicon "$MEDLEX" --validate-baseline --screen-features \
+      --out-dir "$OUT/GRADED_rt"
+  step "graded, dates stripped (era control)" "$OUT/GRADED_strip_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
+      --date-mode strip --med-lexicon "$MEDLEX" --out-dir "$OUT/GRADED_strip_rt"
+  step "graded + demographics" "$OUT/GRADED_demo_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
+      --date-mode year --med-lexicon "$MEDLEX" --add-baseline-cols "$DEMOG" \
+      --out-dir "$OUT/GRADED_demo_rt"
+  # every text feature we can build, against the 0.7310 chart-derivable ceiling
+  step "graded + concepts + demographics" "$OUT/GRADED_all_demo_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
+      --date-mode year --med-lexicon "$MEDLEX" --with-concepts \
+      --add-baseline-cols "$DEMOG" --out-dir "$OUT/GRADED_all_demo_rt"
+  # incremental value over everything already collected
+  step "graded + FULL curated baseline" "$OUT/GRADED_full_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
+      --date-mode year --med-lexicon "$MEDLEX" --add-baseline-cols all \
+      --out-dir "$OUT/GRADED_full_rt"
 fi
 
 # ---- t3headroom: T3-0, the headroom check. NO GPU. Run before any embedding work.

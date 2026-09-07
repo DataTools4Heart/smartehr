@@ -51,7 +51,13 @@ from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort
-from feature_matrix import (finish, handle_listing_flags, smart_baseline_features)
+from feature_matrix import (finish, handle_listing_flags, smart_baseline_features,
+                            smart_baseline_numeric)
+from graded_concepts import (ANTIHYPERTENSIVE, CURATED_MISSING, MED_CLASSES,
+                             VALIDATION_PAIRS, _spearman, compile_med_lexicon,
+                             extract_alcohol, extract_aorta_cm, extract_medications,
+                             extract_onset_years, extract_packyears,
+                             extract_smoking_status, extract_stenosis)
 from results_log import add_results_arg, emit, results_block
 
 CHUNK = 50_000
@@ -62,6 +68,14 @@ TEXT_COLS_DEFAULT = ("consult:consult_tekst,uitgaandebrief:inhoud,"
 
 ISO_DATE_PAT = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 NL_DATE_PAT = re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b")
+# Year-only replacements, for --date-mode year. The graded arm needs the onset YEAR
+# (KliMaYr is one of the four carriers the headroom check identified), and full stripping
+# destroys it whenever a letter writes "CABG op 12-05-2003" rather than "CABG in 2003".
+# Keeping the year alone preserves what onset needs at the coarsest granularity that
+# still works, without leaving full dates in the text.
+ISO_YEAR_SUB = re.compile(r"\b(\d{4})-\d{2}-\d{2}\b")
+NL_YEAR_SUB = re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/](\d{4})\b")
+NL_YEAR2_SUB = re.compile(r"\b\d{1,2}[-/]\d{1,2}[-/]\d{2}\b")
 CLINICIAN_PAT = re.compile(r"\b(dr|drs|arts|aios|anios|prof|mw|hr|collega|specialist|"
                            r"cardioloog|neuroloog|internist|radioloog)\b", re.I)
 SECTION_SPLIT = re.compile(
@@ -228,7 +242,8 @@ def build_cache(event_csv_folder, specs, LM, LB, cohort_ids, cache_path, say):
 NAMEISH_PAT = re.compile(r"(?<![.!?]\s)(?<!^)\b[A-Z][a-z]{2,}\b")
 
 
-def clean_text(t, strip_dates=True, strip_names=True, strip_nameish=False):
+def clean_text(t, strip_dates=True, strip_names=True, strip_nameish=False,
+               date_mode="strip"):
     if strip_nameish:
         # Mid-sentence capitalised words, removed BEFORE lowercasing. Phase 0 measured a
         # median of 50 such tokens per uitgaandebrief letter; once lowercased they survive
@@ -237,7 +252,12 @@ def clean_text(t, strip_dates=True, strip_names=True, strip_nameish=False):
         # it is opt-in and paired with a without-it arm.
         t = NAMEISH_PAT.sub(" ", t)
     t = t.lower()
-    if strip_dates:
+    if date_mode == "year":
+        # keep the year, drop day and month; a 2-digit year is ambiguous, so drop it
+        t = ISO_YEAR_SUB.sub(r" \1 ", t)
+        t = NL_YEAR_SUB.sub(r" \1 ", t)
+        t = NL_YEAR2_SUB.sub(" ", t)
+    elif strip_dates:
         t = ISO_DATE_PAT.sub(" ", t)
         t = NL_DATE_PAT.sub(" ", t)
     if strip_names:
@@ -417,6 +437,257 @@ def tfidf_features(texts, train_rows, analyzer, ngram, max_features, min_df, max
     return pd.DataFrame(M, columns=names)
 
 
+def build_med_lexicon(event_csv_folder, train_ids, lexicon_path, say):
+    """Derive {medication class: [Dutch drug names]} from the cohort's own prescriptions.
+
+    Grounded rather than invented: `med_ZIatc` and `med_genNaam` are documented in
+    data/smartehr/data_dicts/data_dict.csv as "Medication ATC code" and "Medication name",
+    so the names that express each ATC class IN THIS COHORT come from the data. Writing
+    Dutch drug lists by hand is precisely the ungrounded guess that the prefix-partition
+    mistake already cost us once (see the report's §10.2b method note).
+
+    TRAIN patients only. The lexicon shapes the feature space, so building it on the full
+    cohort would let validation and test influence the representation.
+    """
+    if lexicon_path and Path(lexicon_path).exists():
+        lex = json.load(open(lexicon_path))
+        say(f"  reusing medication lexicon {lexicon_path} "
+            f"({sum(len(v) for v in lex.values()):,} names, {len(lex)} classes)")
+        return lex
+    prefixes = [(cls, pre) for cls, spec in MED_CLASSES.items() for pre in spec["atc"]]
+    found = {cls: set() for cls in MED_CLASSES}
+    path = next((q for q in sorted(Path(event_csv_folder).glob("*.csv"))
+                 if q.stem.startswith("med_")), None)
+    if path is None:
+        raise SystemExit(f"no med_*.csv in {event_csv_folder}; the graded arm needs it to "
+                         "derive the medication lexicon")
+    train = set(train_ids)
+    n_rows = 0
+    for chunk in pd.read_csv(path, chunksize=CHUNK, low_memory=False):
+        for c in ("med_ZIatc", "med_genNaam"):
+            if c not in chunk.columns:
+                raise SystemExit(f"{path.name} has no `{c}`; cannot derive the lexicon")
+        sub = chunk[chunk[ID].isin(train)]
+        n_rows += len(sub)
+        atc = sub["med_ZIatc"].astype(str).str.upper()
+        nm = sub["med_genNaam"].astype(str)
+        for cls, pre in prefixes:
+            hit = atc.str.startswith(pre)
+            if hit.any():
+                found[cls].update(nm[hit].unique())
+    lex = {cls: sorted(v) for cls, v in found.items() if v}
+    say(f"  medication lexicon derived from {path.name} ({n_rows:,} train rows): "
+        f"{len(lex)} of {len(MED_CLASSES)} classes have names in this cohort")
+    for cls in sorted(MED_CLASSES):
+        names = lex.get(cls, [])
+        # Names are drug names, not patient data, so they are safe to log -- and the log
+        # is the only way to audit what the text matcher will look for.
+        say(f"    {cls:<28s} {MED_CLASSES[cls]['smart']:<7s} "
+            f"{'/'.join(MED_CLASSES[cls]['atc']):<14s} {len(names):3d} names"
+            + (f": {', '.join(names[:6])}{' ...' if len(names) > 6 else ''}" if names else
+               "  <- NONE; this class cannot be detected in text"))
+    empty = [c for c in MED_CLASSES if c not in lex]
+    if empty:
+        emit("medication classes with no names in this cohort (undetectable): {}",
+             ",".join(empty))
+    if lexicon_path:
+        Path(lexicon_path).parent.mkdir(parents=True, exist_ok=True)
+        json.dump(lex, open(lexicon_path, "w"), indent=1, ensure_ascii=False)
+        say(f"  lexicon written to {lexicon_path}")
+    return lex
+
+
+def graded_features(docs_by_pid, pids, med_compiled, say):
+    """Quantities and dates, on the curated variables' own scales.
+
+    Extraction is PER DOCUMENT, not on the per-patient concatenation, so a percentage in
+    one radiology report cannot bind to a vessel term in another. Aggregation then mirrors
+    each registry variable's own definition: stenosis and aorta take the MAXIMUM
+    (aorta_hg is "Grootste diameter"), onset takes the EARLIEST year (KliMaYr is the
+    "eerste uiting"), and status fields also report the most recent document's value.
+
+    Unstated quantities are NaN, not 0. A patient whose notes never mention stenosis has
+    not been graded 0 -- that is the distinction between "no disease" and "not measured",
+    and conflating them is what made `gfr_count` read C=0.851 in the structured arm. Each
+    quantity therefore also gets an explicit `_measured` indicator, so the screen can see
+    a missingness artefact instead of having it hide inside the value column.
+    """
+    med_names = sorted(med_compiled)
+    cols = (["graded.stenosis_max", "graded.stenosis_last", "graded.stenosis_left_max",
+             "graded.stenosis_right_max", "graded.stenosis_ge50", "graded.stenosis_ge70",
+             "graded.stenosis_n", "graded.stenosis_measured",
+             "graded.packyears", "graded.packyears_measured",
+             "graded.smoking_status_last", "graded.smoking_status_max",
+             "graded.alcohol_status_last", "graded.alcohol_glasses_band",
+             "graded.onset_year_min", "graded.onset_year_n", "graded.onset_measured",
+             "graded.aorta_cm_max", "graded.aorta_measured",
+             "graded.n_antihypertensive_classes", "graded.any_antihypertensive",
+             "graded.n_med_classes"]
+            + [f"graded.med_{c}" for c in med_names])
+    X = pd.DataFrame(np.nan, index=range(len(pids)), columns=cols)
+    idx = {p: i for i, p in enumerate(pids)}
+    hits = {c: 0 for c in cols}
+    for pid, items in docs_by_pid.items():
+        i = idx.get(pid)
+        if i is None:
+            continue
+        sten, sten_l, sten_r, sten_last = [], [], [], None
+        py, years, aorta = [], [], []
+        smoke, smoke_last = [], None
+        alc_status, alc_band = [], []
+        classes = set()
+        for dd, txt in items:                      # already sorted oldest -> newest
+            for grade, side in extract_stenosis(txt):
+                sten.append(grade)
+                sten_last = grade
+                (sten_l if side == "left" else sten_r if side == "right" else []).append(grade)
+            py += extract_packyears(txt)
+            years += extract_onset_years(txt)
+            aorta += extract_aorta_cm(txt)
+            sm = extract_smoking_status(txt)
+            if sm is not None:
+                smoke.append(sm)
+                smoke_last = sm
+            st, band = extract_alcohol(txt)
+            if st is not None:
+                alc_status.append(st)
+            if band is not None:
+                alc_band.append(band)
+            classes |= extract_medications(txt, med_compiled)
+
+        def put(col, val):
+            X.iat[i, cols.index(col)] = val
+
+        if sten:
+            put("graded.stenosis_max", max(sten))
+            put("graded.stenosis_last", sten_last)
+            put("graded.stenosis_ge50", 1.0 if max(sten) >= 3 else 0.0)
+            put("graded.stenosis_ge70", 1.0 if max(sten) >= 4 else 0.0)
+            put("graded.stenosis_n", len(sten))
+        if sten_l:
+            put("graded.stenosis_left_max", max(sten_l))
+        if sten_r:
+            put("graded.stenosis_right_max", max(sten_r))
+        put("graded.stenosis_measured", 1.0 if sten else 0.0)
+        if py:
+            put("graded.packyears", max(py))
+        put("graded.packyears_measured", 1.0 if py else 0.0)
+        if smoke:
+            put("graded.smoking_status_last", smoke_last)
+            put("graded.smoking_status_max", max(smoke))
+        if alc_status:
+            put("graded.alcohol_status_last", alc_status[-1])
+        if alc_band:
+            put("graded.alcohol_glasses_band", max(alc_band))
+        if years:
+            put("graded.onset_year_min", min(years))     # KliMaYr: the FIRST manifestation
+            put("graded.onset_year_n", len(years))
+        put("graded.onset_measured", 1.0 if years else 0.0)
+        if aorta:
+            put("graded.aorta_cm_max", max(aorta))       # aorta_hg: "Grootste diameter"
+        put("graded.aorta_measured", 1.0 if aorta else 0.0)
+        # mht_alln is "Aantal verschillende groepen antihypertensiva" -- a COUNT of
+        # distinct classes, which is why presence flags alone could not reproduce it.
+        n_ah = len(classes & set(ANTIHYPERTENSIVE))
+        put("graded.n_antihypertensive_classes", float(n_ah))
+        put("graded.any_antihypertensive", 1.0 if n_ah else 0.0)
+        put("graded.n_med_classes", float(len(classes)))
+        for c in med_names:
+            put(f"graded.med_{c}", 1.0 if c in classes else 0.0)
+    for c in cols:
+        hits[c] = int(X[c].notna().sum())
+    say(f"  {len(cols)} graded features; coverage over {len(pids):,} patients "
+        "(NaN = not stated, which the pre-imputation screen scores separately):")
+    for c in cols:
+        v = X[c].dropna()
+        extra = ""
+        if len(v) and not c.endswith(("_measured", "_n")):
+            extra = f"  median={v.median():.2f} p90={v.quantile(0.9):.2f}"
+        say(f"    {c:<40s} {hits[c]:6,} ({100*hits[c]/max(len(pids),1):5.1f}%){extra}")
+    return X
+
+
+def validate_graded(X, smart_csv, pids, train_rows, say):
+    """Agreement between each extracted quantity and the curated variable measuring it.
+
+    Outcome-blind by construction, so it cannot overfit the 828 events and can be read
+    before any survival number. It answers the question every previous null left open --
+    does the extraction work? -- and settles ASSUMPTIONS.md #4's Dutch severity-word
+    mapping empirically rather than by assertion.
+
+    Train patients only, to keep the same discipline as every other selection step.
+    """
+    df, _cols = smart_baseline_numeric(smart_csv)
+    cur = df.reindex([pids[i] for i in train_rows])
+    Xtr = X.iloc[list(train_rows)].reset_index(drop=True)
+    say("\n  --- extracted vs curated, TRAIN, outcome never consulted ---")
+    say("  `both` is the patients where BOTH are present; agreement is only defined there.")
+    say(f"  {'extracted':<38s} {'curated':<20s} {'both':>6s} {'rho':>7s} "
+        f"{'exact':>7s} {'sens':>6s} {'spec':>6s}")
+    rows = []
+    for feat, curated, kind in VALIDATION_PAIRS:
+        if feat not in Xtr.columns:
+            continue
+        present = [c for c in curated if c in cur.columns]
+        if not present:
+            say(f"  {feat[:38]:<38s} {'/'.join(curated):<20s}   <- curated column absent")
+            continue
+        cv = None
+        for c in present:
+            v = pd.to_numeric(cur[c], errors="coerce").to_numpy(float)
+            v = np.where(np.isin(v, CURATED_MISSING.get(c, ())), np.nan, v)
+            cv = v if cv is None else np.fmax(cv, v)      # ordinal_max over both sides
+        ev = Xtr[feat].to_numpy(float)
+        ok = ~np.isnan(ev) & ~np.isnan(cv)
+        n = int(ok.sum())
+        if n < 8:
+            say(f"  {feat[:38]:<38s} {'/'.join(present):<20s} {n:6,}   too few to compare")
+            continue
+        e, c_ = ev[ok], cv[ok]
+        rho = _spearman(e, c_)
+        exact = float((e == c_).mean()) if kind in ("ordinal", "ordinal_max", "categorical",
+                                                    "binary") else float("nan")
+        sens = spec = float("nan")
+        if kind == "binary":
+            pos, neg = c_ > 0, c_ == 0
+            sens = float((e[pos] > 0).mean()) if pos.any() else float("nan")
+            spec = float((e[neg] == 0).mean()) if neg.any() else float("nan")
+        say(f"  {feat[:38]:<38s} {'/'.join(present):<20s} {n:6,} "
+            f"{(f'{rho:+.3f}' if rho is not None else '   -  '):>7s} "
+            f"{(f'{exact:.3f}' if exact == exact else '   -  '):>7s} "
+            f"{(f'{sens:.3f}' if sens == sens else '  -   '):>6s} "
+            f"{(f'{spec:.3f}' if spec == spec else '  -   '):>6s}")
+        rows.append((feat, rho, n))
+    good = [f"{f.split('.')[-1]} rho={r:+.2f}" for f, r, n in rows
+            if r is not None and abs(r) >= 0.3]
+    emit("graded vs curated (train, outcome-blind): {} of {} pairs reach |rho|>=0.3{}",
+         len(good), len(rows), "; " + ", ".join(good[:5]) if good else "")
+    if not good and rows:
+        say("  ** nothing reaches |rho|>=0.3: the extraction does not recover the curated")
+        say("     quantities, so a null survival result would be about extraction, not text **")
+    # Medication flags, class by class against their own SMART flag.
+    say(f"\n  {'extracted medication class':<38s} {'curated':<10s} {'both':>6s} "
+        f"{'sens':>6s} {'spec':>6s}")
+    for cls, spec_ in sorted(MED_CLASSES.items()):
+        feat, cc = f"graded.med_{cls}", spec_["smart"]
+        if feat not in Xtr.columns or cc not in cur.columns:
+            continue
+        cv = pd.to_numeric(cur[cc], errors="coerce").to_numpy(float)
+        cv = np.where(np.isin(cv, (9,)), np.nan, cv)       # 9 -> Missend, per smart.csv
+        ev = Xtr[feat].to_numpy(float)
+        ok = ~np.isnan(ev) & ~np.isnan(cv)
+        if int(ok.sum()) < 8:
+            continue
+        e, c_ = ev[ok], cv[ok]
+        pos, neg = c_ > 0, c_ == 0
+        sn = float((e[pos] > 0).mean()) if pos.any() else float("nan")
+        sp = float((e[neg] == 0).mean()) if neg.any() else float("nan")
+        say(f"  {cls:<38s} {cc:<10s} {int(ok.sum()):6,} "
+            f"{(f'{sn:.3f}' if sn == sn else '  -   '):>6s} "
+            f"{(f'{sp:.3f}' if sp == sp else '  -   '):>6s}")
+    say("")
+
+
 def write_documents(text_by_pid, docs_by_pid, cohort, splits, out_dir, H, say):
     """Per-patient text parquet in the schema the Qwen extractor already consumes."""
     dur = cohort["first_event"].to_numpy(float)
@@ -458,6 +729,7 @@ def main(args):
     say(f"  ARGS: mode={args.mode} landmark={LM} lookback={LB} horizon={H} "
         f"section={args.section} analyzer={args.analyzer} svd={args.svd_components} "
         f"require_text={args.require_text} strip_dates={args.strip_dates} "
+        f"date_mode={args.date_mode} med_lexicon={args.med_lexicon} "
         f"strip_names={args.strip_names} strip_nameish={args.strip_nameish} "
         f"concept_encoding={args.concept_encoding} concept_terms={args.concept_terms} "
         f"expand_terms={args.expand_terms} "
@@ -552,7 +824,8 @@ def main(args):
         # cleaned, per-patient concatenation with a hard document boundary
         docs_by_pid = defaultdict(list)
         for p, src, dd, txt in docs:
-            t = clean_text(txt, args.strip_dates, args.strip_names, args.strip_nameish)
+            t = clean_text(txt, args.strip_dates, args.strip_names, args.strip_nameish,
+                           date_mode=args.date_mode)
             if args.section:
                 t = take_section(t, [w.strip().lower()
                                      for w in args.section.split(",") if w.strip()])
@@ -619,6 +892,35 @@ def main(args):
             if never:
                 emit("concepts NEVER matched: {}", ",".join(never))
             rep = f"text_concepts[{args.concept_encoding}/{args.concept_terms}]"
+        elif args.mode == "graded":
+            # Aimed squarely at the four carriers the headroom check named: percent
+            # stenosis, dated onset, pack-years and medication-class count.
+            if args.date_mode != "year":
+                say("  NOTE: --date-mode is not 'year', so a year written as part of a full "
+                    "date is stripped and graded.onset_year_min will under-fire. The paired "
+                    "arm exists to measure the calendar-era contribution; read them together.")
+            lex = build_med_lexicon(args.event_csv_folder,
+                                    [pids[i] for i in train_rows],
+                                    args.med_lexicon, say)
+            X = graded_features(docs_by_pid, pids, compile_med_lexicon(lex), say)
+            n_any = int(X[[c for c in X.columns if c.endswith("_measured")]].fillna(0)
+                        .to_numpy().max(axis=1).sum())
+            emit("graded: {} features; {} of {} patients have at least one extracted "
+                 "quantity", X.shape[1], n_any, len(pids))
+            if args.validate_baseline:
+                validate_graded(X, args.smart_csv, pids, train_rows, say)
+            rep = f"text_graded[dates={args.date_mode}]"
+            if args.with_concepts:
+                # The headline "everything the text gives us" arm: graded quantities are
+                # what T1/T2 lacked, but presence features are not thereby worthless, and
+                # the ceiling to beat (0.7310) was set by a model holding both kinds.
+                tiers = [t.strip() for t in args.concept_terms.split(",") if t.strip()]
+                cc = resolve_concepts(CONCEPTS, tiers, say)
+                C = concept_features(text_by_pid, pids, cc, encoding=args.concept_encoding)
+                say(f"  + {C.shape[1]} concept features appended "
+                    f"({args.concept_encoding}/{args.concept_terms})")
+                X = pd.concat([X.reset_index(drop=True), C.reset_index(drop=True)], axis=1)
+                rep += f"+concepts[{args.concept_terms}]"
         else:
             raise SystemExit(f"unknown --mode {args.mode}")
 
@@ -641,7 +943,9 @@ def main(args):
                        "strip_nameish": args.strip_nameish,
                        "expand_terms": args.expand_terms,
                        "concept_encoding": args.concept_encoding,
-                       "concept_terms": args.concept_terms})
+                       "concept_terms": args.concept_terms,
+                       "date_mode": args.date_mode,
+                       "med_lexicon": args.med_lexicon})
 
 
 
@@ -654,7 +958,8 @@ if __name__ == "__main__":
     p.add_argument("--split-json", required=True)
     p.add_argument("--out-dir", required=True)
     p.add_argument("--mode", required=True,
-                   choices=("volume", "tfidf", "concepts", "documents", "baseline"))
+                   choices=("volume", "tfidf", "concepts", "graded", "documents",
+                            "baseline"))
     p.add_argument("--landmark-days", type=int, default=180)
     p.add_argument("--lookback-days", type=int, default=None)
     p.add_argument("--horizon-days", type=int, default=5475)
@@ -703,9 +1008,30 @@ if __name__ == "__main__":
     p.add_argument("--require-text", action="store_true",
                    help="Restrict the cohort to patients who have text, so a null is not the "
                         "empty-text confound.")
+    p.add_argument("--date-mode", default="strip", choices=("strip", "year", "keep"),
+                   help="'strip' removes full dates (default, and what every earlier arm "
+                        "used). 'year' replaces a full date with its year alone, which the "
+                        "graded arm needs because KliMaYr-style onset is one of the four "
+                        "carriers the headroom check identified and full stripping destroys "
+                        "it. 'year' reintroduces calendar-era information at year "
+                        "granularity, so run the paired 'strip' arm to measure that.")
+    p.add_argument("--with-concepts", action="store_true",
+                   help="With --mode graded: also append the tiered presence concepts, "
+                        "giving one arm holding every text feature we can build.")
+    p.add_argument("--validate-baseline", action="store_true",
+                   help="With --mode graded: report agreement between each extracted "
+                        "quantity and the curated variable measuring the same thing, on "
+                        "train patients. Outcome-blind, so it can be read before any "
+                        "survival number -- and it is the only direct evidence that the "
+                        "extraction works at all.")
+    p.add_argument("--med-lexicon", default=None,
+                   help="Path for the derived ATC-class -> Dutch drug-name lexicon. Built "
+                        "from the cohort's own med_*.csv (train patients only) if absent, "
+                        "reused if present. Point every graded arm at one path.")
     p.add_argument("--strip-dates", action="store_true", default=True)
     p.add_argument("--keep-dates", dest="strip_dates", action="store_false",
-                   help="Sensitivity arm: leave dates in, which lets calendar era leak.")
+                   help="Sensitivity arm: leave dates in, which lets calendar era leak. "
+                        "Equivalent to --date-mode keep.")
     p.add_argument("--strip-names", action="store_true", default=True)
     p.add_argument("--keep-names", dest="strip_names", action="store_false",
                    help="Sensitivity arm: leave clinician/department tokens in.")
@@ -730,6 +1056,12 @@ if __name__ == "__main__":
     add_results_arg(p)
     if not handle_listing_flags(sys.argv[1:]):
         a = p.parse_args()
+        # Reconcile the two date flags so they cannot silently disagree: --keep-dates is
+        # the older spelling of --date-mode keep.
+        if not a.strip_dates and a.date_mode == "strip":
+            a.date_mode = "keep"
+        if a.date_mode == "keep":
+            a.strip_dates = False
         with results_block(a.results_file, f"text arm: {a.mode}",
                            {"mode": a.mode, "landmark": a.landmark_days,
                             "lookback": a.lookback_days, "horizon": a.horizon_days,
