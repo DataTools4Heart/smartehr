@@ -19,6 +19,7 @@ belongs here, not only in conversation.
 | 1 | T2 clinical concepts | `--mode concepts` | **DONE (re-run 2026-09-03 with tiered terms) — see §5.1** |
 | 1 | `incr` — text on top of the FULL curated baseline | `--add-baseline-cols all` | **DONE — see §5.1** |
 | 1 | `sens` — structured arm without `ok.OMSCHR` | `prepare_pivoted_event_features.py` | **DONE — see §5.1** |
+| 2 | **T3-0 headroom check (no GPU)** | `--baseline-cols group:chart` / `group:protocol` | **ready — run this before any T3 work, see §7.0** |
 | 2 | T3 frozen LLM embeddings | `--mode documents` → `extract_qwen_embeddings_longitudinal.py` | **planned — see `docs/t3-frozen-llm-plan.md`** |
 | — | **matched control** for any subcohort arm | `prepare_text_features.py --mode baseline` | **ready** |
 | — | evaluation of any arm | `screen_parquet_features.py` | ready |
@@ -57,8 +58,8 @@ data paths (above) and run:
 ./bash_scripts/run_all_phases.sh t1 t2 screens
 ```
 
-- Phases: `p0 t0 t1 t2 incr sens ctrl struct screens t3`. With no arguments it runs
-  everything except `t3`.
+- Phases: `p0 t0 t1 t2 incr sens t3headroom ctrl struct screens t3`. With no arguments it
+  runs everything except `t3`.
 - **Arms that already exist are skipped**, so re-running after adding one arm is cheap.
   `FORCE=1` redoes them.
 - `DRY_RUN=1` prints the commands without running any.
@@ -66,6 +67,8 @@ data paths (above) and run:
   script itself, so even a bad flag or a killed process leaves a trace — and listed in the
   summary. An unattended overnight batch is never wasted.
 - Overridable: `LANDMARK HORIZON CACHE RESULTS OUT DEMOG SVD TOKENIZER PY`.
+- `t3headroom` is CPU-only and takes seconds (it reads no text); run it before any T3 work,
+  see §7.0.
 - `t3` needs `RUN_T3=1` plus a GPU and `pip install sentence-transformers`; it stays gated
   behind §6 Gate 1.
 
@@ -378,6 +381,9 @@ documented in these notes; automating its extraction is the entire point.
 - **Gate 0.** T0 runs first. Any later gain must exceed it, or it is note-taking intensity,
   not physiology. This is the `gfr_count` C=0.851 lesson from the structured arm: a
   missingness/volume artifact that looked like strong signal.
+- **Gate 0.5 — the headroom check (§7.0).** Cheaper than T3 and can make it unnecessary:
+  if the chart-derivable curated variables cannot beat demographics, no text method can, and
+  the negative becomes structural rather than another null.
 - **Gate 1.** Escalate to T3 (frozen LLM) **only if** T1 or T2 clears its floor on the
   pre-imputation screen, or beats 0.6883 with demographics. If both are null, a null LLM
   arm adds no information.
@@ -388,6 +394,54 @@ documented in these notes; automating its extraction is the entire point.
   achieve is worth more than a fourth null.
 - **Gate 2.** If two consecutive methodology fixes fail to move the verdict, stop. That
   criterion is what closed the structured arm.
+
+---
+
+## 7.0 T3-0 — the headroom check (no GPU, run this FIRST)
+
+Bounds what *any* text method could achieve, by asking what the curated variables reach when
+restricted to facts our narrative corpus could plausibly contain. It can close the arm with a
+mechanism instead of a fourth null, and it costs seconds — `--mode baseline` reads no text.
+
+```bash
+./bash_scripts/run_all_phases.sh t3headroom screens
+```
+
+**Review the split before believing the numbers.** It is the whole experiment, so it is
+written out by exact name in `scripts/smartehr/feature_matrix.py` rather than guessed from
+prefixes, and an unassigned curated column is a hard error (otherwise it would vanish from
+both halves and they would stop summing to the full baseline):
+
+```bash
+python scripts/smartehr/prepare_text_features.py --smart-csv $SMART --event-csv-folder $EVENTS --split-json $SPLITS --list-baseline-groups
+```
+
+| group | n | what it is |
+|---|---|---|
+| `chart` | 114 | history, diagnoses, **medication**, smoking/alcohol, disease onset + `imaging` |
+| `chart_strict` | 97 | the same without imaging findings |
+| `imaging` | 17 | carotid stenosis grade, aortic diameter, kidney size — radiology reports are IN our corpus |
+| `protocol` | 69 | research ultrasound (IMT/ABI), anthropometry, study labs, SF-36, METs |
+| `demographics` | 2 | age/sex — in **neither** half by design |
+
+Two traps this encodes, both of which the first draft of the plan fell into:
+
+- the 44 medication flags (`mht*`/`mli*`/`mas*`/`mgl*`) and the four `KliMa*` onset
+  variables are **chart-derivable**, and no prefix rule puts them there. Getting them wrong
+  shrinks the chart half and biases the check toward the answer we already expect;
+- `hyptns_n` (derived from the measured pressure) is protocol while `hyptns_b`
+  ("behandeling; vraag 6.03", reported treatment) is chart — same for the hyperglycaemia and
+  hyperlipidaemia pairs. Substring selection cannot express that, which is why groups match
+  exact names.
+
+Compare `HR_chart_demo_rt` against **0.6727** (the matched demographics control), never
+0.6883 (a full-cohort number). `≈ 0.673` means no text method can help and the ceiling for
+text is demographics; `0.69–0.72` means partial headroom; `≈ 0.74` means T1/T2 simply failed
+to extract what is there. Full interpretation table in `docs/t3-frozen-llm-plan.md` §3.3.
+
+Note `~group:chart` is **not** the protocol half — it also contains demographics and admin
+columns. Use `group:protocol` explicitly; the builder prints which columns sit in neither
+half so this is visible in the log.
 
 ---
 

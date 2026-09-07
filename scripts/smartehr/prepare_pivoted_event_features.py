@@ -449,7 +449,7 @@ def build(args):
         f"val={len(splits['validation']):,} test={len(splits['test']):,}")
 
     if args.positive_control:
-        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols)
+        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols, say)
         say(f"  BASELINE ARM ({args.baseline_cols or 'all'}): {X.shape[1]} numeric SMART "
             f"baseline features -> {kept}")
         finish(out_dir, X, cohort, splits, train_rows, H, say, log,
@@ -651,7 +651,7 @@ def build(args):
     X.columns = all_names
     added = []
     if args.add_baseline_cols:
-        B, added = smart_baseline_features(args.smart_csv, pids, args.add_baseline_cols)
+        B, added = smart_baseline_features(args.smart_csv, pids, args.add_baseline_cols, say)
         say(f"  appending {B.shape[1]} baseline columns to the event features -> {added}")
         say("  (age and sex need no chart review, so events+demographics is still a "
             "baseline-free model in the sense that matters)")

@@ -91,42 +91,79 @@ which §3's headroom check tests without a GPU.
 ## 3. T3-0 — the headroom check (no GPU, do this FIRST)
 
 Before spending GPU time, establish whether *any* text method could help, by asking what
-the curated variables achieve when restricted to facts a note could plausibly state.
+the curated variables achieve when restricted to facts our narrative corpus could plausibly
+contain. That bounds the ceiling for every text method at once.
 
-Split the 183 curated variables into:
+### 3.1 The split is the whole experiment, so it is written out by name
 
-- **chart-derivable** — history and status that appears in prose: `vg_*`, `vgok_*`, `vgt_*`,
-  `vz_*` (histories), `roken`, `packyrs`, `alcohol`, `diagnsco`, `vaatzkt1`, `klinman`,
-  and medication flags `statine`, `aspirine`, `pamid`, `lipmid`;
-- **protocol-measured** — quantities that exist only because a study visit measured them:
-  `imt_gm`, `abi_*`, `stenACI*`, `csten_*`, `Aort*`, `aorta_*`, `nrlng_*`, `nrvol_*`,
-  `lab*`, `bdsys`/`bddia`, anthropometry, and the questionnaire blocks `kl*`, `mht*`,
-  `mli*`, `mas*`, `mgl*`, `MBS*`.
+**This section was rewritten on 2026-09-07.** The original version split the 183 variables
+by name prefix (`vg_,vgok_,vgt_,vz_,roken,packyrs,...`). Checked against the registry's own
+labels in `data/smartehr/data_dicts/smart.csv`, that rule is wrong in three ways, all of
+which shrink the chart-derivable half and therefore bias the check toward "no headroom" —
+the conclusion we already expect. A check that can only confirm the prior is not worth
+running.
+
+| mis-sorted by the prefix rule | n | why it is chart-derivable |
+|---|---|---|
+| `mht*`, `mli*`, `mas*`, `mgl*`, `mmpr`, `mhmc`, `Thyr`, `Amiodar`, `Lithium` | 44 | medication lists are the most chart-derivable data in any EHR; every discharge letter carries one |
+| `KliMaC`, `KliMaYr`, `KliMaDur`, `KliMaDrD` | 4 | type, year and duration of the first manifest event — "myocardinfarct in 2003" is exactly what a letter states. Also among the strongest curated features (0.6138 / 0.6313 / 0.6078 / 0.5976) |
+| `hyptns_b`, `hypgly_b`, `hyplip_b`, `VgBh_HpL` | 4 | *reported treatment* from the questionnaire. Note the `_n`/`_b` pair splits: `hyptns_n` is derived from the **measured** pressure and is protocol; `hyptns_b` is "behandeling; vraag 6.03" and is chart. No substring rule can express that |
+
+And `leeftijd`/`geslacht` landed in the protocol half, which hands it ~0.673 for free while
+the chart half starts from nothing — the comparison would have measured the split, not the
+data.
+
+The partition therefore lives by exact name in `scripts/smartehr/feature_matrix.py`
+(`CURATED_CHART`, `CURATED_IMAGING`, `CURATED_PROTOCOL`, `CURATED_DEMOG`, `CURATED_ADMIN`),
+selected with `--baseline-cols group:<name>`, and **an unassigned column is a hard error**:
+if a curated variable belonged to no group it would vanish from both halves and they would
+no longer sum to the full baseline whose 0.7394 they are compared against.
+
+| group | n | contents |
+|---|---|---|
+| `chart` (generous) | 114 | history, diagnoses, medication, smoking/alcohol status, disease onset, **plus** `imaging` |
+| `chart_strict` | 97 | the same without the imaging findings |
+| `imaging` | 17 | carotid stenosis grade, aortic diameter, kidney size/volume, renal failure — study measurements in origin, but radiology and MRI reports are **in our corpus** and can state the same numbers |
+| `protocol` | 69 | research ultrasound (IMT, ABI), anthropometry, study labs and their derived flags, metabolic-syndrome criteria, and the questionnaire instruments (SF-36, METs, diet, education, country of birth) |
+| `demographics` | 2 | age and sex — in **neither** half, the floor both are measured against |
+| `admin` | 4 | identifiers and dates, carried only to prove the partition exhaustive |
+
+Review it before believing any number it produces:
 
 ```bash
-python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode baseline --require-text \
-  --baseline-cols "vg_,vgok_,vgt_,vz_,roken,packyrs,alcohol,diagnsco,vaatzkt1,klinman,statine,aspirine,pamid,lipmid" \
-  --out-dir arms/CTRL_chartderivable_rt
+python scripts/smartehr/prepare_text_features.py --smart-csv $SMART \
+  --event-csv-folder $EVENTS --split-json $SPLITS --list-baseline-groups
 ```
+
+The generous half is `chart` = chart + imaging. Reporting `chart_strict` alongside it is what
+shows the assignment of the arguable group is not doing the work.
+
+### 3.2 Running it
 
 ```bash
-python scripts/smartehr/prepare_text_features.py $COMMON --cache $CACHE --mode baseline --require-text \
-  --baseline-cols "~vg_,vgok_,vgt_,vz_,roken,packyrs,alcohol,diagnsco,vaatzkt1,klinman,statine,aspirine,pamid,lipmid" \
-  --out-dir arms/CTRL_protocolonly_rt
+./bash_scripts/run_all_phases.sh t3headroom screens
 ```
 
-**This can end the arm early.** Interpretation:
+Seven arms, all CPU and seconds each (no text is read — `--mode baseline` emits curated
+columns on whatever cohort the text flags define): each half alone, each half plus
+demographics, the strict chart variant, and both halves on the full cohort so the pair is
+comparable to the 0.7576 reference as well as to 0.7394.
 
-| chart-derivable C | meaning |
+### 3.3 What each outcome means
+
+Read `HR_chart_demo_rt` against the **matched** demographics control, 0.6727 — not 0.6883,
+which is a full-cohort number.
+
+| chart-derivable + demographics | meaning |
 |---|---|
-| ≈ 0.673 (demographics) | Chart-derivable facts carry no signal beyond demographics. **No text method can help** — the null is structural, T3 is unnecessary, and this is a *stronger* result than another null because it explains the mechanism. |
-| ≈ 0.70–0.74 | Real headroom exists between text-derivable facts and what T1/T2 achieved. T3 is justified and has a concrete target. |
+| ≈ 0.673 | Chart-derivable facts carry no signal beyond demographics. **No text method can help**, because even having those facts *perfectly* adds nothing — the ceiling for text is demographics. T3 is unnecessary and the free-text negative becomes structural and mechanistic, which is a stronger result than a fourth null. |
+| 0.69–0.72 | Partial headroom. Text would have to recover these facts *well* to realise it. Worth one embedding arm with a concrete target, not a sweep. |
+| ≈ 0.73–0.74 | Full headroom: nearly all of the curated skill is in principle text-derivable, and T1/T2 simply failed to extract it. T3 is justified and the grading hypothesis in §1 is the thing to test. |
 
-Also run the same split on the **full curated** ladder so the two halves are comparable, and
-report the pair in the report's §10.1 as the quantitative version of the "that versus how
-much" claim.
-
----
+The `protocol` half is the counterpart: if it carries most of the skill (≈ 0.73) while the
+chart half sits at demographics, that **is** the mechanism behind §10.1's "that versus how
+much" claim, stated quantitatively — the prognostic information lives in protocol
+measurement, which no amount of reading the notes can recover.
 
 ## 4. T3-1 — model selection, outcome-blind
 

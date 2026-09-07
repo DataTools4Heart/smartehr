@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 t0 t1 t2 incr sens ctrl struct screens t3
+# Phases: p0 t0 t1 t2 incr sens t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -53,7 +53,7 @@ TEXT=("${COMMON[@]}" --cache "$CACHE")
 
 mkdir -p "$OUT" "$(dirname "$RESULTS")" "$(dirname "$CACHE")"
 PHASES=("$@")
-[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens ctrl struct screens)
+[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens t3headroom ctrl struct screens)
 declare -a FAILED=() SKIPPED=() RAN=()
 
 want() { for p in "${PHASES[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
@@ -210,6 +210,49 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- t3headroom: T3-0, the headroom check. NO GPU. Run before any embedding work.
+#      Asks what the CURATED variables achieve when restricted to facts our narrative
+#      corpus could plausibly contain — which bounds what ANY text method could reach.
+#      Two arms can end the free-text arm with a mechanism instead of a fourth null:
+#      if the chart-derivable half cannot beat demographics (0.6727 on this subcohort),
+#      then the ceiling for text is demographics and no model changes that.
+#
+#      The split is by curated-variable PROVENANCE, written out by name in
+#      feature_matrix.py and reviewable with:
+#        python scripts/smartehr/prepare_text_features.py --smart-csv $SMART \
+#          --event-csv-folder $EVENTS --split-json $SPLITS --list-baseline-groups
+#      Read that before believing these numbers. Prefix rules were tried first and got
+#      the 44 medication flags and the KliMa* onset block on the wrong side, both of
+#      which shrink the chart half and bias the check toward the expected answer.
+#
+#      Age and sex are in NEITHER half (they are the floor both are measured against),
+#      so each half also gets a +demographics arm — that is the like-for-like comparator
+#      for the text arms, which all include demographics.
+if want t3headroom; then
+  step "t3-0 chart-derivable (generous: +imaging reports)" "$OUT/HR_chart_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline --require-text \
+      --baseline-cols "group:chart" --out-dir "$OUT/HR_chart_rt"
+  step "t3-0 chart-derivable + demographics" "$OUT/HR_chart_demo_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline --require-text \
+      --baseline-cols "group:chart,leeftijd,geslacht" --out-dir "$OUT/HR_chart_demo_rt"
+  step "t3-0 chart-derivable STRICT (no imaging)" "$OUT/HR_chartstrict_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline --require-text \
+      --baseline-cols "group:chart_strict" --out-dir "$OUT/HR_chartstrict_rt"
+  step "t3-0 protocol-measured only" "$OUT/HR_protocol_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline --require-text \
+      --baseline-cols "group:protocol" --out-dir "$OUT/HR_protocol_rt"
+  step "t3-0 protocol-measured + demographics" "$OUT/HR_protocol_demo_rt" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline --require-text \
+      --baseline-cols "group:protocol,leeftijd,geslacht" --out-dir "$OUT/HR_protocol_demo_rt"
+  # Same split on the FULL cohort, so the pair is comparable to the 0.7576 reference too.
+  step "t3-0 chart-derivable (full cohort)" "$OUT/HR_chart_full" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline \
+      --baseline-cols "group:chart" --out-dir "$OUT/HR_chart_full"
+  step "t3-0 protocol-measured (full cohort)" "$OUT/HR_protocol_full" \
+    "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode baseline \
+      --baseline-cols "group:protocol" --out-dir "$OUT/HR_protocol_full"
 fi
 
 # ---- struct: re-confirm the plumbing once per session. If the curated baseline does

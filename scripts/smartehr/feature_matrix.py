@@ -36,18 +36,141 @@ from results_log import emit
 from smartehr_pipeline import _SMART_OUTCOME_COLS
 
 
+# ---------------------------------------------------------------- curated-variable provenance
+#
+# The T3 headroom check asks: what do the curated variables achieve when restricted to facts
+# our narrative corpus could plausibly contain? That bounds what ANY text method could reach,
+# and can end the free-text arm with a mechanism rather than a fourth null.
+#
+# The answer depends entirely on how the 183 variables are split, so the split is written out
+# by name and reviewed against the registry's own labels (data/smartehr/data_dicts/smart.csv)
+# rather than guessed from name prefixes. Prefix matching got two groups badly wrong:
+# the ~44 medication flags (mht*/mli*/mas*/mgl*) and the disease-onset block (KliMa*) are
+# among the MOST chart-derivable variables here — a letter always lists medication and states
+# "myocardinfarct in 2003" — yet no sensible prefix rule puts them on the chart side. Both
+# errors shrink the chart half, which biases the check toward "no headroom": the conclusion we
+# already expect. A check that can only confirm the prior is not worth running.
+#
+# Groups:
+#   CHART      history, diagnoses, medication, smoking/alcohol status, disease onset. A
+#              discharge letter or consult note states these in prose.
+#   IMAGING    findings our corpus could carry because radiology/MRI reports are IN it:
+#              carotid stenosis grade, aortic diameter, kidney size, renal failure. Study
+#              measurements in origin, but a report in the record can state the same number.
+#   PROTOCOL   exists only because a study visit produced it: research ultrasound (IMT, ABI),
+#              anthropometry, study labs, and the questionnaire instruments (SF-36, METs,
+#              diet, education, country of birth).
+#   DEMOG      age and sex — the floor BOTH halves are measured against, so they belong to
+#              neither. Leaving them in one half hands that half 0.673 for free and the
+#              comparison measures nothing.
+#   ADMIN      identifiers and dates, carried only so the partition can be proved exhaustive.
+#
+# The generous chart half is CHART + IMAGING: if even that cannot beat demographics, no text
+# method can, and the negative is structural. CHART alone is the strict variant, reported
+# alongside so the assignment of the arguable group is visibly not doing the work.
+
+CURATED_CHART = {
+    # first vascular diagnosis and disease at inclusion
+    "diagnsco", "vaatzkt1", "DiagSide", "IncInt_p", "IncInt_v", "klinman",
+    # symptom history
+    "V0402", "V0405",
+    # histories: per-territory questionnaire, operation, total, and ever-composite
+    "vg_0410", "vgok_car", "vgt_kop", "vz_kop",
+    "vg_0321", "vg_0323", "vgok_har", "vgt_hart", "vz_hart",
+    "vg_0325", "vgok_aaa", "vgt_aaa", "vz_aaa",
+    "vg_0606c", "vgok_nie", "vgt_nier", "vz_nier",
+    "vg_0519", "vgok_bee", "vgt_been", "vz_been",
+    # disease labels a letter states, and the reported-treatment questionnaire items.
+    # NB the _n/_b pair splits: hyptns_n is derived from the MEASURED pressure (protocol),
+    # hyptns_b is "behandeling; vraag 6.03" — reported treatment (chart). Same for the
+    # hyperglycaemia and hyperlipidaemia pairs.
+    "vz_hypt", "hyptns_b", "vz_DM", "vz_t1d", "vz_t2d", "hypgly_b",
+    "vz_HypLp", "hyplip_b", "VgBh_HpL",
+    # smoking and alcohol status, including the graded forms — packyrs is the grading test
+    "roken", "packyrs", "alcohol", "AlchlGlz",
+    # medication: the most chart-derivable data in any EHR
+    "mht01", "mht02", "mht02a", "mht02b", "mht02c", "mht02d", "mht03", "mht04", "mht05",
+    "mht06", "mht07", "mht12", "mht33", "mht41", "mht_all", "mht_alln",
+    "mliphoop", "mli01", "mli02", "mli03", "mli04", "lipmid", "statine",
+    "mas01", "mas01a", "mas01b", "mas01c", "mas01d", "mas02", "mas02a", "mas02b", "mas02c",
+    "mas03", "pamid", "aspirine", "pa_stolmid",
+    "mgl01", "mgl02", "mgl03", "mmpr", "mhmc",
+    "TCA", "SSRI", "MAO", "OthADep", "Benzo", "BenzoDer", "BenzoRel",
+    "Thyr", "Amiodar", "Lithium",
+    # onset and duration of clinically manifest vascular disease ("MI in 2003")
+    "KliMaC", "KliMaYr", "KliMaDur", "KliMaDrD",
+}
+
+CURATED_IMAGING = {
+    "stenACIr", "stenACIl", "csten_50", "csten_70",
+    "AortProx", "AortDist", "aorta_hg", "aorta_gm", "aaaech_n",
+    "nrlng_re", "nrlng_li", "nrlng_gm", "nratrof",
+    "nrvol_re", "nrvol_li", "nrvol_gm",
+    "nrfaln_n",
+}
+
+CURATED_PROTOCOL = {
+    # questionnaire instruments that never appear in a clinical letter
+    "opleiding", "RespLand", "PaLand", "MaLand", "WereldDl",
+    "V0821", "V082201", "V082202", "V0823",
+    "kl1fysfc", "kl2socfc", "kl3rolfy", "kl4rolem", "kl5mengz", "kl6vital", "kl7pijn",
+    "kl8alggz", "kl9gezva",
+    "spMEThw", "acMEThw", "bwMEThw",
+    # measured pressure and its derived flag
+    "bdsys", "bddia", "plsprs", "hyptns_n",
+    # anthropometry
+    "gewicht", "lengte", "bm_indx", "bmi_30", "tail_gm", "heup_gm", "tlhp_rat",
+    "vet_subc", "vet_gm",
+    # research ultrasound: ankle-brachial index and carotid intima-media thickness
+    "abi_lg", "abi_gm", "abivrl_n", "ABiRe", "ABiLi", "imt_gm",
+    # study labs and everything derived from them
+    "labgluc", "hypgly_n", "labhb", "labht", "labchol", "labtrig", "labhdl", "ldlchol",
+    "hyplip_n", "labkrea", "labmalb", "labkrur", "mpkr_rat", "AlbCr", "albminur",
+    "klar_coc", "klar_gst", "MDRD", "labhcyst", "hyphmc_n", "labins", "labtsh",
+    "labcrp", "labhba1c", "labapob",
+    # metabolic-syndrome criteria, counted from the measurements above
+    "MBSc", "MBS", "MBSc_mis", "MBScgr",
+}
+
+CURATED_DEMOG = {"leeftijd", "geslacht"}
+CURATED_ADMIN = {"studienr", "IncDatum", "IncInt_d", "abidatum", "afkapdat"}
+
+CURATED_GROUPS = {
+    "chart": CURATED_CHART | CURATED_IMAGING,   # the generous half: what text COULD contain
+    "chart_strict": CURATED_CHART,              # history/meds/diagnoses only
+    "imaging": CURATED_IMAGING,
+    "protocol": CURATED_PROTOCOL,               # complement of `chart`, demographics aside
+    "demographics": CURATED_DEMOG,
+}
+
+
 # ---------------------------------------------------------------- SMART baseline selection
 
-def select_baseline(cols, spec):
-    """Pick baseline columns by case-insensitive substring patterns.
+def select_baseline(cols, spec, say=None):
+    """Pick baseline columns by case-insensitive substring patterns, or by provenance group.
 
     'leeftijd,geslacht'  -> only those (demographics-only arm)
     '~leeftijd,geslacht' -> everything EXCEPT those (curation-without-demographics arm)
     'all' / empty        -> everything
+    'group:chart'        -> a named provenance group (see CURATED_GROUPS); '~group:chart'
+                            gives its complement.
+
+    Groups select by EXACT name, not substring, because the headroom check's whole value
+    rests on the split being reviewable: a substring rule cannot express that `hyptns_b`
+    (reported treatment) is chart-derivable while `hyptns_n` (derived from the measured
+    pressure) is not, and it silently mis-sorted the 44 medication flags.
     """
     if not spec or spec.strip().lower() == "all":
         return list(cols)
-    negate = spec.strip().startswith("~")
+    spec = spec.strip()
+    negate = spec.startswith("~")
+    body = spec.lstrip("~").strip()
+    if body.lower().startswith("group:"):
+        # 'group:chart' or 'group:chart,leeftijd,geslacht' — the group plus exact extras,
+        # which is how a half gets its +demographics comparator without loosening the
+        # exact-name rule into substring matching again.
+        parts = [t.strip() for t in body.split(":", 1)[1].split(",") if t.strip()]
+        return _select_group(cols, parts[0], negate, say, extra=parts[1:])
     pats = [p.strip().lower() for p in spec.lstrip("~").split(",") if p.strip()]
     if not pats:
         return list(cols)
@@ -56,6 +179,68 @@ def select_baseline(cols, spec):
         return any(p in c.lower() for p in pats)
 
     return [c for c in cols if (not hit(c)) == negate]
+
+
+def _select_group(cols, name, negate, say=None, extra=()):
+    """Exact-name selection from CURATED_GROUPS, with an exhaustiveness audit.
+
+    The audit is the point. A curated variable that belongs to no group would silently
+    vanish from both halves of the headroom check, and the two halves would no longer sum
+    to the full baseline whose 0.7394 they are being compared against — so an unassigned
+    column is a hard error naming the offenders, not a warning.
+    """
+    if name not in CURATED_GROUPS:
+        raise SystemExit(f"unknown baseline group {name!r}; available: "
+                         f"{', '.join(sorted(CURATED_GROUPS))}")
+    known = CURATED_CHART | CURATED_IMAGING | CURATED_PROTOCOL | CURATED_DEMOG | CURATED_ADMIN
+    unassigned = [c for c in cols if c not in known]
+    if unassigned:
+        raise SystemExit(
+            f"{len(unassigned)} numeric baseline columns belong to no provenance group, so "
+            f"the chart/protocol split would not be exhaustive: {unassigned}\n"
+            "Add each to CURATED_CHART, CURATED_IMAGING, CURATED_PROTOCOL, CURATED_DEMOG "
+            "or CURATED_ADMIN in feature_matrix.py (the registry labels are in "
+            "data/smartehr/data_dicts/smart.csv).")
+    want = set(CURATED_GROUPS[name])
+    unknown_extra = [e for e in extra if e not in cols]
+    if unknown_extra:
+        raise SystemExit(f"--baseline-cols group:{name} named extra columns that do not "
+                         f"exist: {unknown_extra}; run --list-baseline-cols for the names")
+    want |= set(extra)
+    keep = [c for c in cols if (c not in want) == negate]
+    if say:
+        # Demographics and admin sit in neither half, so a complement is not the other half.
+        excl = [c for c in cols if c in (CURATED_DEMOG | CURATED_ADMIN) and c not in want]
+        say(f"  baseline group {'~' if negate else ''}{name}"
+            f"{'+' + ','.join(extra) if extra else ''}: {len(keep)} of {len(cols)} "
+            f"numeric baseline columns")
+        if not negate:
+            say(f"  members: {keep}")
+        if excl:
+            say(f"  age/sex and admin columns are in NEITHER half by design ({len(excl)}: "
+                f"{excl}) — leaving them in one half would hand it ~0.673 for free")
+    return keep
+
+
+def list_baseline_groups(smart_csv):
+    """Print the provenance partition for clinical review, with per-group membership."""
+    _, cols = smart_baseline_numeric(smart_csv)
+    known = CURATED_CHART | CURATED_IMAGING | CURATED_PROTOCOL | CURATED_DEMOG | CURATED_ADMIN
+    named = [("chart (history/diagnoses/medication)", CURATED_CHART),
+             ("imaging (report-derivable findings)", CURATED_IMAGING),
+             ("protocol (study visit only)", CURATED_PROTOCOL),
+             ("demographics (neither half)", CURATED_DEMOG),
+             ("admin (ids/dates, neither half)", CURATED_ADMIN)]
+    print(f"{len(cols)} numeric SMART baseline columns, by provenance:\n")
+    for label, grp in named:
+        present = [c for c in cols if c in grp]
+        print(f"--- {label}: {len(present)}")
+        for i in range(0, len(present), 6):
+            print("      " + ", ".join(present[i:i + 6]))
+    unassigned = [c for c in cols if c not in known]
+    print(f"\nunassigned: {len(unassigned)}" + (f" -> {unassigned}" if unassigned else " (partition is exhaustive)"))
+    print("\nThe generous chart half is chart+imaging ('group:chart'); 'group:chart_strict'")
+    print("drops the imaging findings. 'group:protocol' is what only a study visit produced.")
 
 
 def smart_baseline_numeric(smart_csv):
@@ -68,7 +253,7 @@ def smart_baseline_numeric(smart_csv):
     return df[[ID] + cols].groupby(ID, as_index=True).first(), cols
 
 
-def smart_baseline_features(smart_csv, pids, spec=None):
+def smart_baseline_features(smart_csv, pids, spec=None, say=None):
     """Selected numeric SMART baseline columns, aligned to `pids`. -> (DataFrame, kept).
 
     Used two ways. As a positive control it validates the cohort/split/target plumbing.
@@ -77,7 +262,7 @@ def smart_baseline_features(smart_csv, pids, spec=None):
     baseline attributes to "expert curation" whatever is really just demographics.
     """
     df, cols = smart_baseline_numeric(smart_csv)
-    keep = select_baseline(cols, spec)
+    keep = select_baseline(cols, spec, say)
     if not keep:
         raise SystemExit(f"baseline column spec {spec!r} matched no numeric baseline column; "
                          "run --list-baseline-cols to see the available names")

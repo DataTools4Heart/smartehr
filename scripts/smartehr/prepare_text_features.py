@@ -51,7 +51,8 @@ from datasets import Dataset
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME, apply_censoring, build_cohort
-from feature_matrix import finish, list_baseline_cols, smart_baseline_features
+from feature_matrix import (finish, list_baseline_cols, list_baseline_groups,
+                            smart_baseline_features)
 from results_log import add_results_arg, emit, results_block
 
 CHUNK = 50_000
@@ -534,7 +535,7 @@ def main(args):
         # MATCHED CONTROL. Emits only the numeric SMART baseline, but on the cohort the
         # text flags define, so a --require-text text arm can be compared against
         # demographics on identical patients rather than against a full-cohort number.
-        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols)
+        X, kept = smart_baseline_features(args.smart_csv, pids, args.baseline_cols, say)
         say(f"  MATCHED CONTROL ({args.baseline_cols or 'all'}): {X.shape[1]} baseline "
             f"features -> {kept}")
         finish(out_dir, X, cohort, splits, train_rows, H, say, log,
@@ -624,7 +625,7 @@ def main(args):
 
     added_base = []
     if args.add_baseline_cols:
-        B, added_base = smart_baseline_features(args.smart_csv, pids, args.add_baseline_cols)
+        B, added_base = smart_baseline_features(args.smart_csv, pids, args.add_baseline_cols, say)
         say(f"  appending {B.shape[1]} baseline columns -> {added_base}")
         X = pd.concat([X.reset_index(drop=True), B.reset_index(drop=True)], axis=1)
         rep += f"+baseline[{args.add_baseline_cols}]"
@@ -710,17 +711,27 @@ if __name__ == "__main__":
                    help="Sensitivity arm: leave clinician/department tokens in.")
     p.add_argument("--baseline-cols", default=None,
                    help="With --mode baseline: which baseline columns the matched control "
-                        "emits, e.g. 'leeftijd,geslacht'. Prefix with ~ to exclude instead.")
+                        "emits, e.g. 'leeftijd,geslacht'. Prefix with ~ to exclude instead. "
+                        "'group:chart' / 'group:chart_strict' / 'group:protocol' select by "
+                        "curated-variable provenance instead (--list-baseline-groups).")
     p.add_argument("--add-baseline-cols", default=None,
                    help="Append baseline columns, e.g. 'leeftijd,geslacht' for the fair "
-                        "text+demographics arm.")
+                        "text+demographics arm. Accepts 'group:...' too.")
     p.add_argument("--list-baseline-cols", action="store_true")
+    p.add_argument("--list-baseline-groups", action="store_true",
+                   help="Print the curated variables split by provenance (chart-derivable / "
+                        "report-derivable imaging / study-protocol-only) and exit. This is "
+                        "the partition the T3 headroom check rests on, so it is meant to be "
+                        "read by a clinician before the arms are believed.")
     p.add_argument("--clip-quantile", type=float, default=0.001)
     p.add_argument("--min-coverage-frac", type=float, default=0.10)
     p.add_argument("--screen-features", action="store_true")
     p.add_argument("--screen-top", type=int, default=30)
     add_results_arg(p)
     a = p.parse_args()
+    if a.list_baseline_groups:
+        list_baseline_groups(a.smart_csv)
+        return
     if a.list_baseline_cols:
         list_baseline_cols(a.smart_csv)
     else:
