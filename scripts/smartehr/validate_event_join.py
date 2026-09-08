@@ -94,6 +94,73 @@ def nearest_baseline_value(folder, prefix, code_col, code, val_col, landmark, sa
     return {p: x for p, (d, x) in best.items()}
 
 
+def probe_keys(a, say):
+    """Which column of smart.csv, used as the join key, actually recovers event weight?
+
+    Needed because `m3life_no` is NOT one of the 287 documented SMART registry variables --
+    the registry's own identifier is `studienr`, and data_dict.csv describes the EHR's
+    `M3LIFE_no` as a "PseudoID to be linked with the SMART dataset". So the column joining
+    them was added to smart.csv by hand, and if it was added wrongly, the fix is to find the
+    column that was meant.
+
+    For each plausible key column K: index the registry's WEIGHT by K, look up each event
+    patient's id in that index, and correlate. Weight is the probe because it is stable,
+    recorded 121,417 times, and needs no interpretation. A column that lights up at rho ~
+    0.9 is the real key; if none does, the linkage itself has to be re-derived upstream and
+    that is a question for the data manager, not for this code.
+    """
+    ev = nearest_baseline_value(a.event_csv_folder, "meting", "label", "Gewicht", "data1",
+                                a.landmark_days, say)
+    if not ev:
+        say("  no meting.Gewicht available; cannot probe keys")
+        return
+    raw = pd.read_csv(a.smart_csv)
+    if "gewicht" not in raw.columns:
+        say("  smart.csv has no `gewicht`; cannot probe keys")
+        return
+    w = pd.to_numeric(raw["gewicht"], errors="coerce")
+    say(f"\n  --- which smart.csv column, used as the join key, recovers routine weight? ---")
+    say(f"  probe: {len(ev):,} patients with a routine weight near baseline")
+    say(f"  {'candidate key':<24s} {'unique':>8s} {'matched':>8s} {'rho':>8s}  note")
+    out = []
+    for c in raw.columns:
+        v = pd.to_numeric(raw[c], errors="coerce")
+        if v.notna().sum() < 0.5 * len(raw):
+            continue
+        if v.dropna().nunique() < 0.5 * len(raw):      # a key is near-unique per row
+            continue
+        idx = pd.Series(w.to_numpy(), index=v.to_numpy())
+        idx = idx[~idx.index.duplicated()]
+        pairs = [(ev[p], idx.get(p)) for p in ev if p in idx.index]
+        pairs = [(x, y) for x, y in pairs if y is not None and not pd.isna(y)]
+        note = ""
+        if np.array_equal(np.sort(v.dropna().to_numpy()),
+                          np.arange(len(v.dropna()))) or np.array_equal(
+                          np.sort(v.dropna().to_numpy()), np.arange(1, len(v.dropna()) + 1)):
+            note = "<- looks like a ROW COUNTER, not a real id"
+        rho = _spearman([x for x, _ in pairs], [y for _, y in pairs]) if len(pairs) >= 30 else None
+        say(f"  {c[:24]:<24s} {v.dropna().nunique():8,} {len(pairs):8,} "
+            f"{(f'{rho:+.3f}' if rho is not None else '   -  '):>8s}  {note}")
+        if rho is not None:
+            out.append((abs(rho), c, rho, len(pairs)))
+    out.sort(reverse=True)
+    if out and out[0][0] >= 0.5:
+        _, c, rho, n = out[0]
+        emit("KEY FOUND: joining on smart.csv column `{}` recovers routine weight "
+             "(rho={:+.3f}, n={}). The current key is wrong; re-run every event and text "
+             "arm with this one", c, rho, n)
+        say(f"\n  -> USE `{c}`. It recovers weight at rho={rho:+.3f}; every event and text")
+        say("     arm must be rebuilt with it, and their nulls re-measured.")
+    else:
+        best = f"{out[0][2]:+.3f} ({out[0][1]})" if out else "none testable"
+        emit("NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best {}): the EHR-to-registry "
+             "linkage cannot be repaired from the files we hold and must be re-derived by "
+             "the data manager", best)
+        say(f"\n  -> No column in smart.csv recovers weight (best {best}). The linkage")
+        say("     cannot be fixed from these files: the EHR extracts and the registry need")
+        say("     to be re-linked at source. This is a question for the data manager.")
+
+
 def main(a):
     say = print
     cur, _cols = smart_baseline_numeric(a.smart_csv)
@@ -132,7 +199,11 @@ def main(a):
 
     strong = [(l, r) for l, r, n in verdicts if r is not None and abs(r) >= 0.5]
     if not verdicts:
-        emit("join check INCONCLUSIVE: no pair had enough overlap to compare")
+        emit("join check INCONCLUSIVE: no pair had enough overlap to compare -- which for "
+             "sources this large is itself a sign the identifiers do not correspond")
+        say("\n  No pair had enough overlapping patients to compare. For sources with "
+            "121,417 weight rows that is itself a linkage failure.")
+        probe_keys(a, say)
     elif strong:
         emit("EVENT JOIN IS SOUND ({}): routine and study measurements agree per patient, "
              "so the identifier join works and the text arm's failure is specific to the "
@@ -150,6 +221,7 @@ def main(a):
         say("     both sources and cannot legitimately disagree for the same patient. Every")
         say("     null in this project -- structured and text -- is uninterpretable until")
         say("     the identifier join is fixed. **")
+        probe_keys(a, say)
 
 
 if __name__ == "__main__":
@@ -158,8 +230,13 @@ if __name__ == "__main__":
     p.add_argument("--smart-csv", required=True)
     p.add_argument("--event-csv-folder", required=True)
     p.add_argument("--landmark-days", type=int, default=180)
+    p.add_argument("--probe-keys", action="store_true",
+                   help="Always probe which smart.csv column works as the join key, not "
+                        "only when the join check fails.")
     add_results_arg(p)
     args = p.parse_args()
     with results_block(args.results_file, "join check: events vs registry",
-                       {"landmark": args.landmark_days}):
+                       {"landmark": args.landmark_days, "probe_keys": args.probe_keys}):
         main(args)
+        if args.probe_keys:
+            probe_keys(args, print)

@@ -1,7 +1,49 @@
 # Can 15-year cardiovascular risk be predicted from raw EHR events, without manually extracted variables?
 
+> ## ⚠ RESULTS UNDER REVIEW — 2026-09-08
+>
+> **The identifier join between the EHR event CSVs and the SMART registry does not work**,
+> so every result derived from event data is withdrawn pending a fix. Quantities measured in
+> *both* sources show zero per-patient agreement:
+>
+> | event source | registry | n | rho | shuffled floor | med(event) | med(registry) |
+> |---|---|---|---|---|---|---|
+> | `meting.Gewicht` | `gewicht` | 10,923 | **+0.011** | +0.021 | 81.0 kg | 80.0 kg |
+> | `meting.Lengte` | `lengte` | 8,202 | −0.017 | +0.006 | 174 cm | — |
+> | `meting.BMI` | `bm_indx` | 2,776 | −0.009 | −0.029 | 26.3 | 26.0 |
+> | `lab_ezis.Creat-BL` | `labkrea` | 6,010 | +0.002 | −0.007 | 79 | 84 |
+> | `lab_ezis.Chol-BL` | `labchol` | 5,161 | −0.012 | +0.020 | 4.7 | 5.0 |
+>
+> The medians show both sides hold real data for the same population; only the per-patient
+> correspondence is absent. A person's routine weight cannot be uncorrelated with their
+> study-visit weight, so this is not a null result — it is real data on the wrong rows.
+> Note that `m3life_no` is **not** among the 287 documented registry variables (the
+> registry's own identifier is `studienr`), and `data_dict.csv` describes the EHR's
+> `M3LIFE_no` only as a "PseudoID to be linked with the SMART dataset" — so the joining
+> column was added to `smart.csv` outside the documented schema.
+>
+> **Withdrawn:** every arm built from event CSVs — the structured/pivoted event arms
+> (H1, H2, H3, H5, H6, H7) and every free-text arm (H8, H9, H10, and the graded arm),
+> including "events add +0.0007" and "text adds +0.0023".
+>
+> **Not affected**, because they are built only from `smart.csv` and never touch event data:
+> the curated baseline **0.7576**, curation-without-demographics **0.7547**, demographics
+> **0.6883**, and the whole **§10.2b headroom check** (chart-derivable 0.7310, protocol
+> 0.7196, strict chart 0.7024, demographics 0.6727). One caveat on the subcohort numbers:
+> the `--require-text` subcohort was *selected* by which patients had documents under the
+> broken join, so those 9,644 patients are not "the patients with narrative text" — but
+> every arm measured on them uses the same patients and the same labels, so the comparisons
+> among them remain internally valid.
+>
+> Diagnosis and next step: `scripts/smartehr/validate_event_join.py` (also
+> `./bash_scripts/run_all_phases.sh joincheck`), which on failure probes which column of
+> `smart.csv` does recover routine weight. If one does, every event and text arm must be
+> rebuilt with it. If none does, the linkage has to be re-derived at source.
+
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
-Status: **structured/numeric: negative (closed). Free-text: negative for every
+Status: **UNDER REVIEW (see the banner above): the event-to-registry join is broken,
+so all event-derived results are withdrawn. Previously: structured/numeric negative,
+free-text negative for every
 representation tried, but the headroom check (§10.2b) shows the information is present —
 so the null is about extraction, and one further arm (T3) is justified.**
 Last updated: 2026-09-07

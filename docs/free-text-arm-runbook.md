@@ -617,6 +617,25 @@ to confirm that.
 
 ## 10. Changelog
 
+- **2026-09-08 — THE EVENT-TO-REGISTRY JOIN IS BROKEN. All event-derived results are
+  withdrawn.** The `joincheck` phase compared five quantities measured in *both* the routine
+  EHR and the study visit, with no text or extraction involved: weight rho **+0.011** on
+  10,923 patients (shuffled floor +0.021), height −0.017, BMI −0.009, creatinine +0.002,
+  cholesterol −0.012. The medians match on both sides (weight 81 vs 80 kg, BMI 26.3 vs 26.0,
+  cholesterol 4.7 vs 5.0), so both hold real data for the same population — only the
+  per-patient correspondence is missing. A person's routine weight cannot be uncorrelated
+  with their study weight, so this is not a null; it is real data on the wrong rows.
+  Context worth knowing: `m3life_no` is **not** one of the 287 documented registry
+  variables (the registry's own id is `studienr`), and `data_dict.csv` calls the EHR's
+  `M3LIFE_no` only a "PseudoID to be linked with the SMART dataset" — the joining column was
+  added to `smart.csv` outside the documented schema.
+  **Withdrawn:** every structured event arm and every text arm. **Not affected:** anything
+  built only from `smart.csv` — the curated baseline 0.7576, demographics 0.6883, and the
+  entire headroom check (0.7310 / 0.7196 / 0.7024 / 0.6727), since those never read event
+  data. On failure the check now probes which `smart.csv` column *does* recover routine
+  weight; if one does, rebuild every arm with it, and if none does the linkage must be
+  re-derived at source.
+
 - **2026-09-08 — the extractor fixes landed, agreement did not move, so the JOIN is now
   under positive control.** The stemming fix worked exactly where predicted (statine
   sensitivity 0.001 → **0.315**, insulin 0.000 → **0.175**, LMWH 0.000 → **0.500**, while
