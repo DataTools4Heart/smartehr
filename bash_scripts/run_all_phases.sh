@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
+# Phases: p0 normdiag joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -236,6 +236,22 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- normdiag: did the UTF-8 / id-normalisation step break the linkage? Compares the
+#      ORIGINAL exports against the normalised ones, and crucially tries the join on the
+#      ORIGINALS. Paths default to the layout described on the VM; override if they differ.
+#      Read this BEFORE asking the data provider for a crosswalk -- if the originals join,
+#      nothing needs requesting.
+if want normdiag; then
+  ORIG_SMART="${ORIG_SMART:-data/smart/smart_22nov2022.csv}"
+  NORM_SMART="${NORM_SMART:-data/smart/smart_utf8.csv}"
+  ORIG_EVENTS="${ORIG_EVENTS:-data/smartehr}"
+  NORM_EVENTS="${NORM_EVENTS:-data/smartehr-utf-8}"
+  step "normalisation diagnosis" "-" \
+    "$PY" "$S/diagnose_normalization.py" --orig-smart "$ORIG_SMART" \
+      --norm-smart "$NORM_SMART" --orig-events "$ORIG_EVENTS" \
+      --norm-events "$NORM_EVENTS" --results-file "$RESULTS"
 fi
 
 # ---- joincheck: is the event data joined to the right patients? No text, no extraction,
