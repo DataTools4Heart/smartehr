@@ -285,10 +285,25 @@ structured arm's positive control. Verified on a synthetic cohort: a correct joi
 rho = 1.000 and the run emits `JOIN CONTROL PASSES`; a shuffled join returns rho ≈ 0 and the
 run emits `** JOIN CONTROL FAILS **` and says to stop.
 
-**How to read it.** If it fails, no text result in this project is interpretable — T0
-volume, T1 TF-IDF and T2 concepts included — and the free-text null measures plumbing, not
-data. If it passes, the join is sound and the graded arm's weakness is genuinely about
-extracting these facts from these letters.
+**How to read it — corrected 2026-09-08.** A failed control does **not** by itself prove a
+misjoin: a noise extractor produces the same near-zero rho. The first version of this entry
+overstated that, and the run's first output said so too. The two causes are separated by the
+**sex marginals**, now printed alongside a 2×2:
+
+| observation | cause | response |
+|---|---|---|
+| extracted P(male) ≈ registry P(male), but the 2×2 is not diagonal | **misjoin** — the text is real and patient-specific, attached to the wrong patients | no text result in this project is interpretable; fix the join first |
+| extracted P(male) far from registry P(male) | **the extractor** is not reading this patient's sex | fix extraction; the join remains untested |
+
+Verified on synthetic cohorts (70% male, matching a vascular cohort) that each failure mode
+produces its own signature: a permuted join gives marginals 0.705 vs 0.705 with an
+off-diagonal table, while a coin-flip extractor gives 0.463 vs 0.705.
+
+**What the first real run already implies.** Exact sex agreement was 0.506 on 2,619
+patients. Under independence, agreement = pe·pc + (1−pe)(1−pc); if the registry is ~70% male
+(typical for SMART) that implies extracted P(male) ≈ 0.515 — a coin flip, which points at
+the extractor. If the cohort were near 50/50 the observation is uninformative either way,
+which is precisely why the marginals are now reported rather than inferred.
 
 ---
 

@@ -320,13 +320,23 @@ Five arms: graded alone (with validation), a dates-stripped era control, +demogr
 +concepts+demographics (every text feature at once, against the 0.7310 ceiling), and
 +full curated baseline (incremental value against 0.7394).
 
-**Read the JOIN CONTROL line first, then the validation table.** `graded.sex_from_text` and
+**Read the JOIN CONTROL line and the sex table first, then the validation table.** `graded.sex_from_text` and
 `graded.age_from_text` are checked against `geslacht` and `leeftijd`: both are stated in
 nearly every Dutch letter, so if they do not agree the documents are not joined to the right
 patients and **no text result in this project is interpretable** — T0, T1 and T2 included.
 The run says `JOIN CONTROL PASSES` or `** JOIN CONTROL FAILS **` explicitly. Note that
 plausible concept prevalences never ruled this out: a patient-shuffled cache preserves
 prevalence exactly.
+
+**A failure does not by itself prove a misjoin** — a noise extractor gives the same rho. The
+printed sex marginals and 2×2 separate them: matching marginals with an off-diagonal table
+means the documents are on the wrong patients (fix the join, discard every text result);
+mismatched marginals mean the extractor is at fault and the join is still untested. Verified
+both signatures on synthetic cohorts.
+
+**Status 2026-09-08: the control FAILED** (sex rho −0.022 on 2,619 patients, exact 0.506;
+age rho −0.004 on 2,173) and the marginals were not yet being printed, so which of the two
+causes applies is still open. That is the next thing to run.
 
 **Read the validation table before any survival number — the first run failed it.** On
 2026-09-07 all 12 pairs came back below |rho|=0.3 and the arm's C-indices were discarded as

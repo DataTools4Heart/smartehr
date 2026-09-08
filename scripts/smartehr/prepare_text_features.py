@@ -515,6 +515,7 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
     """
     med_names = sorted(med_compiled)
     cols = (["graded.sex_from_text", "graded.age_from_text",     # the join positive control
+             "graded.sex_agreement", "graded.sex_n_docs", "graded.age_spread",
              "graded.stenosis_max", "graded.stenosis_last", "graded.stenosis_left_max",
              "graded.stenosis_right_max", "graded.stenosis_ge50", "graded.stenosis_ge70",
              "graded.stenosis_n", "graded.stenosis_measured",
@@ -569,9 +570,17 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
 
         if sexes:
             # majority vote across this patient's documents
-            put("graded.sex_from_text", 1.0 if sexes.count(1) >= sexes.count(2) else 2.0)
+            nm, nf = sexes.count(1), sexes.count(2)
+            put("graded.sex_from_text", 1.0 if nm >= nf else 2.0)
+            # 1.0 = every document agrees; ~0.5 = they contradict each other, which means
+            # the text is not patient-specific rather than joined to the wrong patient.
+            put("graded.sex_agreement", max(nm, nf) / float(nm + nf))
+            put("graded.sex_n_docs", float(nm + nf))
         if ages:
             put("graded.age_from_text", float(np.median(ages)))
+            # A patient's documents span years, so a few years of spread is expected; tens
+            # of years means the ages do not belong to one person.
+            put("graded.age_spread", float(max(ages) - min(ages)))
         if sten:
             put("graded.stenosis_max", max(sten))
             put("graded.stenosis_last", sten_last)
@@ -676,6 +685,38 @@ def validate_graded(X, smart_csv, pids, train_rows, say):
             f"{(f'{sens:.3f}' if sens == sens else '  -   '):>6s} "
             f"{(f'{spec:.3f}' if spec == spec else '  -   '):>6s}")
         rows.append((feat, rho, n))
+    # The 2x2 and the two marginals separate the only two explanations for a failed
+    # control, which need opposite responses:
+    #   * extracted P(male) far from curated P(male)  -> the EXTRACTOR is noise; it is
+    #     reading sex from text that is not about this patient (or not reading it at all).
+    #   * extracted P(male) close to curated, but the table off-diagonal -> the DOCUMENTS
+    #     are joined to the wrong patients, and every text arm here is invalid.
+    if "graded.sex_from_text" in Xtr.columns and "geslacht" in cur.columns:
+        e = Xtr["graded.sex_from_text"].to_numpy(float)
+        c_ = pd.to_numeric(cur["geslacht"], errors="coerce").to_numpy(float)
+        c_ = np.where(c_ == 9, np.nan, c_)
+        ok = ~np.isnan(e) & ~np.isnan(c_)
+        if ok.sum() >= 20:
+            e, c_ = e[ok], c_[ok]
+            pe, pc = float((e == 1).mean()), float((c_ == 1).mean())
+            say(f"\n  --- sex: the discriminating table (n={int(ok.sum()):,}) ---")
+            say(f"  P(male) extracted from text = {pe:.3f} | P(male) in the registry = {pc:.3f}")
+            say(f"  {'':>14s} {'registry Man':>14s} {'registry Vrouw':>15s}")
+            for lab, val in (("text Man", 1), ("text Vrouw", 2)):
+                say(f"  {lab:>14s} {int(((e==val)&(c_==1)).sum()):14,} "
+                    f"{int(((e==val)&(c_==2)).sum()):15,}")
+            if abs(pe - pc) > 0.12:
+                emit("sex marginals DISAGREE (text {:.3f} vs registry {:.3f}): the extractor "
+                     "is not reading this patient's sex, so the failed join control is "
+                     "inconclusive about the join itself", pe, pc)
+                say("  -> the marginals differ, so the EXTRACTOR is the first suspect, not")
+                say("     the join. Fix sex extraction before drawing any join conclusion.")
+            else:
+                emit("sex marginals AGREE (text {:.3f} vs registry {:.3f}) while per-patient "
+                     "agreement is chance: that is the signature of a MISJOIN, not a weak "
+                     "extractor", pe, pc)
+                say("  -> marginals agree but the table is not diagonal: the text is being")
+                say("     matched to the WRONG PATIENTS. Fix the join before anything else.")
     ctrl = {f: r for f, r, n in rows if f in ("graded.sex_from_text", "graded.age_from_text")}
     if ctrl:
         worst = min((abs(r) for r in ctrl.values() if r is not None), default=0.0)
@@ -686,12 +727,14 @@ def validate_graded(X, smart_csv, pids, train_rows, say):
                  "a weak graded result is about extraction, not plumbing", detail)
         else:
             emit("** JOIN CONTROL FAILS ({}) **: age and sex are stated in nearly every "
-                 "letter, so failing to recover them means the documents are NOT joined to "
-                 "the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 "
-                 "concepts) is then invalid, not just this one", detail)
-            say("  ** THE JOIN CONTROL FAILED. Stop here: no text result in this project is")
-            say("     interpretable until the document-to-patient join is fixed. Note that")
-            say("     plausible concept PREVALENCES do not rule this out -- a shuffled cache")
+                 "letter, so either the documents are joined to the WRONG PATIENTS -- which "
+                 "would invalidate every text arm here, T0/T1/T2 included -- or these "
+                 "extractors are noise. The sex marginals above say which", detail)
+            say("  ** THE JOIN CONTROL FAILED. No text result is interpretable until this is")
+            say("     resolved. Read the sex table above to tell the two causes apart: equal")
+            say("     marginals with an off-diagonal table means a MISJOIN; unequal marginals")
+            say("     mean the EXTRACTOR is at fault and the join is still untested. Note")
+            say("     that plausible concept PREVALENCES rule out neither -- a shuffled cache")
             say("     preserves prevalence exactly. **")
     good = [f"{f.split('.')[-1]} rho={r:+.2f}" for f, r, n in rows
             if r is not None and abs(r) >= 0.3]
