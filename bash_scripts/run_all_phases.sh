@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
+# Phases: p0 joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -79,7 +79,7 @@ fi
 
 mkdir -p "$OUT" "$(dirname "$RESULTS")" "$(dirname "$CACHE")"
 PHASES=("$@")
-[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 t0 t1 t2 incr sens graded t3headroom ctrl struct screens)
+[ ${#PHASES[@]} -eq 0 ] && PHASES=(p0 joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens)
 declare -a FAILED=() SKIPPED=() RAN=()
 
 want() { for p in "${PHASES[@]}"; do [ "$p" = "$1" ] && return 0; done; return 1; }
@@ -236,6 +236,17 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- joincheck: is the event data joined to the right patients? No text, no extraction,
+#      no outcome. Weight, height, BMI, creatinine and cholesterol are measured BOTH in the
+#      routine EHR and at the study visit, so per-patient agreement between the two tests
+#      the identifier join directly. Run this whenever a text or event arm reads null: it
+#      distinguishes "no signal" from "wrong patients", and it is seconds of CPU.
+if want joincheck; then
+  step "join check: events vs registry" "-" \
+    "$PY" "$S/validate_event_join.py" --smart-csv "$SMART" \
+      --event-csv-folder "$EVENTS" --landmark-days "$LANDMARK" --results-file "$RESULTS"
 fi
 
 # ---- graded: the response to the headroom check. T1/T2 encoded PRESENCE; the headroom

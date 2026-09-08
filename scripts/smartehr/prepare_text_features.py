@@ -705,18 +705,26 @@ def validate_graded(X, smart_csv, pids, train_rows, say):
             for lab, val in (("text Man", 1), ("text Vrouw", 2)):
                 say(f"  {lab:>14s} {int(((e==val)&(c_==1)).sum()):14,} "
                     f"{int(((e==val)&(c_==2)).sum()):15,}")
-            if abs(pe - pc) > 0.12:
-                emit("sex marginals DISAGREE (text {:.3f} vs registry {:.3f}): the extractor "
-                     "is not reading this patient's sex, so the failed join control is "
-                     "inconclusive about the join itself", pe, pc)
-                say("  -> the marginals differ, so the EXTRACTOR is the first suspect, not")
-                say("     the join. Fix sex extraction before drawing any join conclusion.")
-            else:
-                emit("sex marginals AGREE (text {:.3f} vs registry {:.3f}) while per-patient "
-                     "agreement is chance: that is the signature of a MISJOIN, not a weak "
-                     "extractor", pe, pc)
-                say("  -> marginals agree but the table is not diagonal: the text is being")
-                say("     matched to the WRONG PATIENTS. Fix the join before anything else.")
+            # Deliberately NOT a verdict. The first version of this code called "misjoin"
+            # whenever the marginals came within 0.12, and on the real data they came
+            # within 0.10 (0.553 vs 0.653) -- a borderline value decided by an arbitrary
+            # threshold. A misjoin with an accurate extractor would put pe AT pc; a
+            # noise extractor would put it at 0.50; the observed value sat between, which
+            # is exactly the case the threshold cannot adjudicate. So report the numbers
+            # and defer to validate_event_join.py, which tests the identifier join with no
+            # extractor in the path at all.
+            lean = ("a misjoin (pe near pc)" if abs(pe - pc) <= 0.05 else
+                    "a noisy extractor (pe near 0.50)" if abs(pe - 0.5) <= 0.05 else
+                    "NEITHER cleanly -- pe sits between pc and 0.50")
+            emit("sex marginals: text {:.3f} vs registry {:.3f}; a misjoin predicts {:.3f} "
+                 "and a noise extractor 0.500, so this leans toward {}. NOT decisive: run "
+                 "scripts/smartehr/validate_event_join.py, which tests the identifier join "
+                 "with no extractor in the path", pe, pc, pc, lean)
+            say(f"  -> a misjoin predicts P(male)={pc:.3f}, a noise extractor 0.500; "
+                f"observed {pe:.3f}")
+            say("     This is suggestive, not decisive. Run validate_event_join.py: it")
+            say("     compares weight, height and creatinine measured in BOTH the EHR and")
+            say("     the study visit, so no text extraction is involved in the answer.")
     ctrl = {f: r for f, r, n in rows if f in ("graded.sex_from_text", "graded.age_from_text")}
     if ctrl:
         worst = min((abs(r) for r in ctrl.values() if r is not None), default=0.0)
@@ -731,11 +739,10 @@ def validate_graded(X, smart_csv, pids, train_rows, say):
                  "would invalidate every text arm here, T0/T1/T2 included -- or these "
                  "extractors are noise. The sex marginals above say which", detail)
             say("  ** THE JOIN CONTROL FAILED. No text result is interpretable until this is")
-            say("     resolved. Read the sex table above to tell the two causes apart: equal")
-            say("     marginals with an off-diagonal table means a MISJOIN; unequal marginals")
-            say("     mean the EXTRACTOR is at fault and the join is still untested. Note")
-            say("     that plausible concept PREVALENCES rule out neither -- a shuffled cache")
-            say("     preserves prevalence exactly. **")
+            say("     resolved. The sex table above is suggestive; the decisive test is")
+            say("     scripts/smartehr/validate_event_join.py, which needs no extractor.")
+            say("     Note that plausible concept PREVALENCES rule out neither cause -- a")
+            say("     shuffled cache preserves prevalence exactly. **")
     good = [f"{f.split('.')[-1]} rho={r:+.2f}" for f, r, n in rows
             if r is not None and abs(r) >= 0.3]
     emit("graded vs curated (train, outcome-blind): {} of {} pairs reach |rho|>=0.3{}",

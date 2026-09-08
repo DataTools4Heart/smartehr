@@ -299,11 +299,47 @@ Verified on synthetic cohorts (70% male, matching a vascular cohort) that each f
 produces its own signature: a permuted join gives marginals 0.705 vs 0.705 with an
 off-diagonal table, while a coin-flip extractor gives 0.463 vs 0.705.
 
-**What the first real run already implies.** Exact sex agreement was 0.506 on 2,619
-patients. Under independence, agreement = pe·pc + (1−pe)(1−pc); if the registry is ~70% male
-(typical for SMART) that implies extracted P(male) ≈ 0.515 — a coin flip, which points at
-the extractor. If the cohort were near 50/50 the observation is uninformative either way,
-which is precisely why the marginals are now reported rather than inferred.
+**Result, and a correction (2026-09-08).** The control failed: sex rho −0.022 on 2,619
+patients with exact agreement 0.506, age rho −0.004 on 2,173. The marginals came back
+**extracted P(male) 0.553 against a registry 0.653**, and the code called that "marginals
+agree → misjoin" because of a threshold I had set at 0.12. **That verdict is withdrawn.** A
+misjoin with an accurate extractor predicts pe = pc = 0.653; a noise extractor predicts
+0.500; the observed 0.553 sits between, which is exactly the case a threshold cannot
+adjudicate. Fitting both parameters confirms only that the extracted sex carries no
+per-patient information (q ≈ 0), which both causes produce.
+
+One datum does favour a misjoin: `graded.sex_agreement` has median **1.00** over a median of
+2 documents per patient, so a patient's own documents agree with each other about sex while
+being independent of the registry. Self-consistent, patient-specific text on the wrong
+patient is what that looks like — though a per-department template could also produce it.
+
+So the question is settled elsewhere, by a check with no extractor in the path at all:
+**`scripts/smartehr/validate_event_join.py`** (§12).
+
+---
+
+## 12. The identifier join is testable without any text
+
+Weight, height, BMI, creatinine and cholesterol are measured **both** in the routine EHR
+event stream and at the SMART study visit, so per-patient agreement between the two is a
+direct test of the identifier join with no language processing involved. Codes are taken
+from the repo's own dictionaries — `meting.csv` gives `Gewicht` (121,417 rows), `Lengte`
+(68,918) and `BMI` (19,229); `lab.csv` gives `Creat-BL` (149,294) and `Chol-BL` (44,236);
+`smart.csv` gives the registry counterparts and their units.
+
+Spearman is used, so a cm-versus-m unit difference cannot affect the verdict, and each pair
+is also correlated against a **permuted** registry column so the real value is read against
+a measured floor rather than an assumed zero.
+
+Weight is the sharpest test: a person's weight is stable over years and needs no
+interpretation. Verified on synthetic fixtures — a correct join returns rho 0.996 for weight
+and 0.991 for creatinine against a shuffled floor of ≈0; a permuted join returns 0.011 and
+0.005.
+
+| outcome | meaning |
+|---|---|
+| weight rho > 0.7 | the identifier join is sound; the structured arm's null stands and the text failure is specific to the document cache or the extractors |
+| rho ≈ 0 | the join is broken for event data generally; **both** arms' nulls measure plumbing and every event and text result in this project has to be withdrawn |
 
 ---
 

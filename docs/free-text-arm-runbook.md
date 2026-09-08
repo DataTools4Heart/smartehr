@@ -334,9 +334,26 @@ means the documents are on the wrong patients (fix the join, discard every text 
 mismatched marginals mean the extractor is at fault and the join is still untested. Verified
 both signatures on synthetic cohorts.
 
-**Status 2026-09-08: the control FAILED** (sex rho −0.022 on 2,619 patients, exact 0.506;
-age rho −0.004 on 2,173) and the marginals were not yet being printed, so which of the two
-causes applies is still open. That is the next thing to run.
+**Status 2026-09-08: the control FAILED and the cause is not yet settled.** Sex rho −0.022
+on 2,619 patients (exact 0.506), age rho −0.004 on 2,173. Marginals: extracted P(male)
+**0.553** against a registry **0.653** — a misjoin predicts 0.653, a noise extractor 0.500,
+and the observed value sits between, so no threshold can adjudicate it. (An earlier build
+did call "misjoin" here off a 0.12 threshold; that verdict is withdrawn.) One datum favours
+a misjoin: `graded.sex_agreement` median **1.00**, so a patient's own documents agree with
+each other about sex while being independent of the registry.
+
+**The decisive test needs no extractor** — new `joincheck` phase:
+
+```bash
+./bash_scripts/run_all_phases.sh joincheck
+```
+
+Weight, height, BMI, creatinine and cholesterol are measured in **both** the routine EHR and
+the study visit, so per-patient agreement tests the identifier join directly. Codes come
+from `meting.csv` / `lab.csv`, registry counterparts from `smart.csv`; Spearman, so units
+cannot affect it; each pair also correlated against a permuted registry column for a
+measured floor. Weight rho > 0.7 means the join is sound and the structured null stands;
+rho ≈ 0 means **every** result in this project, structured and text, has to be withdrawn.
 
 **Read the validation table before any survival number — the first run failed it.** On
 2026-09-07 all 12 pairs came back below |rho|=0.3 and the arm's C-indices were discarded as
