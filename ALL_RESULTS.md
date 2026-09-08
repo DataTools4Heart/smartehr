@@ -6,42 +6,45 @@ No raw clinical text is ever written here.
 
 ## Index (5 runs)
 
-- **2026-09-08T13:25:08Z | text arm: graded**
+- **2026-09-08T13:59:01Z | text arm: graded**
   - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-  - RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-  - RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
+  - RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+  - RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+  - RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
   - RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
-  - RESULT: arm=text_graded[dates=strip] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
-- **2026-09-08T13:29:23Z | text arm: graded**
+  - RESULT: arm=text_graded[dates=strip] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
+- **2026-09-08T14:03:16Z | text arm: graded**
   - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-  - RESULT: graded: 43 features; 2259 of 9644 patients have at least one extracted quantity
-  - RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
+  - RESULT: graded: 46 features; 2259 of 9644 patients have at least one extracted quantity
+  - RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+  - RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
   - RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
-  - RESULT: arm=text_graded[dates=year] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
-- **2026-09-08T13:33:30Z | text arm: graded**
+  - RESULT: arm=text_graded[dates=year] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
+- **2026-09-08T14:07:23Z | text arm: graded**
   - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-  - RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-  - RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=37 train=6210/914ev validation=1510/230ev test=1924/287ev
-- **2026-09-08T13:37:31Z | text arm: graded**
+  - RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+  - RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=40 train=6210/914ev validation=1510/230ev test=1924/287ev
+- **2026-09-08T14:11:23Z | text arm: graded**
   - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-  - RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-  - RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=76 train=6210/914ev validation=1510/230ev test=1924/287ev
-- **2026-09-08T13:41:55Z | text arm: graded**
+  - RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+  - RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=79 train=6210/914ev validation=1510/230ev test=1924/287ev
+- **2026-09-08T14:15:50Z | text arm: graded**
   - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-  - RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-  - RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=218 train=6210/914ev validation=1510/230ev test=1924/287ev
+  - RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+  - RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=221 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 ---
 
-### RUN 2026-09-08T13:25:08Z | text arm: graded
+### RUN 2026-09-08T13:59:01Z | text arm: graded
 
 - status: ok
 - context: mode=graded landmark=180 horizon=5475 analyzer=word require_text=True strip_nameish=False concept_encoding=binary out=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_rt
 - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-- RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-- RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
+- RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+- RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+- RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
 - RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
-- RESULT: arm=text_graded[dates=strip] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
+- RESULT: arm=text_graded[dates=strip] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 <details><summary>full output</summary>
 
@@ -60,9 +63,12 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
   after cleaning: 9,644 patients retain text (100.0%)
   NOTE: --date-mode is not 'year', so a year written as part of a full date is stripped and graded.onset_year_min will under-fire. The paired arm exists to measure the calendar-era contribution; read them together.
   reusing medication lexicon /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/med_lexicon.json (118 names, 18 classes)
-  43 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
+  46 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
     graded.sex_from_text                      4,036 ( 41.8%)  median=1.00 p90=2.00
     graded.age_from_text                      3,327 ( 34.5%)  median=60.00 p90=75.00
+    graded.sex_agreement                      4,036 ( 41.8%)  median=1.00 p90=1.00
+    graded.sex_n_docs                         4,036 ( 41.8%)  median=2.00 p90=8.00
+    graded.age_spread                         3,327 ( 34.5%)  median=0.00 p90=16.00
     graded.stenosis_max                       1,306 ( 13.5%)  median=2.00 p90=6.00
     graded.stenosis_last                      1,306 ( 13.5%)  median=0.00 p90=4.00
     graded.stenosis_left_max                    393 (  4.1%)  median=3.00 p90=6.00
@@ -104,7 +110,7 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
     graded.med_statine                        9,644 (100.0%)  median=0.00 p90=1.00
     graded.med_vasodilatator                  9,644 (100.0%)  median=0.00 p90=0.00
     graded.med_vka                            9,644 (100.0%)  median=0.00 p90=0.00
-RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
+RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
 
   --- extracted vs curated, TRAIN, outcome never consulted ---
   `both` is the patients where BOTH are present; agreement is only defined there.
@@ -124,10 +130,21 @@ RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted q
   graded.onset_year_min                  KliMaYr                 202  -0.179     -     -      -   
   graded.aorta_cm_max                    aorta_hg                555  -0.006     -     -      -   
   graded.n_antihypertensive_classes      mht_alln              6,210  -0.010     -     -      -   
-RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
-  ** THE JOIN CONTROL FAILED. Stop here: no text result in this project is
-     interpretable until the document-to-patient join is fixed. Note that
-     plausible concept PREVALENCES do not rule this out -- a shuffled cache
+
+  --- sex: the discriminating table (n=2,619) ---
+  P(male) extracted from text = 0.553 | P(male) in the registry = 0.653
+                   registry Man  registry Vrouw
+        text Man            931             517
+      text Vrouw            778             393
+RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+  -> marginals agree but the table is not diagonal: the text is being
+     matched to the WRONG PATIENTS. Fix the join before anything else.
+RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
+  ** THE JOIN CONTROL FAILED. No text result is interpretable until this is
+     resolved. Read the sex table above to tell the two causes apart: equal
+     marginals with an off-diagonal table means a MISJOIN; unequal marginals
+     mean the EXTRACTOR is at fault and the join is still untested. Note
+     that plausible concept PREVALENCES rule out neither -- a shuffled cache
      preserves prevalence exactly. **
 RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
   ** nothing reaches |rho|>=0.3: the extraction does not recover the curated
@@ -153,18 +170,20 @@ RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
   vasodilatator                          mht41       6,210  0.000  0.999
   vka                                    mas02       6,210  0.074  0.928
 
-  raw feature matrix: 9,644 patients x 43 features
+  raw feature matrix: 9,644 patients x 46 features
 
   --- univariate screen on RAW (un-imputed) features, train, horizon 5475d ---
   828 events; each feature scored only on the patients who HAVE it
   permutation-calibrated null: SE(C) = 0.292/sqrt(events) (the analytic 0.5/sqrt(events) is ~1.6x too wide under this censoring)
   C_mono = raw value; C_udev = |value - median|, which catches U-shaped risk that
   a monotone C-index cannot see (a true 0.62 U-shape reads as 0.50 monotone)
-  43 features tested = ~19 independent tests (correlated aggregators of the same code) | clearing raw 2-SE: 0 (~1 expected from noise)
+  46 features tested = ~19 independent tests (correlated aggregators of the same code) | clearing raw 2-SE: 1 (~1 expected from noise)
   surviving Benjamini-Hochberg FDR 5%: 0 | surviving Bonferroni (p<2.6e-03): 0  <- believe these, not the raw count
   feature                                   C_mono  C_udev   trn%    ev     z       sig
+  graded.age_spread                         0.4568  0.4568  35.0%   286  2.50    raw2SE
   graded.stenosis_n                         0.4679  0.4477  13.6%   120  1.96          
   graded.med_insuline                       0.4835  0.4835 100.0%   828  1.63          
+  graded.sex_n_docs                         0.4824  0.4734  42.2%   344  1.69          
   graded.n_med_classes                      0.4899  0.4882 100.0%   828  1.17          
   graded.med_diureticum                     0.4893  0.4893 100.0%   828  1.06          
   graded.alcohol_status_last                0.5541  0.4459  12.7%    79  1.65          
@@ -191,23 +210,20 @@ RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
   graded.med_centraal_antihyp               0.4995  0.4995 100.0%   828  0.04          
   graded.med_galzuurbinder                  0.5004  0.5004 100.0%   828  0.04          
   graded.med_vasodilatator                  0.4997  0.4997 100.0%   828  0.03          
-  graded.stenosis_max                       0.4956  0.4685  13.6%   120  1.18          
-  graded.alcohol_glasses_band               0.5685  0.5685   6.7%    38  1.45          
   trn% is the share of the TRAIN split carrying a value (the screen is train-only);
   a feature covering a few percent cannot drive a cohort-level model, however real
   its subcohort signal. Count/indicator features are never missing, so they read 100%.
-  ** nothing clears its floor even before imputation: not an imputation artefact **
 
   winsorised at train quantiles [0.001, 0.999]
   dropped 8 features covered in <10% of train (post-imputation they are near-constant and only add noise)
-  imputed 150,649 missing cells with the train median, then standardised
-  train      : 6,210 patients | events=828 (13.3%) | features=35
-  validation : 1,510 patients | events=206 (13.6%) | features=35
-  test       : 1,924 patients | events=257 (13.4%) | features=35
-RESULT: arm=text_graded[dates=strip] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
+  imputed 168,182 missing cells with the train median, then standardised
+  train      : 6,210 patients | events=828 (13.3%) | features=38
+  validation : 1,510 patients | events=206 (13.6%) | features=38
+  test       : 1,924 patients | events=257 (13.4%) | features=38
+RESULT: arm=text_graded[dates=strip] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 Saved to /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_rt
-Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_rt model=mlp model.input_size=35
+Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_rt model=mlp model.input_size=38
 (feature_names in metadata.json — use them to interpret the fitted model)
 ```
 
@@ -215,15 +231,16 @@ Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi
 
 ---
 
-### RUN 2026-09-08T13:29:23Z | text arm: graded
+### RUN 2026-09-08T14:03:16Z | text arm: graded
 
 - status: ok
 - context: mode=graded landmark=180 horizon=5475 analyzer=word require_text=True strip_nameish=False concept_encoding=binary out=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_year_rt
 - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-- RESULT: graded: 43 features; 2259 of 9644 patients have at least one extracted quantity
-- RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
+- RESULT: graded: 46 features; 2259 of 9644 patients have at least one extracted quantity
+- RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+- RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
 - RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
-- RESULT: arm=text_graded[dates=year] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
+- RESULT: arm=text_graded[dates=year] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 <details><summary>full output</summary>
 
@@ -241,9 +258,12 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
   NOTE: benchmarks measured on the FULL cohort do not apply to this subcohort. Build the matched control with --mode baseline --require-text.
   after cleaning: 9,644 patients retain text (100.0%)
   reusing medication lexicon /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/med_lexicon.json (118 names, 18 classes)
-  43 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
+  46 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
     graded.sex_from_text                      4,036 ( 41.8%)  median=1.00 p90=2.00
     graded.age_from_text                      3,327 ( 34.5%)  median=60.00 p90=75.00
+    graded.sex_agreement                      4,036 ( 41.8%)  median=1.00 p90=1.00
+    graded.sex_n_docs                         4,036 ( 41.8%)  median=2.00 p90=8.00
+    graded.age_spread                         3,327 ( 34.5%)  median=0.00 p90=16.00
     graded.stenosis_max                       1,306 ( 13.5%)  median=2.00 p90=6.00
     graded.stenosis_last                      1,306 ( 13.5%)  median=0.00 p90=4.00
     graded.stenosis_left_max                    394 (  4.1%)  median=3.00 p90=6.00
@@ -285,7 +305,7 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
     graded.med_statine                        9,644 (100.0%)  median=0.00 p90=1.00
     graded.med_vasodilatator                  9,644 (100.0%)  median=0.00 p90=0.00
     graded.med_vka                            9,644 (100.0%)  median=0.00 p90=0.00
-RESULT: graded: 43 features; 2259 of 9644 patients have at least one extracted quantity
+RESULT: graded: 46 features; 2259 of 9644 patients have at least one extracted quantity
 
   --- extracted vs curated, TRAIN, outcome never consulted ---
   `both` is the patients where BOTH are present; agreement is only defined there.
@@ -305,10 +325,21 @@ RESULT: graded: 43 features; 2259 of 9644 patients have at least one extracted q
   graded.onset_year_min                  KliMaYr                 203  -0.179     -     -      -   
   graded.aorta_cm_max                    aorta_hg                555  -0.006     -     -      -   
   graded.n_antihypertensive_classes      mht_alln              6,210  -0.010     -     -      -   
-RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so failing to recover them means the documents are NOT joined to the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 concepts) is then invalid, not just this one
-  ** THE JOIN CONTROL FAILED. Stop here: no text result in this project is
-     interpretable until the document-to-patient join is fixed. Note that
-     plausible concept PREVALENCES do not rule this out -- a shuffled cache
+
+  --- sex: the discriminating table (n=2,619) ---
+  P(male) extracted from text = 0.553 | P(male) in the registry = 0.653
+                   registry Man  registry Vrouw
+        text Man            931             517
+      text Vrouw            778             393
+RESULT: sex marginals AGREE (text 0.553 vs registry 0.653) while per-patient agreement is chance: that is the signature of a MISJOIN, not a weak extractor
+  -> marginals agree but the table is not diagonal: the text is being
+     matched to the WRONG PATIENTS. Fix the join before anything else.
+RESULT: ** JOIN CONTROL FAILS (sex_from_text rho=-0.022, age_from_text rho=-0.004) **: age and sex are stated in nearly every letter, so either the documents are joined to the WRONG PATIENTS -- which would invalidate every text arm here, T0/T1/T2 included -- or these extractors are noise. The sex marginals above say which
+  ** THE JOIN CONTROL FAILED. No text result is interpretable until this is
+     resolved. Read the sex table above to tell the two causes apart: equal
+     marginals with an off-diagonal table means a MISJOIN; unequal marginals
+     mean the EXTRACTOR is at fault and the join is still untested. Note
+     that plausible concept PREVALENCES rule out neither -- a shuffled cache
      preserves prevalence exactly. **
 RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
   ** nothing reaches |rho|>=0.3: the extraction does not recover the curated
@@ -334,17 +365,17 @@ RESULT: graded vs curated (train, outcome-blind): 0 of 15 pairs reach |rho|>=0.3
   vasodilatator                          mht41       6,210  0.000  0.999
   vka                                    mas02       6,210  0.074  0.928
 
-  raw feature matrix: 9,644 patients x 43 features
+  raw feature matrix: 9,644 patients x 46 features
   winsorised at train quantiles [0.001, 0.999]
   dropped 8 features covered in <10% of train (post-imputation they are near-constant and only add noise)
-  imputed 150,633 missing cells with the train median, then standardised
-  train      : 6,210 patients | events=828 (13.3%) | features=35
-  validation : 1,510 patients | events=206 (13.6%) | features=35
-  test       : 1,924 patients | events=257 (13.4%) | features=35
-RESULT: arm=text_graded[dates=year] n_features=35 train=6210/914ev validation=1510/230ev test=1924/287ev
+  imputed 168,166 missing cells with the train median, then standardised
+  train      : 6,210 patients | events=828 (13.3%) | features=38
+  validation : 1,510 patients | events=206 (13.6%) | features=38
+  test       : 1,924 patients | events=257 (13.4%) | features=38
+RESULT: arm=text_graded[dates=year] n_features=38 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 Saved to /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_year_rt
-Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_year_rt model=mlp model.input_size=35
+Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_year_rt model=mlp model.input_size=38
 (feature_names in metadata.json — use them to interpret the fitted model)
 ```
 
@@ -352,13 +383,13 @@ Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi
 
 ---
 
-### RUN 2026-09-08T13:33:30Z | text arm: graded
+### RUN 2026-09-08T14:07:23Z | text arm: graded
 
 - status: ok
 - context: mode=graded landmark=180 horizon=5475 analyzer=word require_text=True strip_nameish=False concept_encoding=binary add_baseline=leeftijd,geslacht out=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_demo_rt
 - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-- RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-- RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=37 train=6210/914ev validation=1510/230ev test=1924/287ev
+- RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+- RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=40 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 <details><summary>full output</summary>
 
@@ -377,9 +408,12 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
   after cleaning: 9,644 patients retain text (100.0%)
   NOTE: --date-mode is not 'year', so a year written as part of a full date is stripped and graded.onset_year_min will under-fire. The paired arm exists to measure the calendar-era contribution; read them together.
   reusing medication lexicon /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/med_lexicon.json (118 names, 18 classes)
-  43 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
+  46 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
     graded.sex_from_text                      4,036 ( 41.8%)  median=1.00 p90=2.00
     graded.age_from_text                      3,327 ( 34.5%)  median=60.00 p90=75.00
+    graded.sex_agreement                      4,036 ( 41.8%)  median=1.00 p90=1.00
+    graded.sex_n_docs                         4,036 ( 41.8%)  median=2.00 p90=8.00
+    graded.age_spread                         3,327 ( 34.5%)  median=0.00 p90=16.00
     graded.stenosis_max                       1,306 ( 13.5%)  median=2.00 p90=6.00
     graded.stenosis_last                      1,306 ( 13.5%)  median=0.00 p90=4.00
     graded.stenosis_left_max                    393 (  4.1%)  median=3.00 p90=6.00
@@ -421,23 +455,23 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
     graded.med_statine                        9,644 (100.0%)  median=0.00 p90=1.00
     graded.med_vasodilatator                  9,644 (100.0%)  median=0.00 p90=0.00
     graded.med_vka                            9,644 (100.0%)  median=0.00 p90=0.00
-RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
+RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
   appending 2 baseline columns -> ['geslacht', 'leeftijd']
-  raw feature matrix: 9,644 patients x 45 features
+  raw feature matrix: 9,644 patients x 48 features
   winsorised at train quantiles [0.001, 0.999]
   dropped 8 features covered in <10% of train (post-imputation they are near-constant and only add noise)
-  imputed 150,649 missing cells with the train median, then standardised
+  imputed 168,182 missing cells with the train median, then standardised
   self-check on the appended baseline columns (each should be clearly off 0.5;
   if one is missing or ~0.5 the arm is broken, not null):
     smart_baseline.geslacht: train C=0.4422
     smart_baseline.leeftijd: train C=0.6731
-  train      : 6,210 patients | events=828 (13.3%) | features=37
-  validation : 1,510 patients | events=206 (13.6%) | features=37
-  test       : 1,924 patients | events=257 (13.4%) | features=37
-RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=37 train=6210/914ev validation=1510/230ev test=1924/287ev
+  train      : 6,210 patients | events=828 (13.3%) | features=40
+  validation : 1,510 patients | events=206 (13.6%) | features=40
+  test       : 1,924 patients | events=257 (13.4%) | features=40
+RESULT: arm=text_graded[dates=strip]+baseline[leeftijd,geslacht] n_features=40 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 Saved to /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_demo_rt
-Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_demo_rt model=mlp model.input_size=37
+Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_demo_rt model=mlp model.input_size=40
 (feature_names in metadata.json — use them to interpret the fitted model)
 ```
 
@@ -445,13 +479,13 @@ Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi
 
 ---
 
-### RUN 2026-09-08T13:37:31Z | text arm: graded
+### RUN 2026-09-08T14:11:23Z | text arm: graded
 
 - status: ok
 - context: mode=graded landmark=180 horizon=5475 analyzer=word require_text=True strip_nameish=False concept_encoding=binary add_baseline=leeftijd,geslacht out=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_all_demo_rt
 - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-- RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-- RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=76 train=6210/914ev validation=1510/230ev test=1924/287ev
+- RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+- RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=79 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 <details><summary>full output</summary>
 
@@ -470,9 +504,12 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
   after cleaning: 9,644 patients retain text (100.0%)
   NOTE: --date-mode is not 'year', so a year written as part of a full date is stripped and graded.onset_year_min will under-fire. The paired arm exists to measure the calendar-era contribution; read them together.
   reusing medication lexicon /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/med_lexicon.json (118 names, 18 classes)
-  43 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
+  46 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
     graded.sex_from_text                      4,036 ( 41.8%)  median=1.00 p90=2.00
     graded.age_from_text                      3,327 ( 34.5%)  median=60.00 p90=75.00
+    graded.sex_agreement                      4,036 ( 41.8%)  median=1.00 p90=1.00
+    graded.sex_n_docs                         4,036 ( 41.8%)  median=2.00 p90=8.00
+    graded.age_spread                         3,327 ( 34.5%)  median=0.00 p90=16.00
     graded.stenosis_max                       1,306 ( 13.5%)  median=2.00 p90=6.00
     graded.stenosis_last                      1,306 ( 13.5%)  median=0.00 p90=4.00
     graded.stenosis_left_max                    393 (  4.1%)  median=3.00 p90=6.00
@@ -514,26 +551,26 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
     graded.med_statine                        9,644 (100.0%)  median=0.00 p90=1.00
     graded.med_vasodilatator                  9,644 (100.0%)  median=0.00 p90=0.00
     graded.med_vka                            9,644 (100.0%)  median=0.00 p90=0.00
-RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
+RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
   concept tiers in use: disease,symptom
   concepts with no terms in these tiers, skipped: revascularisatie
   + 39 concept features appended (binary/disease,symptom)
   appending 2 baseline columns -> ['geslacht', 'leeftijd']
-  raw feature matrix: 9,644 patients x 84 features
+  raw feature matrix: 9,644 patients x 87 features
   winsorised at train quantiles [0.001, 0.999]
   dropped 8 features covered in <10% of train (post-imputation they are near-constant and only add noise)
-  imputed 150,649 missing cells with the train median, then standardised
+  imputed 168,182 missing cells with the train median, then standardised
   self-check on the appended baseline columns (each should be clearly off 0.5;
   if one is missing or ~0.5 the arm is broken, not null):
     smart_baseline.geslacht: train C=0.4422
     smart_baseline.leeftijd: train C=0.6731
-  train      : 6,210 patients | events=828 (13.3%) | features=76
-  validation : 1,510 patients | events=206 (13.6%) | features=76
-  test       : 1,924 patients | events=257 (13.4%) | features=76
-RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=76 train=6210/914ev validation=1510/230ev test=1924/287ev
+  train      : 6,210 patients | events=828 (13.3%) | features=79
+  validation : 1,510 patients | events=206 (13.6%) | features=79
+  test       : 1,924 patients | events=257 (13.4%) | features=79
+RESULT: arm=text_graded[dates=strip]+concepts[disease,symptom]+baseline[leeftijd,geslacht] n_features=79 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 Saved to /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_all_demo_rt
-Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_all_demo_rt model=mlp model.input_size=76
+Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_all_demo_rt model=mlp model.input_size=79
 (feature_names in metadata.json — use them to interpret the fitted model)
 ```
 
@@ -541,13 +578,13 @@ Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi
 
 ---
 
-### RUN 2026-09-08T13:41:55Z | text arm: graded
+### RUN 2026-09-08T14:15:50Z | text arm: graded
 
 - status: ok
 - context: mode=graded landmark=180 horizon=5475 analyzer=word require_text=True strip_nameish=False concept_encoding=binary add_baseline=all out=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_full_rt
 - RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
-- RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
-- RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=218 train=6210/914ev validation=1510/230ev test=1924/287ev
+- RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
+- RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=221 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 <details><summary>full output</summary>
 
@@ -566,9 +603,12 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
   after cleaning: 9,644 patients retain text (100.0%)
   NOTE: --date-mode is not 'year', so a year written as part of a full date is stripped and graded.onset_year_min will under-fire. The paired arm exists to measure the calendar-era contribution; read them together.
   reusing medication lexicon /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/med_lexicon.json (118 names, 18 classes)
-  43 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
+  46 graded features; coverage over 9,644 patients (NaN = not stated, which the pre-imputation screen scores separately):
     graded.sex_from_text                      4,036 ( 41.8%)  median=1.00 p90=2.00
     graded.age_from_text                      3,327 ( 34.5%)  median=60.00 p90=75.00
+    graded.sex_agreement                      4,036 ( 41.8%)  median=1.00 p90=1.00
+    graded.sex_n_docs                         4,036 ( 41.8%)  median=2.00 p90=8.00
+    graded.age_spread                         3,327 ( 34.5%)  median=0.00 p90=16.00
     graded.stenosis_max                       1,306 ( 13.5%)  median=2.00 p90=6.00
     graded.stenosis_last                      1,306 ( 13.5%)  median=0.00 p90=4.00
     graded.stenosis_left_max                    393 (  4.1%)  median=3.00 p90=6.00
@@ -610,13 +650,13 @@ RESULT: documents=121778 patients_with_text=9644/13434 (71.8%)
     graded.med_statine                        9,644 (100.0%)  median=0.00 p90=1.00
     graded.med_vasodilatator                  9,644 (100.0%)  median=0.00 p90=0.00
     graded.med_vka                            9,644 (100.0%)  median=0.00 p90=0.00
-RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted quantity
+RESULT: graded: 46 features; 2256 of 9644 patients have at least one extracted quantity
   appending 183 baseline columns -> ['geslacht', 'leeftijd', 'opleiding', 'RespLand', 'PaLand', 'MaLand', 'WereldDl', 'diagnsco', 'vaatzkt1', 'DiagSide', 'IncInt_p', 'IncInt_v', 'V0405', 'vg_0410', 'vgok_car', 'vgt_kop', 'vz_kop', 'vg_0321', 'vg_0323', 'vgok_har', 'vgt_hart', 'vz_hart', 'vg_0325', 'vgok_aaa', 'vgt_aaa', 'vz_aaa', 'vg_0606c', 'vgok_nie', 'vgt_nier', 'vz_nier', 'vg_0519', 'vgok_bee', 'vgt_been', 'vz_been', 'bdsys', 'bddia', 'hyptns_n', 'hyptns_b', 'vz_hypt', 'labgluc', 'hypgly_n', 'hypgly_b', 'vz_DM', 'vz_t1d', 'vz_t2d', 'klinman', 'gewicht', 'lengte', 'bm_indx', 'bmi_30', 'tail_gm', 'heup_gm', 'tlhp_rat', 'vet_subc', 'vet_gm', 'plsprs', 'abi_lg', 'abi_gm', 'abivrl_n', 'ABiRe', 'ABiLi', 'imt_gm', 'stenACIr', 'stenACIl', 'csten_50', 'csten_70', 'AortProx', 'AortDist', 'aorta_hg', 'aorta_gm', 'aaaech_n', 'nrlng_re', 'nrlng_li', 'nrlng_gm', 'nratrof', 'nrvol_re', 'nrvol_li', 'nrvol_gm', 'labhb', 'labht', 'labchol', 'labtrig', 'labhdl', 'ldlchol', 'VgBh_HpL', 'hyplip_n', 'hyplip_b', 'vz_HypLp', 'labkrea', 'labmalb', 'labkrur', 'mpkr_rat', 'albminur', 'nrfaln_n', 'klar_coc', 'klar_gst', 'MDRD', 'labhcyst', 'hyphmc_n', 'labins', 'labtsh', 'labcrp', 'labhba1c', 'labapob', 'roken', 'packyrs', 'alcohol', 'AlchlGlz', 'V0821', 'V082201', 'V082202', 'V0823', 'MBSc', 'MBS', 'MBSc_mis', 'MBScgr', 'kl1fysfc', 'kl2socfc', 'kl3rolfy', 'kl4rolem', 'kl5mengz', 'kl6vital', 'kl7pijn', 'kl8alggz', 'kl9gezva', 'mht01', 'mht02', 'mht02a', 'mht02b', 'mht02c', 'mht02d', 'mht03', 'mht04', 'mht05', 'mht06', 'mht07', 'mht12', 'mht33', 'mht41', 'mliphoop', 'mli01', 'mli02', 'mli03', 'mli04', 'mas01', 'mas01a', 'mas01b', 'mas01c', 'mas01d', 'mas02', 'mas02a', 'mas02b', 'mas02c', 'mas03', 'mmpr', 'mhmc', 'mgl01', 'mgl02', 'mgl03', 'TCA', 'SSRI', 'MAO', 'OthADep', 'Benzo', 'BenzoDer', 'BenzoRel', 'Thyr', 'Amiodar', 'Lithium', 'mht_alln', 'mht_all', 'lipmid', 'statine', 'pamid', 'aspirine', 'pa_stolmid', 'KliMaC', 'KliMaYr', 'KliMaDur', 'KliMaDrD', 'spMEThw', 'acMEThw', 'bwMEThw']
-  raw feature matrix: 9,644 patients x 226 features
+  raw feature matrix: 9,644 patients x 229 features
   winsorised at train quantiles [0.001, 0.999]
   dropped 8 features covered in <10% of train (post-imputation they are near-constant and only add noise)
   4 features had ~zero train variance; left unscaled instead of divided by ~0 (that would swamp a penalised model)
-  imputed 312,723 missing cells with the train median, then standardised
+  imputed 330,256 missing cells with the train median, then standardised
   self-check on the appended baseline columns (each should be clearly off 0.5;
   if one is missing or ~0.5 the arm is broken, not null):
     smart_baseline.geslacht: train C=0.4422
@@ -802,13 +842,13 @@ RESULT: graded: 43 features; 2256 of 9644 patients have at least one extracted q
     smart_baseline.spMEThw: train C=0.4445
     smart_baseline.acMEThw: train C=0.4497
     smart_baseline.bwMEThw: train C=0.4353
-  train      : 6,210 patients | events=828 (13.3%) | features=218
-  validation : 1,510 patients | events=206 (13.6%) | features=218
-  test       : 1,924 patients | events=257 (13.4%) | features=218
-RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=218 train=6210/914ev validation=1510/230ev test=1924/287ev
+  train      : 6,210 patients | events=828 (13.3%) | features=221
+  validation : 1,510 patients | events=206 (13.6%) | features=221
+  test       : 1,924 patients | events=257 (13.4%) | features=221
+RESULT: arm=text_graded[dates=strip]+baseline[all] n_features=221 train=6210/914ev validation=1510/230ev test=1924/287ev
 
 Saved to /home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_full_rt
-Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_full_rt model=mlp model.input_size=218
+Train with:  dataset=smartehr_embeddings dataset.root_path=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/arms/GRADED_full_rt model=mlp model.input_size=221
 (feature_names in metadata.json — use them to interpret the fitted model)
 ```
 
