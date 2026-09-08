@@ -6,19 +6,21 @@ No raw clinical text is ever written here.
 
 ## Index (1 runs)
 
-- **2026-09-08T15:50:39Z | diagnose: did normalisation break the join?**
+- **2026-09-08T15:56:42Z | diagnose: did normalisation break the join?**
   - RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
   - RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
+  - RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
   - RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
 ---
 
-### RUN 2026-09-08T15:50:39Z | diagnose: did normalisation break the join?
+### RUN 2026-09-08T15:56:42Z | diagnose: did normalisation break the join?
 
 - status: ok
 - context: orig_smart=data/smart/smart_22nov2022.csv norm_smart=data/smart/smart_utf8.csv
 - RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
 - RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
+- RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
 - RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
 <details><summary>full output</summary>
@@ -57,6 +59,13 @@ RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
     ORIGINAL pair matched on int    ids: n=10,923  rho=+0.011
     norm registry + orig events matched on string ids: n= 4,067  rho=-0.004
     norm registry + orig events matched on int    ids: n=10,923  rho=+0.011
+
+=== 3. were the ids assigned in the same ORDER? =========================
+  registry 13,776 ids | events 12,771 ids | pairing the 12,771 smallest of each by rank
+  rank-matched weight agreement: rho=+0.000
+RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
+  -> no. The id orders are unrelated too, so the assignments are
+     independent in value AND in order.
 RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
   -> The ORIGINAL files do not join either (original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011). The normalisation is
