@@ -239,9 +239,32 @@ def internal_consistency(a, say):
         say(f"\n  identifier spaces: registry {rid.nunique():,} ids in "
             f"[{rid.min():,}, {rid.max():,}] | events {eid.nunique():,} ids in "
             f"[{eid.min():,}, {eid.max():,}] | overlap {inter:,}")
+        # Is that overlap a shared key, or coincidence? If the two files assigned their
+        # pseudo-ids INDEPENDENTLY over the same numbering range, the expected overlap is
+        # R*E/N. An observed value at that number means the "matching" patients match by
+        # arithmetic, not by identity -- which is a completely different problem from a
+        # shared key that has been scrambled, and points at two pseudonymisation runs.
+        R, E = int(rid.nunique()), int(eid.nunique())
+        lo = int(min(rid.min(), eid.min()))
+        hi = int(max(rid.max(), eid.max()))
+        N = hi - lo + 1
+        exp = R * E / N if N else float("nan")
+        say(f"  expected overlap if the two id sets were INDEPENDENT draws from "
+            f"[{lo:,}, {hi:,}] (N={N:,}): {exp:,.0f}")
+        say(f"  observed / expected = {inter / exp:.4f}" if exp else "")
         emit("identifier spaces: registry {} ids [{}, {}], events {} ids [{}, {}], "
-             "overlap {}", rid.nunique(), rid.min(), rid.max(), eid.nunique(),
-             eid.min(), eid.max(), inter)
+             "overlap {} vs {:.0f} expected under independence (ratio {:.4f})",
+             R, int(rid.min()), int(rid.max()), E, int(eid.min()), int(eid.max()),
+             inter, exp, inter / exp if exp else float("nan"))
+        if exp and 0.9 <= inter / exp <= 1.1:
+            emit("** THE TWO FILES DO NOT SHARE A KEY **: the overlap is what independent "
+                 "id assignments over the same numbering range would produce by arithmetic "
+                 "alone, so the {} 'matching' patients match by coincidence. The extracts "
+                 "come from different pseudonymisation runs and a crosswalk is required",
+                 inter)
+            say("  -> The overlap IS the chance value. These are independent id assignments")
+            say("     over one numbering range: the files share a range, not a key. Ask the")
+            say("     data manager for the crosswalk; no code change can recover this.")
 
 
 def main(a):

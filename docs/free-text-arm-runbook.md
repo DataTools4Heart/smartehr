@@ -617,8 +617,19 @@ to confirm that.
 
 ## 10. Changelog
 
-- **2026-09-08 (later) — no key in `smart.csv` repairs the linkage; this is now a
-  data-delivery question.** The probe found exactly **one** usable candidate key column in
+- **2026-09-08 (final) — DIAGNOSIS COMPLETE: the two extracts do not share a key, they
+  share a numbering range.** The `m3life_no` values in `smart.csv` and in the EHR CSVs are
+  independent pseudonymisation assignments over the same space, so every apparently matching
+  patient matches by arithmetic: registry 13,806 ids in [1, 16096], events 12,771 in
+  [2, 15877], **observed overlap 10,949 against 10,954 expected under independence — ratio
+  0.9995.** Both files are internally coherent (BMI vs weight/height² within one row: events
+  rho +0.941, median |diff| 0.31; registry +0.798, whose lower value is entirely explained
+  by `lengte` being rounded to integer metres — 80/2² = 20 against a stated 26.1, and the
+  observed offset is 6.25). So neither file is corrupt and no code change can recover the
+  linkage. **A crosswalk between the two pseudonymisation runs is required from the data
+  provider.** The check now computes and reports this chance-overlap test itself.
+
+- **2026-09-08 (earlier) — no key in `smart.csv` repairs the linkage.** The probe found exactly **one** usable candidate key column in
   `smart.csv` — `m3life_no` itself, 13,806 unique values matching 10,923 event patients — and
   it reads rho **+0.011** against routine weight. `studienr`, the registry's own documented
   identifier, is **not present in the file at all**, so this delivery is keyed solely on the

@@ -35,10 +35,32 @@
 > every arm measured on them uses the same patients and the same labels, so the comparisons
 > among them remain internally valid.
 >
-> Diagnosis and next step: `scripts/smartehr/validate_event_join.py` (also
-> `./bash_scripts/run_all_phases.sh joincheck`), which on failure probes which column of
-> `smart.csv` does recover routine weight. If one does, every event and text arm must be
-> rebuilt with it. If none does, the linkage has to be re-derived at source.
+> ### Diagnosis (complete, 2026-09-08)
+>
+> **The two extracts do not share a key. They share a numbering range.** The `m3life_no`
+> values in `smart.csv` and in the EHR CSVs are independent pseudonymisation assignments
+> over the same space, so the patients that appear to match do so by arithmetic:
+>
+> | | |
+> |---|---|
+> | registry distinct ids | 13,806 in [1, 16096] |
+> | event distinct ids | 12,771 in [2, 15877] |
+> | **expected overlap if independent** (R·E/N) | **10,954** |
+> | **observed overlap** | **10,949** |
+> | ratio | **0.9995** |
+>
+> Both files are internally coherent, so neither is corrupt on its own — BMI against
+> weight/height² within one row gives rho **+0.941** for the events (median |diff| 0.31) and
+> **+0.798** for the registry. The registry's lower value is fully explained by its `lengte`
+> column being rounded to integer metres (median 2.00): for an 80 kg person that makes the
+> implied BMI 80/2² = 20 against a stated 26.1, and the observed median offset is 6.25.
+> Nothing here indicates scrambled values.
+>
+> So no code change can recover the linkage, and no column of `smart.csv` can either
+> (`studienr`, the registry's own documented identifier, is absent from the file). **A
+> crosswalk between the two pseudonymisation runs is required from the data provider.**
+>
+> Reproduce with `./bash_scripts/run_all_phases.sh joincheck`.
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
 Status: **UNDER REVIEW (see the banner above): the event-to-registry join is broken,
