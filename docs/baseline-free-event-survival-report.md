@@ -99,6 +99,45 @@
 >
 > **A crosswalk between the two pseudonymisation runs is the only remaining route.**
 >
+> ### Affected EHR extract files (all 16)
+>
+> The mismatch is a property of the identifier, so every extract keyed on it is affected.
+> Directly demonstrated on `meting_20251203.csv` and `lab_ezis_20250709.csv` — the only two
+> holding quantities the registry also measures; the rest share the same key and cannot be
+> tested that way.
+>
+> | file | id column as delivered | distinct patients |
+> |---|---|---|
+> | `consult_20251208.csv` | `M3LIFE_no` | 8,991 |
+> | `dbc_20251203.csv` | **`M3Life_no`** | 12,532 |
+> | `diag_20250626.csv` | `M3LIFE_no` | 14,354 |
+> | `ecg_measmatrix_20251208.csv` | `M3LIFE_no` | 15,390 |
+> | `echo_20250626.csv` | `M3LIFE_no` | 4,768 |
+> | `hos_20251209.csv` | `M3LIFE_no` | 12,227 |
+> | `hos_mut_20251209.csv` | `M3LIFE_no` | 12,227 |
+> | `lab_ezis_20250709.csv` | **`M3Life_no`** | 11,298 |
+> | `med_20250709.csv` | `M3LIFE_no` | 11,864 |
+> | `meting_20251203.csv` | `M3LIFE_no` | 15,831 |
+> | `mri_verslag_20250626.csv` | `M3LIFE_no` | 1,679 |
+> | `ok_20250626.csv` | `M3LIFE_no` | 7,548 |
+> | `ok_verslag_20250626.csv` | `M3LIFE_no` | 4,531 |
+> | `radiologie_verslag_20251208.csv` | `M3LIFE_no` | 10,893 |
+> | `uitgaandebrief_20251208.csv` | `M3LIFE_no` | 8,472 |
+> | `verr_20251203.csv` | `M3LIFE_no` | 2,989 |
+>
+> Registry side: `smart_22nov2022.csv`, column `M3LIFE_no`, 13,806 patients.
+>
+> Two observations for the provider. The casing is not uniform across the delivery —
+> `dbc` and `lab_ezis` use `M3Life_no`, the other fourteen `M3LIFE_no`. And several extracts
+> cover **more** distinct patients than the registry contains (`meting` 15,831, `ecg` 15,390,
+> `diag` 14,354 against 13,806), so the extracts are not restricted to the registry cohort
+> and a crosswalk needs to cover the intersection.
+>
+> The separate `UCN_*` delivery (20 files) was never used by this project. Its ECG and echo
+> tables link by `ECG_TestID` / `ECHO_StudyID` rather than a patient id, so they inherit the
+> problem through the EHR tables; `UCN_PATIENT_DEMOGRAFISCH.csv` is described as demographics
+> and might offer an independent check if it carries a patient identifier.
+>
 > Reproduce with `./bash_scripts/run_all_phases.sh normdiag joincheck`.
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
