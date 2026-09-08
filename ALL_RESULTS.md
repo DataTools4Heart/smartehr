@@ -6,26 +6,28 @@ No raw clinical text is ever written here.
 
 ## Index (1 runs)
 
-- **2026-09-08T14:34:18Z | join check: events vs registry**
+- **2026-09-08T15:05:41Z | join check: events vs registry**
   - RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
   - RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
   - RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
   - RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
   - RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
   - RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
+  - RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
 
 ---
 
-### RUN 2026-09-08T14:34:18Z | join check: events vs registry
+### RUN 2026-09-08T15:05:41Z | join check: events vs registry
 
 - status: ok
-- context: landmark=180
+- context: landmark=180 probe_keys=False
 - RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
 - RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
 - RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
 - RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
 - RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
 - RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
+- RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
 
 <details><summary>full output</summary>
 
@@ -49,6 +51,16 @@ RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities
      both sources and cannot legitimately disagree for the same patient. Every
      null in this project -- structured and text -- is uninterpretable until
      the identifier join is fixed. **
+
+  --- which smart.csv column, used as the join key, recovers routine weight? ---
+  probe: 12,771 patients with a routine weight near baseline
+  candidate key              unique  matched      rho  note
+  m3life_no                  13,806   10,923   +0.011  
+RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
+
+  -> No column in smart.csv recovers weight (best +0.011 (m3life_no)). The linkage
+     cannot be fixed from these files: the EHR extracts and the registry need
+     to be re-linked at source. This is a question for the data manager.
 ```
 
 </details>
