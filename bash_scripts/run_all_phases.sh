@@ -251,29 +251,33 @@ fi
 #      what settles the Dutch severity-word mapping in ASSUMPTIONS.md #4.
 if want graded; then
   MEDLEX="${MEDLEX:-$OUT/med_lexicon.json}"
-  # date-mode year: a year written as part of a full date is otherwise stripped, and
-  # dated onset is one of the four carriers. The paired strip arm below measures how much
-  # of any gain is calendar era rather than clinical content (plan pitfall #4).
+  # --date-mode strip is PRIMARY. The 2026-09-07 run tried `year` first, on the theory
+  # that full stripping destroys "CABG op 12-05-2003"; validation showed the opposite --
+  # converting dates to years turned every letterhead date into a candidate onset year and
+  # dragged the extracted median to 2009, where KliMaYr is the FIRST event years earlier
+  # (rho -0.028). Onset now also demands a history cue ("in 2003", "sinds 1998"), which a
+  # converted date never has, so `year` buys nothing and costs specificity.
   step "graded quantities (+validation)" "$OUT/GRADED_rt" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
-      --date-mode year --med-lexicon "$MEDLEX" --validate-baseline --screen-features \
+      --date-mode strip --med-lexicon "$MEDLEX" --validate-baseline --screen-features \
       --out-dir "$OUT/GRADED_rt"
-  step "graded, dates stripped (era control)" "$OUT/GRADED_strip_rt" \
+  step "graded, dates kept as years (era sensitivity)" "$OUT/GRADED_year_rt" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
-      --date-mode strip --med-lexicon "$MEDLEX" --out-dir "$OUT/GRADED_strip_rt"
+      --date-mode year --med-lexicon "$MEDLEX" --validate-baseline \
+      --out-dir "$OUT/GRADED_year_rt"
   step "graded + demographics" "$OUT/GRADED_demo_rt" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
-      --date-mode year --med-lexicon "$MEDLEX" --add-baseline-cols "$DEMOG" \
+      --date-mode strip --med-lexicon "$MEDLEX" --add-baseline-cols "$DEMOG" \
       --out-dir "$OUT/GRADED_demo_rt"
   # every text feature we can build, against the 0.7310 chart-derivable ceiling
   step "graded + concepts + demographics" "$OUT/GRADED_all_demo_rt" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
-      --date-mode year --med-lexicon "$MEDLEX" --with-concepts \
+      --date-mode strip --med-lexicon "$MEDLEX" --with-concepts \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/GRADED_all_demo_rt"
   # incremental value over everything already collected
   step "graded + FULL curated baseline" "$OUT/GRADED_full_rt" \
     "$PY" "$S/prepare_text_features.py" "${TEXT[@]}" --mode graded --require-text \
-      --date-mode year --med-lexicon "$MEDLEX" --add-baseline-cols all \
+      --date-mode strip --med-lexicon "$MEDLEX" --add-baseline-cols all \
       --out-dir "$OUT/GRADED_full_rt"
 fi
 

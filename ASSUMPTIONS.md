@@ -76,14 +76,22 @@ which is also reported via `emit`.
 
 ## 2. Drug names are derived, not assumed
 
-**Not an assumption — recorded here because it is the alternative to one.** The Dutch drug
-names searched for in text are **not** written by hand. They are derived from the cohort's
-own `med_*.csv` by taking every `med_genNaam` whose `med_ZIatc` starts with a prefix in §1,
+**Not an assumption — recorded here because it is the alternative to one.** The drug names
+searched for in text are **not** written by hand. They are derived from the cohort's own
+`med_*.csv` by taking every `med_genNaam` whose `med_ZIatc` starts with a prefix in §1,
 over **train patients only**.
 
 **Why this way.** A hand-written Dutch drug list would be an unverifiable guess about which
-names this site actually uses, and it would silently miss local spellings and brand names.
-Deriving it means the lexicon is auditable against the data that produced it.
+names this site actually uses. Deriving it means the lexicon is auditable against the data
+that produced it, and its per-class contents are printed into `$RESULTS`.
+
+**Correction (2026-09-07).** This entry originally implied the derived names were the Dutch
+surface forms clinicians write. **They are not: `med_genNaam` holds WHO/ATC English INN
+names** — `SIMVASTATIN`, `INSULIN GLARGINE`, `HEPARIN`, `ACETYLSALICYLIC ACID`. Matching
+them verbatim against Dutch narrative recovered almost nothing, measured at sensitivity
+**0.001** for statins and **0.000** for insulin, while beta-blockers reached 0.265 purely
+because `metoprolol`/`bisoprolol`/`atenolol` are spelled identically in both languages. That
+contrast is what identified the cause. The bridge is now a morphological one — see §9.
 
 **Residual risk.** A drug prescribed but never *named in narrative text* contributes nothing;
 conversely a drug named in text but never prescribed in this cohort is invisible to the
@@ -195,6 +203,60 @@ year alone.
 follow-up length and treatment era — pitfall #4 in the free-text plan. Mitigation: the
 paired arm runs with `--date-mode strip`, so the era contribution is measured rather than
 assumed away. **If the two arms differ materially, believe the stripped one.**
+
+---
+
+## 9. English INN → Dutch surface form is bridged by stemming, not translation
+
+**Assumed.** That the Dutch spelling of a drug is the English INN plus a regular ending, so
+matching *stem + any word characters* recovers it.
+
+**Why it is needed.** §2's correction: the derived lexicon is English, the text is Dutch.
+A translation table would be a hand-written guess per drug — exactly what §2 avoids.
+
+**The rule.** Take the **first** qualifying token of `med_genNaam` (the active substance;
+trailing tokens are salts, insulin variants and ATC class wording), trim a trailing `e` or
+`ic`, require ≥6 characters, and match `\bstem[a-z]*\b`.
+
+| INN | stem | matches Dutch |
+|---|---|---|
+| `SIMVASTATIN` | `simvastatin` | simvastatine |
+| `INSULIN (HUMAN)` | `insulin` | insuline |
+| `HEPARIN` | `heparin` | heparine |
+| `ACETYLSALICYLIC ACID` | `acetylsalicyl` | acetylsalicylzuur |
+| `DIPYRIDAMOLE` | `dipyridamol` | dipyridamol |
+| `ENALAPRIL AND DIURETICS` | `enalapril` | enalapril |
+
+**Why only the first token.** Taking every token produced the false positives this arm
+cannot afford: `CARBASALATE CALCIUM` contributed the stem `calcium`, which matches
+"calciumantagonist" and any calcium lab value, and `INSULIN ASPART` contributed `aspart`,
+which matches "aspartaat" (the ASAT enzyme).
+
+**Residual risk.** Stems whose Dutch spelling differs *internally* still fail:
+`HYDROCHLOROTHIAZIDE` does not match Dutch `hydrochloorthiazide` (chloro/chloor), and
+`CARBASALATE` does not match `carbasalaat`. Brand names clinicians actually write (`Ascal`
+for carbasalate, `HCT` for hydrochlorothiazide) are absent from the lexicon entirely. All of
+these are under-detection, never over-detection.
+
+**How to check.** The `--validate-baseline` sensitivity column per class: a class whose
+Dutch form diverges internally will show low sensitivity while its neighbours are high.
+
+---
+
+## 10. Corrections made after the 2026-09-07 validation run
+
+Recorded because the reasoning that produced each mistake is more useful than the fix, and
+because every one was caught by `--validate-baseline` rather than by inspection.
+
+| what was wrong | evidence | fix |
+|---|---|---|
+| English INN vs Dutch text (§2, §9) | statine sens 0.001, insulin 0.000, betablokker 0.265 | stem matching |
+| `niet meer` treated as an ex-smoker cue | cohort median smoking code read 1 (former); it fires on "kan niet meer lopen" | require `rookt niet meer` / `niet meer gerookt` |
+| bare word "alcohol" set current use | cohort median read 3 (current drinker) | require an affirmative or a quantity |
+| `occlusie` anywhere within 60 chars of a vessel graded the carotid 6 | cohort p90 read 6, which no carotid cohort does | a standalone lesion term must sit within 30 chars of the vessel |
+| any length near "aorta" read as a diameter | cohort p90 read 7.0 cm | require a measurement cue, or the aorta named just before the number |
+| `--date-mode year` turned letterhead dates into onset years | extracted median onset 2009 where `KliMaYr` is the first event years earlier; rho −0.028 | require a history cue (`in 2003`, `sinds 1998`); `--date-mode strip` is now primary |
+| `py` accepted as a pack-year abbreviation | "10 py" is anything | removed; stated and reconstructed pack-years are now separate features |
 
 ---
 

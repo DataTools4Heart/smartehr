@@ -86,7 +86,7 @@ VESSEL_TERMS = r"(?:aci|a\.?\s?carotis\s?interna|carotis|halsslagader|carotiden)
 # is only a modifier and must qualify one ("ernstige stenose").
 QUALITATIVE = (
     (r"pre-?occlusief|pre-?occlusieve?", 7, True),
-    (r"(?:totale?\s+)?occlusie|volledig afgesloten|afsluiting", 6, True),
+    (r"(?:totale?\s+)?occlusie|geoccludeerd|volledig afgesloten|afsluiting", 6, True),
     (r"subtotale?", 5, False),
     (r"ernstige?|forse?|hooggradige?|significante?", 4, False),
     (r"matige?|middelmatige?|matig-?ernstige?", 2, False),
@@ -94,6 +94,7 @@ QUALITATIVE = (
 )
 
 WINDOW = 60          # characters between a vessel/stenosis term and its quantity
+TIGHT_WINDOW = 30    # for a term that IS the lesion, so it must sit beside the vessel
 LATERAL_WINDOW = 40  # characters within which "links"/"rechts" binds to the finding
 
 
@@ -144,6 +145,7 @@ def extract_stenosis(text):
     for m in re.finditer(VESSEL_TERMS, t):
         ctx_from = max(0, m.start() - WINDOW)
         ctx = t[ctx_from:m.end() + WINDOW]
+        tight = t[max(0, m.start() - TIGHT_WINDOW):m.end() + TIGHT_WINDOW]
         if not re.search(STENOSIS_TERMS, ctx):
             continue
         if re.search(r"\b(?:geen|zonder|vrij van)\b[^.;]{0,30}" + STENOSIS_TERMS, ctx) or \
@@ -155,7 +157,10 @@ def extract_stenosis(text):
         for pat, grade, standalone in QUALITATIVE:
             hit = (re.search(r"\b(?:" + pat + r")\b[^.;]{0,25}" + STENOSIS_TERMS, ctx)
                    or re.search(STENOSIS_TERMS + r"[^.;]{0,25}\b(?:" + pat + r")\b", ctx)
-                   or (standalone and re.search(r"\b(?:" + pat + r")\b", ctx)))
+                   # A standalone lesion term still has to sit NEXT TO the vessel, within
+                   # TIGHT_WINDOW, or any occlusion mentioned elsewhere in the report is
+                   # attributed to the carotid.
+                   or (standalone and re.search(r"\b(?:" + pat + r")\b", tight)))
             if hit:
                 out.append((grade, _side(t[ctx_from:m.end() + LATERAL_WINDOW])))
                 break
@@ -170,15 +175,22 @@ def extract_stenosis(text):
 CIGS_PER_PACK = 20
 
 
-def extract_packyears(text):
-    """-> list of pack-year values, direct statements first."""
+def extract_packyears(text, reconstruct=True):
+    """-> list of pack-year values. Stated figures only, unless `reconstruct`.
+
+    `py` was removed from the alternation: as an abbreviation it matches anything ("10 py")
+    and the validated agreement with `packyrs` could not distinguish a bad abbreviation
+    from a bad reconstruction. The builder now emits stated and reconstructed values as
+    SEPARATE features for exactly that reason.
+    """
     t = norm(text)
     out = []
-    for m in re.finditer(r"(\d{1,3}(?:[.,]\d+)?)\s*(?:pack\s?-?\s?years?|packyears?|pakjaar|pakjaren|py)\b", t):
+    for m in re.finditer(r"(\d{1,3}(?:[.,]\d+)?)\s*(?:pack\s?-?\s?years?|packyears?|"
+                         r"pakjaar|pakjaren)\b", t):
         v = _num(m.group(1))
         if v is not None and 0 <= v <= 200:
             out.append(v)
-    if out:
+    if out or not reconstruct:
         return out          # a stated pack-year figure beats anything reconstructed
     # Reconstruct only when BOTH a rate and a duration are present; a rate alone gives
     # no pack-years, and defaulting the missing half would invent the quantity.
@@ -214,7 +226,8 @@ def extract_packyears(text):
 
 SMOKING_NEVER = r"\b(?:nooit gerookt|niet-?roker|non-?smoker|nooit geroken)\b"
 SMOKING_FORMER = (r"\b(?:ex-?roker|ex-?rookster|voormalig(?:e)? roker|gestopt met roken|"
-                  r"gestopt te roken|vroeger gerookt|rookte voorheen|niet meer)\b")
+                  r"gestopt te roken|vroeger gerookt|rookte voorheen|"
+                  r"rookt niet meer|niet meer gerookt)\b")
 SMOKING_CURRENT = r"\b(?:rookt|roker|rookster|actief roker|nog steeds rookt|rookt nog)\b"
 
 
@@ -267,7 +280,9 @@ def extract_alcohol(text):
         status = 0
     elif re.search(r"\b(?:gestopt met alcohol|voorheen alcohol|vroeger alcohol)\b", t):
         status = 1
-    elif re.search(r"\b(?:alcohol|drinkt|eenheden|glazen)\b", t):
+    elif re.search(r"\b(?:drinkt|alcoholgebruik: ?ja|gebruikt alcohol|"
+                   r"alcohol ?\+)\b", t) or re.search(
+                   r"\d+\s*(?:glazen|glas|eenheden)", t):
         status = 3
     band = None
     m = re.search(r"(\d{1,3}(?:[.,]\d+)?)\s*(?:glazen|glas|eenheden|e\.?)\s*(?:per|/)\s*week", t)
@@ -297,17 +312,27 @@ EVENT_TERMS = (r"(?:myocardinfarct|hartinfarct|infarct|mi\b|hartstilstand|"
                r"aneurysma|aaa\b|"
                r"endarteriectomie|desobstructie|halsslagader|carotisoperatie|"
                r"amputatie|claudicatio|revascularisatie|vaatoperatie)")
-YEAR_WINDOW = 70
+YEAR_WINDOW = 30
 YEAR_MIN, YEAR_MAX = 1930, 2030
+# A year that states WHEN something happened is introduced by one of these. A bare year
+# with no cue is usually a document, letter or scan date -- which is what flooded the
+# onset feature when --date-mode year converted full dates into years.
+HISTORY_CUE = r"(?:in|sinds|sedert|anno|vanaf|rond|omstreeks)"
 
 
-def extract_onset_years(text):
-    """-> list of plausible years mentioned next to a vascular event term."""
+def extract_onset_years(text, require_cue=True):
+    """-> list of plausible years mentioned next to a vascular event term.
+
+    `require_cue` demands a temporal preposition immediately before the year, so that a
+    date printed in a letterhead is not read as the year a disease began.
+    """
     t = norm(text)
     out = []
     for m in re.finditer(r"\b(19\d{2}|20\d{2})\b", t):
         y = int(m.group(1))
         if not (YEAR_MIN <= y <= YEAR_MAX):
+            continue
+        if require_cue and not re.search(HISTORY_CUE + r"\s+$", t[:m.start()]):
             continue
         ctx = t[max(0, m.start() - YEAR_WINDOW):m.end() + YEAR_WINDOW]
         if re.search(EVENT_TERMS, ctx):
@@ -320,6 +345,11 @@ def extract_onset_years(text):
 # aorta_hg: "Grootste diameter aorta (cm.) (echo)" -> the MAXIMUM, in centimetres.
 
 AORTA_TERMS = r"(?:aorta|aneurysma|aaa\b|aortadiameter)"
+# A bare length near the word "aorta" is not an aortic diameter. Requiring a measurement
+# cue is what separates "aorta, diameter 4,2 cm" from "5 cm distaal van de aorta".
+AORTA_CUE = r"(?:diameter|doorsnede|ap-?diameter|maximaal|max\.?|dia\b|wijdte|kaliber)"
+AORTA_WINDOW = 30
+AORTA_LEAD = 20      # chars in which the aorta term may NAME the object before the number
 
 
 def extract_aorta_cm(text):
@@ -331,10 +361,15 @@ def extract_aorta_cm(text):
         if v is None:
             continue
         cm = v / 10.0 if m.group(2) == "mm" else v
-        ctx = t[max(0, m.start() - WINDOW):m.end() + WINDOW]
+        ctx = t[max(0, m.start() - AORTA_WINDOW):m.end() + AORTA_WINDOW]
         if not re.search(AORTA_TERMS, ctx):
             continue
-        if 1.0 <= cm <= 15.0:      # an adult aorta outside this range is a parse error
+        lead = t[max(0, m.start() - AORTA_LEAD):m.start()]
+        # Either a measurement cue, or the aorta named immediately before the number. A
+        # term that only FOLLOWS the number is describing a location, not a diameter.
+        if not (re.search(AORTA_CUE, ctx) or re.search(AORTA_TERMS, lead)):
+            continue
+        if 1.0 <= cm <= 12.0:      # an adult aorta outside this range is a parse error
             out.append(cm)
     return out
 
@@ -375,17 +410,72 @@ MED_CLASSES = {
 ANTIHYPERTENSIVE = tuple(k for k, v in MED_CLASSES.items() if v["smart"].startswith("mht"))
 
 
-def compile_med_lexicon(lexicon):
-    """{class: [drug names]} -> {class: compiled word-boundary alternation}.
+# Tokens in med_genNaam that are not drug names: ATC combination and salt wording.
+# "ENALAPRIL AND DIURETICS" must contribute `enalapril`, not the phrase, which no letter
+# ever writes.
+_MED_STOPTOKENS = {
+    # connectors, salts and ATC class wording
+    "and", "acid", "human", "sparing", "agents", "potassium", "calcium", "sodium",
+    "combinations", "other", "plain", "derivatives", "etexilate", "levorotatory",
+    "diuretics", "antihypertensives", "preparations", "related", "atc",
+    "in", "with", "or", "the",
+}
 
-    Word boundaries, not substrings: the concept arm already read C=0.910 for smoking
-    because `roken` matched "afgesproken", and a drug name is just as prone to it.
+
+def med_stems(name):
+    """English INN from med_genNaam -> stems that also match the Dutch surface form.
+
+    THIS IS THE FIX FOR THE ARM'S BIGGEST FAILURE. `med_genNaam` holds WHO/ATC **English**
+    INN names, not the Dutch spellings clinicians write, so matching the values verbatim
+    against Dutch narrative recovered almost nothing -- validated at sensitivity 0.001 for
+    statins and 0.000 for insulin, while beta-blockers reached 0.265 purely because
+    metoprolol/bisoprolol/atenolol happen to be spelled identically in both languages.
+    That contrast is what identified the cause.
+
+      SIMVASTATIN          -> Dutch simvastatine
+      INSULIN GLARGINE     -> Dutch insuline glargine
+      HEPARIN              -> Dutch heparine
+      ACETYLSALICYLIC ACID -> Dutch acetylsalicylzuur
+
+    So each token is reduced to a stem and matched as stem + any word characters, which
+    covers the regular Dutch endings without inventing a translation table. The trims are
+    morphological, not per-drug: a trailing 'e' (dipyridamole/dipyridamol) and a trailing
+    'ic' (acetylsalicylic/acetylsalicylzuur). See ASSUMPTIONS.md #9.
+
+    Stems are >= 6 characters, so a short fragment cannot match unrelated prose.
+
+    Only the FIRST qualifying token is used -- the active substance. Trailing tokens are
+    salts, insulin variants and ATC class wording, and taking them too produced exactly the
+    false positives this arm cannot afford: "CARBASALATE CALCIUM" contributed the stem
+    `calcium`, which matches "calciumantagonist" and any calcium lab value, and
+    "INSULIN ASPART" contributed `aspart`, which matches "aspartaat" (the ASAT enzyme).
+    """
+    for tok in re.split(r"[^a-z]+", norm(name)):
+        if len(tok) < 6 or tok in _MED_STOPTOKENS:
+            continue
+        if tok.endswith("ic"):
+            tok = tok[:-2]
+        elif tok.endswith("e"):
+            tok = tok[:-1]
+        return {tok} if len(tok) >= 6 else set()
+    return set()
+
+
+def compile_med_lexicon(lexicon):
+    """{class: [INN names]} -> {class: compiled stem alternation}.
+
+    Anchored at the start of a word, so a stem cannot match mid-word: the concept arm
+    already read C=0.910 for smoking because `roken` matched "afgesproken". The trailing
+    [a-z]* is what admits the Dutch ending.
     """
     out = {}
     for cls, names in lexicon.items():
-        toks = sorted({norm(n) for n in names if n and len(norm(n)) >= 4}, key=len, reverse=True)
-        if toks:
-            out[cls] = re.compile(r"\b(?:" + "|".join(re.escape(x) for x in toks) + r")\b")
+        stems = set()
+        for n in names or ():
+            stems |= med_stems(n)
+        if stems:
+            toks = sorted(stems, key=len, reverse=True)
+            out[cls] = re.compile(r"\b(?:" + "|".join(re.escape(x) for x in toks) + r")[a-z]*\b")
     return out
 
 
@@ -428,6 +518,7 @@ VALIDATION_PAIRS = (
     ("graded.stenosis_ge50", ("csten_50",), "binary"),
     ("graded.stenosis_ge70", ("csten_70",), "binary"),
     ("graded.packyears", ("packyrs",), "numeric"),
+    ("graded.packyears_stated", ("packyrs",), "numeric"),
     ("graded.smoking_status_last", ("roken",), "categorical"),
     ("graded.alcohol_status_last", ("alcohol",), "categorical"),
     ("graded.alcohol_glasses_band", ("AlchlGlz",), "ordinal"),

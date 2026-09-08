@@ -320,7 +320,10 @@ Five arms: graded alone (with validation), a dates-stripped era control, +demogr
 +concepts+demographics (every text feature at once, against the 0.7310 ceiling), and
 +full curated baseline (incremental value against 0.7394).
 
-**Read the validation table before any survival number.** `--validate-baseline` compares
+**Read the validation table before any survival number — the first run failed it.** On
+2026-09-07 all 12 pairs came back below |rho|=0.3 and the arm's C-indices were discarded as
+a measurement of the extractor. Six bugs were found from that table; if the pairs are still
+near zero after a re-run, the same conclusion applies again. `--validate-baseline` compares
 each extracted quantity against the curated variable measuring the same thing, on train
 patients, with the outcome never consulted:
 
@@ -578,6 +581,29 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-09-07 (later) — the graded arm's FIRST RUN FAILED ITS OWN VALIDATION, and that is
+  the check working.** 170 runs. `0 of 12` extracted-vs-curated pairs reached |rho|>=0.3:
+  stenosis +0.072, pack-years +0.052, smoking −0.008, onset year −0.028, aorta +0.002,
+  antihypertensive count −0.011. **The survival numbers from that run (0.4920 alone, 0.6746
+  with demographics) are therefore uninterpretable** — they measure my extractor, not the
+  text. Six distinct bugs, each identified from the validation table rather than by
+  inspection, all fixed and each with a regression fixture (91 assertions now):
+  - **`med_genNaam` holds ENGLISH INN names**, not Dutch surface forms — `SIMVASTATIN`,
+    `INSULIN GLARGINE`, `HEPARIN`. Statine sensitivity 0.001 and insulin 0.000, while
+    beta-blockers reached 0.265 *only* because metoprolol is spelled the same in both
+    languages. That contrast is what located the cause. Bridged by stemming
+    (`ASSUMPTIONS.md` §9), using only the active-substance token — taking every token gave
+    `calcium` from "CARBASALATE CALCIUM" and `aspart` from "INSULIN ASPART".
+  - `niet meer` counted as an ex-smoker cue, so it fired on "kan niet meer lopen" and put
+    the cohort median smoking code at 1.
+  - the bare word "alcohol" set current use; cohort median read 3.
+  - `occlusie` anywhere within 60 chars of a vessel graded the carotid 6; cohort p90 read 6.
+  - any length near "aorta" became a diameter; cohort p90 read 7.0 cm.
+  - **`--date-mode year` was my own bad call**: converting dates to years turned every
+    letterhead date into a candidate onset year and dragged the extracted median to 2009,
+    where `KliMaYr` is the first event years earlier. Onset now requires a history cue and
+    **`--date-mode strip` is primary**, with `year` kept only as the sensitivity arm.
 
 - **2026-09-07 — T2b graded + medication features built, in response to the headroom
   check.** `--mode graded` extracts quantities rather than assertions, every scale taken

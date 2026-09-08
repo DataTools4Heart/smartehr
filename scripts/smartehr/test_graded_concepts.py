@@ -105,6 +105,66 @@ check("mm converted to cm", extract_aorta_cm("Aneurysma, 48 mm."), [4.8])
 check("length with no aorta term is ignored", extract_aorta_cm("Litteken van 5 cm."), [])
 check("out-of-range value rejected", extract_aorta_cm("aorta 90 cm"), [])
 
+print("\n--- regressions from the 2026-09-07 validation run ---")
+# Every case here corresponds to a measured failure in that run's extracted-vs-curated
+# table, which is the whole reason --validate-baseline exists.
+from graded_concepts import med_stems
+# med_genNaam holds ENGLISH INN names. Matching them verbatim against Dutch narrative gave
+# statine sensitivity 0.001 and insulin 0.000, while beta-blockers reached 0.265 only
+# because metoprolol is spelled the same in both languages.
+real = {"statine": ["SIMVASTATIN", "ATORVASTATIN"],
+        "insuline": ["INSULIN (HUMAN)", "INSULIN ASPART"],
+        "lmwh": ["HEPARIN", "NADROPARIN"],
+        "plaatjesremmer": ["ACETYLSALICYLIC ACID", "CARBASALATE CALCIUM", "DIPYRIDAMOLE"],
+        "ace_remmer": ["ENALAPRIL AND DIURETICS"],
+        "calciumantagonist": ["AMLODIPINE"]}
+rc = compile_med_lexicon(real)
+check("English INN matches the Dutch form (SIMVASTATIN -> simvastatine)",
+      extract_medications("medicatie: simvastatine 40mg", rc), {"statine"})
+check("INSULIN -> insuline", extract_medications("insuline glargine", rc), {"insuline"})
+check("HEPARIN -> heparine", extract_medications("nadroparine s.c.", rc), {"lmwh"})
+check("ACETYLSALICYLIC ACID -> acetylsalicylzuur",
+      extract_medications("acetylsalicylzuur 80mg", rc), {"plaatjesremmer"})
+check("combination wording contributes only the substance",
+      extract_medications("enalapril 10mg", rc), {"ace_remmer"})
+# Only the FIRST token is used: "CARBASALATE CALCIUM" otherwise contributed the stem
+# `calcium`, and "INSULIN ASPART" the stem `aspart` (which matches the ASAT enzyme).
+check("salt token does not become a stem", med_stems("CARBASALATE CALCIUM"), {"carbasalat"})
+check("calcium lab value is not an antiplatelet",
+      extract_medications("calcium 2,45 mmol/l, calciumscore verhoogd", rc), set())
+check("aspartaat is not insulin", extract_medications("asat 30, aspartaat normaal", rc), set())
+# "niet meer" fired on "niet meer dan" / "kan niet meer lopen" and put the cohort median
+# smoking code at 1 (former).
+check("'niet meer' alone is not an ex-smoker",
+      extract_smoking_status("kan niet meer dan 100 meter lopen"), None)
+check("'rookt niet meer' still is", extract_smoking_status("rookt niet meer"), 1)
+# The mere word "alcohol" made status 3 (current drinker) for almost everyone.
+check("bare mention of alcohol is not current use",
+      extract_alcohol("alcoholanamnese besproken")[0], None)
+check("a quantity still gives current use", extract_alcohol("drinkt 10 glazen per week")[0], 3)
+# --date-mode year turned letterhead dates into onset years; extracted median read 2009
+# where KliMaYr is the first event years earlier. A history cue is now required.
+check("year with a history cue is an onset",
+      extract_onset_years("myocardinfarct in 2003"), [2003])
+check("bare year beside an event but with no cue is not",
+      extract_onset_years("myocardinfarct 2003 controle"), [])
+check("document-date wording is not a history cue",
+      extract_onset_years("brief myocardinfarct d.d. 2019"), [])
+# "occlusie" anywhere within 60 chars of any vessel word graded every such patient 6;
+# the cohort p90 read 6, which no carotid cohort does.
+check("occlusion far from the vessel is not a carotid occlusion",
+      extract_stenosis("carotis met plaque. elders in het verslag: occlusie van een "
+                       "kleine tak distaal in de hersenen beschreven."), [])
+# aorta p90 read 7.0 cm; a bare length near "aorta" is not a diameter.
+check("length near 'aorta' without a measurement cue is ignored",
+      extract_aorta_cm("incisie 5 cm boven de aorta"), [])
+check("diameter cue is required and accepted",
+      extract_aorta_cm("aorta, diameter 4,2 cm"), [4.2])
+# "10 py" is not ten pack-years.
+check("ambiguous 'py' abbreviation no longer counts", extract_packyears("10 py"), [])
+check("reconstruct=False returns only stated figures",
+      extract_packyears("rookt 20 sigaretten per dag sinds 30 jaar", reconstruct=False), [])
+
 print("\n--- medications: lexicon is data-derived, matching is word-bounded ---")
 # Stands in for what the med CSV yields per ATC prefix.
 lex = {"statine": ["Simvastatine", "Atorvastatine"],

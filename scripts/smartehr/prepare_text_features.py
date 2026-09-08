@@ -516,7 +516,8 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
     cols = (["graded.stenosis_max", "graded.stenosis_last", "graded.stenosis_left_max",
              "graded.stenosis_right_max", "graded.stenosis_ge50", "graded.stenosis_ge70",
              "graded.stenosis_n", "graded.stenosis_measured",
-             "graded.packyears", "graded.packyears_measured",
+             "graded.packyears", "graded.packyears_stated",
+             "graded.packyears_measured",
              "graded.smoking_status_last", "graded.smoking_status_max",
              "graded.alcohol_status_last", "graded.alcohol_glasses_band",
              "graded.onset_year_min", "graded.onset_year_n", "graded.onset_measured",
@@ -532,7 +533,7 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
         if i is None:
             continue
         sten, sten_l, sten_r, sten_last = [], [], [], None
-        py, years, aorta = [], [], []
+        py, py_stated, years, aorta = [], [], [], []
         smoke, smoke_last = [], None
         alc_status, alc_band = [], []
         classes = set()
@@ -542,6 +543,7 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
                 sten_last = grade
                 (sten_l if side == "left" else sten_r if side == "right" else []).append(grade)
             py += extract_packyears(txt)
+            py_stated += extract_packyears(txt, reconstruct=False)
             years += extract_onset_years(txt)
             aorta += extract_aorta_cm(txt)
             sm = extract_smoking_status(txt)
@@ -571,6 +573,10 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
         put("graded.stenosis_measured", 1.0 if sten else 0.0)
         if py:
             put("graded.packyears", max(py))
+        if py_stated:
+            # Kept apart from the reconstructed value: when the two disagree with the
+            # curated `packyrs`, only separate features say which path is at fault.
+            put("graded.packyears_stated", max(py_stated))
         put("graded.packyears_measured", 1.0 if py else 0.0)
         if smoke:
             put("graded.smoking_status_last", smoke_last)
