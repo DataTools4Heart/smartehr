@@ -6,76 +6,62 @@ No raw clinical text is ever written here.
 
 ## Index (1 runs)
 
-- **2026-09-08T15:12:55Z | join check: events vs registry**
-  - RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
-  - RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
-  - RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
-  - RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
-  - RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
-  - RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
-  - RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
-  - RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
-  - RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
-  - RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949
+- **2026-09-08T15:50:39Z | diagnose: did normalisation break the join?**
+  - RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
+  - RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
+  - RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
 ---
 
-### RUN 2026-09-08T15:12:55Z | join check: events vs registry
+### RUN 2026-09-08T15:50:39Z | diagnose: did normalisation break the join?
 
 - status: ok
-- context: landmark=180 probe_keys=False
-- RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
-- RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
-- RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
-- RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
-- RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
-- RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
-- RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
-- RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
-- RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
-- RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949
+- context: orig_smart=data/smart/smart_22nov2022.csv norm_smart=data/smart/smart_utf8.csv
+- RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
+- RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
+- RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
 <details><summary>full output</summary>
 
 ```
-  registry: 13,806 patients
+=== 1. registry: original vs normalised ==================================
+  ORIGINAL registry
+    path      data/smart/smart_22nov2022.csv
+    parsed as encoding=cp1252 sep=;  rows=13,808 cols=261
+    id column 'M3LIFE_no'
+    ids       n=13,808 unique=13,807 purely_numeric=13,806 leading_zeros=8,573 whitespace=0
+    id lengths (chars) {5: 13806, 11: 2}
+    NON-NUMERIC id examples: ['Ao vene RDP', 'Ao vene RDP']
+  NORMALISED registry
+    path      data/smart/smart_utf8.csv
+    parsed as encoding=utf-8 sep=,  rows=13,806 cols=261
+    id column 'm3life_no'
+    ids       n=13,806 unique=13,806 purely_numeric=13,806 leading_zeros=0 whitespace=0
+    id lengths (chars) {1: 8, 2: 76, 3: 765, 4: 7724, 5: 5233}
+RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
+  ** rows changed 13,808 -> 13,806: the re-encode altered how rows were split, which misaligns every column from its id **
 
-  event source                 registry      both     rho  shuffled  med(event)   med(reg)
-  meting.Gewicht               gewicht     10,923  +0.011    +0.021       81.00      80.00
-RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
-  meting.Lengte                lengte       8,202  -0.017    +0.006      174.00       2.00
-RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
-  meting.BMI                   bm_indx      2,776  -0.009    -0.029       26.30      26.00
-RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
-  lab_ezis.Creat-BL            labkrea      6,010  +0.002    -0.007       79.00      84.00
-RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
-  lab_ezis.Chol-BL             labchol      5,161  -0.012    +0.020        4.70       5.00
-RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
-RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
+  registry id sets: original 13,807 | normalised 13,806
+    identical as strings? False
+    identical as ints?    True
+    string overlap 5,233 | int overlap 13,806
+    id -> weight preserved across normalisation? n=5,223 rho=+1.000
+RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
 
-  ** THE EVENT JOIN IS BROKEN. Weight, height and creatinine are measured in
-     both sources and cannot legitimately disagree for the same patient. Every
-     null in this project -- structured and text -- is uninterpretable until
-     the identifier join is fixed. **
+=== 2. THE DECISIVE TEST: does the ORIGINAL pair join? ==================
+  ORIGINAL events:
+    meting_20251203.csv (encoding=cp1252, sep=;): weights for 12,771 ids
+  NORMALISED events:
+    no meting*.csv in data/smartehr-utf-8
+    ORIGINAL pair matched on string ids: n=10,923  rho=+0.011
+    ORIGINAL pair matched on int    ids: n=10,923  rho=+0.011
+    norm registry + orig events matched on string ids: n= 4,067  rho=-0.004
+    norm registry + orig events matched on int    ids: n=10,923  rho=+0.011
+RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
-  --- which smart.csv column, used as the join key, recovers routine weight? ---
-  probe: 12,771 patients with a routine weight near baseline
-  candidate key              unique  matched      rho  note
-  m3life_no                  13,806   10,923   +0.011  
-RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
-
-  -> No column in smart.csv recovers weight (best +0.011 (m3life_no)). The linkage
-     cannot be fixed from these files: the EHR extracts and the registry need
-     to be re-linked at source. This is a question for the data manager.
-
-  --- is each file self-consistent? BMI = weight / height^2 within one row ---
-  REGISTRY  n=13,731  rho(implied BMI, stated BMI)=+0.798  median |diff|=6.25
-RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
-  EVENTS    n=3,180  rho(implied BMI, stated BMI)=+0.941  median |diff|=0.31
-RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
-
-  identifier spaces: registry 13,806 ids in [1, 16,096] | events 12,771 ids in [2, 15,877] | overlap 10,949
-RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949
+  -> The ORIGINAL files do not join either (original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011). The normalisation is
+     exonerated: the two extracts carry independent pseudonymisation runs, and
+     the crosswalk has to come from the data provider.
 ```
 
 </details>
