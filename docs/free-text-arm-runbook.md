@@ -617,6 +617,20 @@ to confirm that.
 
 ## 10. Changelog
 
+- **2026-09-08 — the local preprocessing is NOT the cause.** The UTF-8 / id-normalisation
+  step was the obvious suspect, and `normdiag` clears it: **the original files do not join
+  either** (weight rho **+0.011** on 10,923 patients, identical matched as strings or as
+  ints). The normalisation was faithful — integer-normalised id sets are *identical* and
+  id→weight is preserved at rho **+1.000**. The original registry is cp1252,
+  semicolon-delimited, decimal-comma, with `M3LIFE_no` zero-padded to 5 chars (8,573 of
+  13,806 have a leading zero), which explains why string-matched id sets differ while
+  int-matched ones agree exactly. Two incidental findings: the original has **2 rows whose
+  id column holds free text** (`'Ao vene RDP'`) — at least two field-shifted rows in that
+  export, dropped by the normalisation (13,808 → 13,806) — and registry `lengte` is rounded
+  to integer metres. Also ruled out: no second identifier exists on the event side, and a
+  rank-order probe (were both extracts numbered in one shared source order?) is now in
+  `diagnose_normalization.py` step 3.
+
 - **2026-09-08 (final) — DIAGNOSIS COMPLETE: the two extracts do not share a key, they
   share a numbering range.** The `m3life_no` values in `smart.csv` and in the EHR CSVs are
   independent pseudonymisation assignments over the same space, so every apparently matching

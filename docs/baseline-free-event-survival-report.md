@@ -60,7 +60,31 @@
 > (`studienr`, the registry's own documented identifier, is absent from the file). **A
 > crosswalk between the two pseudonymisation runs is required from the data provider.**
 >
-> Reproduce with `./bash_scripts/run_all_phases.sh joincheck`.
+> **Preprocessing ruled out (2026-09-08).** Both sources were preprocessed locally — a
+> non-UTF-8 original converted to UTF-8, the `m3life_no` column name normalised across
+> files, and its dtype normalised (string in the registry, numeric elsewhere) — so that step
+> was the obvious suspect. It is not the cause: **the original files do not join either**
+> (weight rho **+0.011** on 10,923 patients, the same value, matched as strings and as
+> ints). The normalisation was in fact faithful where it matters — the integer-normalised id
+> sets are *identical*, and id→weight is preserved at rho **+1.000**.
+>
+> The original registry is a cp1252, semicolon-delimited, decimal-comma export whose
+> `M3LIFE_no` is zero-padded to 5 characters (8,573 of 13,806 carry a leading zero), which
+> is why the string-matched id sets differ while the integer-matched sets agree exactly.
+>
+> Two incidental data-quality findings, neither the cause:
+> - the original has **2 rows whose id column holds free text** (`'Ao vene RDP'`), so that
+>   export has at least two field-shifted rows — an unescaped delimiter or quote. The
+>   normalisation dropped them (13,808 → 13,806 rows), correctly;
+> - the registry's `lengte` is rounded to integer metres (median 2.00), making it unusable
+>   as a height.
+>
+> Also ruled out: no second identifier exists on the event side (`hos_nr`, `ECG_TestID` and
+> `ECHO_StudyID` are within-modality keys), and rank-matching — the hypothesis that both
+> extracts numbered patients sequentially in one shared source order, so the ids differ in
+> value but agree in rank — is tested by `diagnose_normalization.py` step 3.
+>
+> Reproduce with `./bash_scripts/run_all_phases.sh normdiag joincheck`.
 
 **Experimentation journal — SMART EHR cohort, UMC Utrecht**
 Status: **UNDER REVIEW (see the banner above): the event-to-registry join is broken,

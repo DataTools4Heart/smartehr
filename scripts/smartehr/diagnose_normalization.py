@@ -271,6 +271,51 @@ def main(a):
         r, _ = join_rho(n_sm, n_idc, o_ev, say, "norm registry + orig events")
         res["norm_reg_orig_ev"] = r
 
+    # ---- last resort: were the two id sets assigned in the SAME underlying order?
+    # Both sides are 5-digit ids over one ~16k range. If each extract numbered patients
+    # sequentially in a shared source order (a ROW_NUMBER() over the same sort), then the
+    # VALUES differ but their RANKS agree, and matching k-th smallest to k-th smallest
+    # recovers the join even though no id matches. Cheap to test and it would recover
+    # everything, so it is worth one shot before asking for a crosswalk.
+    if o_sm is not None and o_idc and o_ev:
+        gcol = next((c for c in o_sm.columns if str(c).strip().lower() == "gewicht"), None)
+        if gcol is not None:
+            reg = {}
+            for i, x in zip(o_sm[o_idc].astype(str).str.strip(), to_num(o_sm[gcol])):
+                if i != "" and not pd.isna(x):
+                    try:
+                        reg[int(float(i))] = float(x)
+                    except ValueError:
+                        pass
+            ev = {}
+            for k, v in o_ev.items():
+                try:
+                    ev[int(float(k))] = v
+                except ValueError:
+                    pass
+            rk = sorted(reg)
+            ek = sorted(ev)
+            m = min(len(rk), len(ek))
+            say(f"\n=== 3. were the ids assigned in the same ORDER? " + "=" * 25)
+            say(f"  registry {len(rk):,} ids | events {len(ek):,} ids | pairing the "
+                f"{m:,} smallest of each by rank")
+            if m >= 30:
+                rho = _spearman([ev[ek[i]] for i in range(m)], [reg[rk[i]] for i in range(m)])
+                say(f"  rank-matched weight agreement: rho="
+                    f"{(f'{rho:+.3f}' if rho is not None else '-')}")
+                emit("rank-matched (k-th smallest id to k-th smallest id) weight agreement: "
+                     "rho={} on {} pairs", f"{rho:+.3f}" if rho is not None else "-", m)
+                if rho is not None and abs(rho) >= 0.5:
+                    emit("** THE IDS SHARE AN ORDER, NOT VALUES **: rank-matching recovers "
+                         "weight at rho={:+.3f}, so both extracts numbered patients "
+                         "sequentially in the same source order and the join can be "
+                         "reconstructed from that order", rho)
+                    say("  ** RECOVERED BY RANK: both extracts numbered patients in the "
+                        "same order. **")
+                else:
+                    say("  -> no. The id orders are unrelated too, so the assignments are")
+                    say("     independent in value AND in order.")
+
     # Rank by agreement first, then by how many patients it covers: string and int id
     # matching can give the same rho on very different n, and the wider one is the one to
     # rebuild from.
