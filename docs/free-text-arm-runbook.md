@@ -628,8 +628,12 @@ to confirm that.
   id column holds free text** (`'Ao vene RDP'`) — at least two field-shifted rows in that
   export, dropped by the normalisation (13,808 → 13,806) — and registry `lengte` is rounded
   to integer metres. Also ruled out: no second identifier exists on the event side, and a
-  rank-order probe (were both extracts numbered in one shared source order?) is now in
-  `diagnose_normalization.py` step 3.
+  rank-order probe came back **rho +0.000** on 12,771 pairs, so the ids are independent in
+  value *and* in order. **Everything testable from the files is exhausted** — value match,
+  value match on the originals, rank match, other candidate keys, a second event-side
+  identifier, within-file corruption, and the local preprocessing are all excluded, and the
+  id overlap is 0.9995 of the chance value. A crosswalk from the data provider is the only
+  remaining route.
 
 - **2026-09-08 (final) — DIAGNOSIS COMPLETE: the two extracts do not share a key, they
   share a numbering range.** The `m3life_no` values in `smart.csv` and in the EHR CSVs are

@@ -80,9 +80,24 @@
 >   as a height.
 >
 > Also ruled out: no second identifier exists on the event side (`hos_nr`, `ECG_TestID` and
-> `ECHO_StudyID` are within-modality keys), and rank-matching — the hypothesis that both
-> extracts numbered patients sequentially in one shared source order, so the ids differ in
-> value but agree in rank — is tested by `diagnose_normalization.py` step 3.
+> `ECHO_StudyID` are within-modality keys); and the ids do not share an **order** either —
+> rank-matching the k-th smallest registry id to the k-th smallest event id gives rho
+> **+0.000** on 12,771 pairs, so they are independent in value *and* in rank.
+>
+> **Everything testable from the files is now exhausted:**
+>
+> | hypothesis | result |
+> |---|---|
+> | ids match by value | rho +0.011 |
+> | ids match by value in the *originals* | rho +0.011 |
+> | ids match by rank / shared source order | rho +0.000 |
+> | some other column of `smart.csv` is the key | only `m3life_no` qualifies; +0.011 |
+> | a second identifier exists on the event side | none — all are within-modality keys |
+> | one of the files is internally corrupt | no — BMI identity holds in both |
+> | the local UTF-8 / dtype normalisation broke it | no — originals fail identically |
+> | the overlap reflects a real shared key | no — it is 0.9995 of the chance value |
+>
+> **A crosswalk between the two pseudonymisation runs is the only remaining route.**
 >
 > Reproduce with `./bash_scripts/run_all_phases.sh normdiag joincheck`.
 
