@@ -617,6 +617,22 @@ to confirm that.
 
 ## 10. Changelog
 
+- **2026-09-08 (later) — no key in `smart.csv` repairs the linkage; this is now a
+  data-delivery question.** The probe found exactly **one** usable candidate key column in
+  `smart.csv` — `m3life_no` itself, 13,806 unique values matching 10,923 event patients — and
+  it reads rho **+0.011** against routine weight. `studienr`, the registry's own documented
+  identifier, is **not present in the file at all**, so this delivery is keyed solely on the
+  pseudo-ID. The linkage therefore cannot be rebuilt from the files we hold.
+  New within-file consistency check to localise the corruption before escalating: **BMI =
+  weight / height²** must hold inside a single row of a single file, whatever the row is
+  keyed by. Both files coherent but disagreeing with each other means the two extracts carry
+  pseudo-IDs from **different pseudonymisation runs**; a file inconsistent with **itself**
+  means its values were shuffled when it was produced. Verified on fixtures: a coherent
+  registry returns rho +1.000 (median |diff| 0.02) and a scrambled one −0.059 (median |diff|
+  4.83). The check also reports both identifier spaces and their overlap, since an overlap
+  that is mere numeric coincidence looks very different from two extracts meant to share a
+  key. **Run `joincheck` once more to get that diagnosis, then take it to the data manager.**
+
 - **2026-09-08 — THE EVENT-TO-REGISTRY JOIN IS BROKEN. All event-derived results are
   withdrawn.** The `joincheck` phase compared five quantities measured in *both* the routine
   EHR and the study visit, with no text or extraction involved: weight rho **+0.011** on

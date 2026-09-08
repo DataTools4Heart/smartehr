@@ -161,6 +161,89 @@ def probe_keys(a, say):
         say("     to be re-linked at source. This is a question for the data manager.")
 
 
+def internal_consistency(a, say):
+    """Is each file self-consistent? BMI = weight / height^2 must hold WITHIN a file.
+
+    This localises the corruption, which is what makes the escalation actionable. The
+    identity involves three columns of a single row, so it holds regardless of how rows are
+    keyed:
+
+      * both files internally consistent, but not with each other -> the two extracts carry
+        pseudo-IDs from DIFFERENT pseudonymisation runs, and the linkage must be re-derived
+        at source;
+      * a file inconsistent with ITSELF -> that file's values were shuffled relative to its
+        own rows, and the problem is in producing it.
+
+    Also reports the identifier spaces, since an overlap that is merely numeric coincidence
+    looks very different from two extracts that were meant to share a key.
+    """
+    say("\n  --- is each file self-consistent? BMI = weight / height^2 within one row ---")
+    raw = pd.read_csv(a.smart_csv)
+    have = [c for c in ("gewicht", "lengte", "bm_indx") if c in raw.columns]
+    if len(have) == 3:
+        g = pd.to_numeric(raw["gewicht"], errors="coerce")
+        l = pd.to_numeric(raw["lengte"], errors="coerce")
+        b = pd.to_numeric(raw["bm_indx"], errors="coerce")
+        g = g.where(~g.isin((999,))); b = b.where(~b.isin((99, 999)))
+        # "Lengte (m.)" per smart.csv, but accept centimetres if that is what it holds
+        lm = l.where((l > 1.2) & (l < 2.3))
+        if lm.notna().sum() < 0.2 * l.notna().sum():
+            lm = (l / 100.0).where((l > 120) & (l < 230))
+            say("  registry `lengte` looks like CENTIMETRES despite the label saying metres")
+        ok = g.notna() & lm.notna() & b.notna()
+        if ok.sum() >= 30:
+            implied = g[ok] / (lm[ok] ** 2)
+            rho = _spearman(implied.to_numpy(), b[ok].to_numpy())
+            med = float(np.median(np.abs(implied.to_numpy() - b[ok].to_numpy())))
+            say(f"  REGISTRY  n={int(ok.sum()):,}  rho(implied BMI, stated BMI)="
+                f"{(f'{rho:+.3f}' if rho is not None else '-')}  median |diff|={med:.2f}")
+            emit("registry self-consistency: BMI vs weight/height^2 rho={} on {} rows "
+                 "(median abs diff {:.2f})",
+                 f"{rho:+.3f}" if rho is not None else "-", int(ok.sum()), med)
+        else:
+            say("  REGISTRY  too few rows with all three of gewicht/lengte/bm_indx")
+    else:
+        say(f"  REGISTRY  missing {set(('gewicht','lengte','bm_indx')) - set(have)}")
+
+    ev_g = nearest_baseline_value(a.event_csv_folder, "meting", "label", "Gewicht", "data1",
+                                  a.landmark_days, say)
+    ev_l = nearest_baseline_value(a.event_csv_folder, "meting", "label", "Lengte", "data1",
+                                  a.landmark_days, say)
+    ev_b = nearest_baseline_value(a.event_csv_folder, "meting", "label", "BMI", "data1",
+                                  a.landmark_days, say)
+    common = [p for p in ev_b if p in ev_g and p in ev_l]
+    if len(common) >= 30:
+        gg = np.array([ev_g[p] for p in common], float)
+        ll = np.array([ev_l[p] for p in common], float)
+        bb = np.array([ev_b[p] for p in common], float)
+        ll = np.where(ll > 100, ll / 100.0, ll)          # cm -> m if needed
+        good = (ll > 1.2) & (ll < 2.3) & (gg > 30) & (gg < 250)
+        if good.sum() >= 30:
+            implied = gg[good] / ll[good] ** 2
+            rho = _spearman(implied, bb[good])
+            med = float(np.median(np.abs(implied - bb[good])))
+            say(f"  EVENTS    n={int(good.sum()):,}  rho(implied BMI, stated BMI)="
+                f"{(f'{rho:+.3f}' if rho is not None else '-')}  median |diff|={med:.2f}")
+            emit("event self-consistency: BMI vs weight/height^2 rho={} on {} patients "
+                 "(median abs diff {:.2f})",
+                 f"{rho:+.3f}" if rho is not None else "-", int(good.sum()), med)
+    else:
+        say(f"  EVENTS    only {len(common):,} patients have all three of "
+            "Gewicht/Lengte/BMI near baseline")
+
+    # identifier spaces: are these two extracts even meant to share a key?
+    rid = pd.to_numeric(raw[ID], errors="coerce").dropna().astype(int) if ID in raw.columns else None
+    if rid is not None and ev_g:
+        eid = pd.Series(sorted(ev_g))
+        inter = len(set(rid) & set(eid))
+        say(f"\n  identifier spaces: registry {rid.nunique():,} ids in "
+            f"[{rid.min():,}, {rid.max():,}] | events {eid.nunique():,} ids in "
+            f"[{eid.min():,}, {eid.max():,}] | overlap {inter:,}")
+        emit("identifier spaces: registry {} ids [{}, {}], events {} ids [{}, {}], "
+             "overlap {}", rid.nunique(), rid.min(), rid.max(), eid.nunique(),
+             eid.min(), eid.max(), inter)
+
+
 def main(a):
     say = print
     cur, _cols = smart_baseline_numeric(a.smart_csv)
@@ -222,6 +305,9 @@ def main(a):
         say("     null in this project -- structured and text -- is uninterpretable until")
         say("     the identifier join is fixed. **")
         probe_keys(a, say)
+    # Always run: it localises the corruption when the join fails, and confirms both files
+    # are coherent when it passes.
+    internal_consistency(a, say)
 
 
 if __name__ == "__main__":
