@@ -485,6 +485,63 @@ def extract_medications(text, compiled):
     return {cls for cls, rx in compiled.items() if rx.search(t)}
 
 
+# ---------------------------------------------------------------- 8. the JOIN positive control
+#
+# WHY THIS IS HERE. After two rounds of extractor fixes, every graded feature still agreed
+# with its curated counterpart at |rho| < 0.2, and the medication table showed the telling
+# signature: for all 15 classes, sensitivity ~= 1 - specificity (mean difference +0.008).
+# A weak-but-real detector has sens > 1-spec; these matches are statistically INDEPENDENT
+# of whether the patient takes the drug. That is not a tuning problem, and it appeared
+# across stenosis, smoking, alcohol, aorta and onset at the same time.
+#
+# Two explanations survive, and they have opposite consequences:
+#   (a) the letters mention these facts non-specifically (boilerplate, advice, family
+#       history), so per-patient extraction of them is simply not possible here;
+#   (b) the documents are not joined to the right patients, in which case EVERY text arm
+#       in this project is invalid -- T0 volume, T1 TF-IDF and T2 concepts included -- and
+#       the free-text null measures a plumbing bug rather than the data.
+#
+# Note the concept arm's "clinically plausible prevalences" (diabetes 23.9%, smoking 39.4%)
+# never distinguished these: a patient-shuffled cache preserves prevalence exactly. So that
+# reassurance was not evidence of a correct join.
+#
+# Age and sex settle it. Both are stated in nearly every Dutch clinical letter, both are
+# trivial to extract, and both have a curated counterpart that MUST agree if the join is
+# right. This is the text arm's equivalent of the structured arm's positive control -- the
+# check that made its 0.7576 interpretable.
+
+SEX_MALE = r"\b(?:man|mannelijke?|meneer|dhr|heer)\b"
+SEX_FEMALE = r"\b(?:vrouw|vrouwelijke?|mevrouw|patiente|dame)\b"
+AGE_MIN, AGE_MAX = 18, 110
+
+
+def extract_sex(text):
+    """-> 1 (Man) / 2 (Vrouw) on `geslacht`'s own codes, or None.
+
+    Codes are the registry's: smart.csv gives geslacht 1 -> Man, 2 -> Vrouw, 9 -> Missend.
+    Whichever term occurs more often wins, since a letter may also mention a partner.
+    """
+    t = norm(text)
+    m = len(re.findall(SEX_MALE, t))
+    f = len(re.findall(SEX_FEMALE, t))
+    if m == f:
+        return None
+    return 1 if m > f else 2
+
+
+def extract_ages(text):
+    """-> list of ages in years. A cue is required, so no bare number can qualify."""
+    t = norm(text)
+    out = []
+    for pat in (r"(\d{2,3})\s*-?\s*jarige?\b", r"leeftijd\s*:?\s*(\d{2,3})\b",
+                r"(?:man|vrouw|patiente?)\s+van\s+(\d{2,3})\s*jaar\b"):
+        for mt in re.finditer(pat, t):
+            v = int(mt.group(1))
+            if AGE_MIN <= v <= AGE_MAX:
+                out.append(v)
+    return out
+
+
 # ---------------------------------------------------------------- validation against curation
 #
 # The cheapest and most important check on this whole arm, and it never touches the outcome:
@@ -507,11 +564,18 @@ CURATED_MISSING = {
     "aorta_hg": (99,), "AortDist": (99,), "AortProx": (99,),
     "mht_alln": (),                              # '.' only, already NaN after read_csv
     "nrfaln_n": (9,),
+    "geslacht": (9,),                            # 9 -> Missend
+    "leeftijd": (999,),                          # 999 -> Missend
 }
 
 # extracted feature -> (curated variable(s), comparison kind). `max` means the extracted
 # value is compared against the larger of two curated sides.
 VALIDATION_PAIRS = (
+    # THE JOIN POSITIVE CONTROL -- read these two first. If they do not agree strongly,
+    # the documents are not joined to the right patients and NOTHING below is
+    # interpretable, nor is any earlier text arm.
+    ("graded.sex_from_text", ("geslacht",), "categorical"),
+    ("graded.age_from_text", ("leeftijd",), "numeric"),
     ("graded.stenosis_max", ("stenACIl", "stenACIr"), "ordinal_max"),
     ("graded.stenosis_left_max", ("stenACIl",), "ordinal"),
     ("graded.stenosis_right_max", ("stenACIr",), "ordinal"),

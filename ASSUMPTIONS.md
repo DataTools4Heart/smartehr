@@ -260,6 +260,38 @@ because every one was caught by `--validate-baseline` rather than by inspection.
 
 ---
 
+## 11. The document-to-patient join is now positively controlled, not assumed
+
+**Was assumed, until 2026-09-08.** That the documents in the text cache are joined to the
+right patients. Every text arm in this project rests on it, and nothing tested it.
+
+**Why it became a question.** After two rounds of extractor fixes, all 13 graded features
+still agreed with their curated counterparts at |rho| < 0.2, and the medication table showed
+sensitivity ≈ 1 − specificity for all 15 classes (mean difference **+0.008**). A weak but
+real detector satisfies sens > 1−spec; equality means the matches are statistically
+*independent* of the truth. That pattern appeared across stenosis, smoking, alcohol, aorta
+and onset simultaneously, which is not what a set of independent regex weaknesses looks
+like.
+
+**What did not settle it.** The concept arm's clinically plausible prevalences (diabetes
+23.9%, smoking 39.4%, prior MI 26.2%) were previously read as evidence that extraction
+worked. They are not evidence of a correct join: **a patient-shuffled cache preserves every
+prevalence exactly.**
+
+**The control.** `graded.sex_from_text` and `graded.age_from_text` versus `geslacht` and
+`leeftijd`. Both facts are stated in nearly every Dutch clinical letter, both are trivial to
+extract, and both must agree if the join is right — the text arm's counterpart to the
+structured arm's positive control. Verified on a synthetic cohort: a correct join returns
+rho = 1.000 and the run emits `JOIN CONTROL PASSES`; a shuffled join returns rho ≈ 0 and the
+run emits `** JOIN CONTROL FAILS **` and says to stop.
+
+**How to read it.** If it fails, no text result in this project is interpretable — T0
+volume, T1 TF-IDF and T2 concepts included — and the free-text null measures plumbing, not
+data. If it passes, the join is sound and the graded arm's weakness is genuinely about
+extracting these facts from these letters.
+
+---
+
 ## 8. What is deliberately not attempted
 
 - **Temporal scoping of a quantity to its own date.** An extracted stenosis grade is

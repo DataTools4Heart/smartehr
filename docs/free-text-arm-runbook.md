@@ -320,6 +320,14 @@ Five arms: graded alone (with validation), a dates-stripped era control, +demogr
 +concepts+demographics (every text feature at once, against the 0.7310 ceiling), and
 +full curated baseline (incremental value against 0.7394).
 
+**Read the JOIN CONTROL line first, then the validation table.** `graded.sex_from_text` and
+`graded.age_from_text` are checked against `geslacht` and `leeftijd`: both are stated in
+nearly every Dutch letter, so if they do not agree the documents are not joined to the right
+patients and **no text result in this project is interpretable** — T0, T1 and T2 included.
+The run says `JOIN CONTROL PASSES` or `** JOIN CONTROL FAILS **` explicitly. Note that
+plausible concept prevalences never ruled this out: a patient-shuffled cache preserves
+prevalence exactly.
+
 **Read the validation table before any survival number — the first run failed it.** On
 2026-09-07 all 12 pairs came back below |rho|=0.3 and the arm's C-indices were discarded as
 a measurement of the extractor. Six bugs were found from that table; if the pairs are still
@@ -581,6 +589,22 @@ to confirm that.
 ---
 
 ## 10. Changelog
+
+- **2026-09-08 — the extractor fixes landed, agreement did not move, so the JOIN is now
+  under positive control.** The stemming fix worked exactly where predicted (statine
+  sensitivity 0.001 → **0.315**, insulin 0.000 → **0.175**, LMWH 0.000 → **0.500**, while
+  beta-blockers stayed at 0.269 as expected since metoprolol is spelled the same in both
+  languages). And yet all 13 pairs still sit at |rho| < 0.2. The medication table says why:
+  **sensitivity ≈ 1 − specificity for all 15 classes**, mean difference +0.008. A weak but
+  real detector has sens > 1−spec; equality means the matches are independent of the truth,
+  and the same near-zero pattern holds across stenosis, smoking, alcohol, aorta and onset at
+  once — not the signature of independent regex weaknesses.
+  Two explanations remain, with opposite consequences: the letters mention these facts
+  non-specifically, or **the documents are not joined to the right patients**, in which case
+  every text arm here is invalid. New `graded.sex_from_text` / `graded.age_from_text`
+  settle it against `geslacht` / `leeftijd` — see `ASSUMPTIONS.md` §11. Note the concept
+  arm's plausible prevalences never ruled the join out: a shuffled cache preserves
+  prevalence exactly.
 
 - **2026-09-07 (later) — the graded arm's FIRST RUN FAILED ITS OWN VALIDATION, and that is
   the check working.** 170 runs. `0 of 12` extracted-vs-curated pairs reached |rho|>=0.3:

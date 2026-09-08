@@ -55,6 +55,7 @@ from feature_matrix import (finish, handle_listing_flags, smart_baseline_feature
                             smart_baseline_numeric)
 from graded_concepts import (ANTIHYPERTENSIVE, CURATED_MISSING, MED_CLASSES,
                              VALIDATION_PAIRS, _spearman, compile_med_lexicon,
+                             extract_ages, extract_sex,
                              extract_alcohol, extract_aorta_cm, extract_medications,
                              extract_onset_years, extract_packyears,
                              extract_smoking_status, extract_stenosis)
@@ -513,7 +514,8 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
     a missingness artefact instead of having it hide inside the value column.
     """
     med_names = sorted(med_compiled)
-    cols = (["graded.stenosis_max", "graded.stenosis_last", "graded.stenosis_left_max",
+    cols = (["graded.sex_from_text", "graded.age_from_text",     # the join positive control
+             "graded.stenosis_max", "graded.stenosis_last", "graded.stenosis_left_max",
              "graded.stenosis_right_max", "graded.stenosis_ge50", "graded.stenosis_ge70",
              "graded.stenosis_n", "graded.stenosis_measured",
              "graded.packyears", "graded.packyears_stated",
@@ -536,6 +538,7 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
         py, py_stated, years, aorta = [], [], [], []
         smoke, smoke_last = [], None
         alc_status, alc_band = [], []
+        sexes, ages = [], []
         classes = set()
         for dd, txt in items:                      # already sorted oldest -> newest
             for grade, side in extract_stenosis(txt):
@@ -555,11 +558,20 @@ def graded_features(docs_by_pid, pids, med_compiled, say):
                 alc_status.append(st)
             if band is not None:
                 alc_band.append(band)
+            sx = extract_sex(txt)
+            if sx is not None:
+                sexes.append(sx)
+            ages += extract_ages(txt)
             classes |= extract_medications(txt, med_compiled)
 
         def put(col, val):
             X.iat[i, cols.index(col)] = val
 
+        if sexes:
+            # majority vote across this patient's documents
+            put("graded.sex_from_text", 1.0 if sexes.count(1) >= sexes.count(2) else 2.0)
+        if ages:
+            put("graded.age_from_text", float(np.median(ages)))
         if sten:
             put("graded.stenosis_max", max(sten))
             put("graded.stenosis_last", sten_last)
@@ -664,6 +676,23 @@ def validate_graded(X, smart_csv, pids, train_rows, say):
             f"{(f'{sens:.3f}' if sens == sens else '  -   '):>6s} "
             f"{(f'{spec:.3f}' if spec == spec else '  -   '):>6s}")
         rows.append((feat, rho, n))
+    ctrl = {f: r for f, r, n in rows if f in ("graded.sex_from_text", "graded.age_from_text")}
+    if ctrl:
+        worst = min((abs(r) for r in ctrl.values() if r is not None), default=0.0)
+        detail = ", ".join(f"{f.split('.')[-1]} rho={r:+.3f}" if r is not None else f
+                           for f, r in ctrl.items())
+        if worst >= 0.5:
+            emit("JOIN CONTROL PASSES ({}): documents are joined to the right patients, so "
+                 "a weak graded result is about extraction, not plumbing", detail)
+        else:
+            emit("** JOIN CONTROL FAILS ({}) **: age and sex are stated in nearly every "
+                 "letter, so failing to recover them means the documents are NOT joined to "
+                 "the right patients -- and EVERY text arm (T0 volume, T1 TF-IDF, T2 "
+                 "concepts) is then invalid, not just this one", detail)
+            say("  ** THE JOIN CONTROL FAILED. Stop here: no text result in this project is")
+            say("     interpretable until the document-to-patient join is fixed. Note that")
+            say("     plausible concept PREVALENCES do not rule this out -- a shuffled cache")
+            say("     preserves prevalence exactly. **")
     good = [f"{f.split('.')[-1]} rho={r:+.2f}" for f, r, n in rows
             if r is not None and abs(r) >= 0.3]
     emit("graded vs curated (train, outcome-blind): {} of {} pairs reach |rho|>=0.3{}",

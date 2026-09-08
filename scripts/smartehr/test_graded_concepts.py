@@ -165,6 +165,20 @@ check("ambiguous 'py' abbreviation no longer counts", extract_packyears("10 py")
 check("reconstruct=False returns only stated figures",
       extract_packyears("rookt 20 sigaretten per dag sinds 30 jaar", reconstruct=False), [])
 
+print("\n--- the JOIN positive control (age and sex from text) ---")
+from graded_concepts import extract_ages, extract_sex
+# geslacht's own codes: 1 -> Man, 2 -> Vrouw.
+check("male", extract_sex("67-jarige man met pijn op de borst"), 1)
+check("female", extract_sex("mevrouw, 72-jarige vrouw"), 2)
+check("'patiente' is female", extract_sex("patiente is bekend met diabetes"), 2)
+# 'manifest' contains 'man'; a substring match would sex every vascular patient male.
+check("'klinisch manifest' does not read as male", extract_sex("klinisch manifest vaatlijden"), None)
+check("no mention", extract_sex("geen bijzonderheden"), None)
+check("age from 'jarige'", extract_ages("67-jarige man"), [67])
+check("age from 'leeftijd:'", extract_ages("leeftijd: 72"), [72])
+check("a bare measurement is not an age", extract_ages("aorta 45 mm"), [])
+check("a year is not an age", extract_ages("in 2003 een infarct"), [])
+
 print("\n--- medications: lexicon is data-derived, matching is word-bounded ---")
 # Stands in for what the med CSV yields per ATC prefix.
 lex = {"statine": ["Simvastatine", "Atorvastatine"],
