@@ -139,7 +139,28 @@
 > | the local UTF-8 / dtype normalisation broke it | no — originals fail identically |
 > | the overlap reflects a real shared key | no — it is 0.9995 of the chance value |
 >
-> **A crosswalk between the two pseudonymisation runs is the only remaining route.**
+> **The EHR delivery is the outlier (UCN crosswalk test, 2026-09-09).** The unused `UCN`
+> delivery is a third source. It sits in the **registry's** id space and **not** in the EHR's,
+> so two independent sources agree with each other and disagree with the 16 EHR extracts:
+>
+> | test | result |
+> |---|---|
+> | `UCN_PATIENT_DEMOGRAFISCH` sex vs registry `geslacht` | **1.000** agreement on 658 patients (chance 0.545) |
+> | its birth year vs registry `leeftijd` | rho **−0.891** on 658 (negative is correct) |
+> | `UCN_ECG_TEST` vs `ecg_measmatrix` — 8 measurement pairs | rho **−0.022 to +0.041**, best case = permuted floor, on 2,241–2,291 shared ids |
+>
+> A second, independent sign of a shared enumeration: the registry occupies 13,806 of 16,096
+> id values (86% dense), so an independently-assigned UCN id should land inside it 86% of the
+> time. Only **24–33%** do — 2,068 of `UCORBIOFORM`'s 2,708 ids fall in the registry's 2,290
+> *gaps*. Independent assignment cannot produce that; one enumeration of a larger source
+> population, mostly split between the two, can.
+>
+> **This does not rescue the analysis.** Only ~640 registry patients appear in the largest
+> UCN clinical file (~87 events at the 13.6% rate), against the 828 training events the
+> withdrawn analysis used. The value is diagnostic: it names the EHR delivery as the broken
+> one, which makes the request precise.
+>
+> **A crosswalk for the EHR extracts' `M3LIFE_no` is the only remaining route.**
 >
 > ### Affected EHR extract files (all 16)
 >

@@ -563,6 +563,21 @@ id. That is the same field-shift signature found in the registry export.
 Verified on four fixtures, one per outcome, each with a deliberately malformed
 `UCN_ECG_TEST.csv`.
 
+**Result (2026-09-09): UCN shares the REGISTRY id space, not the EHR's.** Demographics sex
+agrees with `geslacht` at **1.000** on 658 patients (chance 0.545) and birth year against
+`leeftijd` at rho **−0.891**; the eight ECG measurement pairs against `ecg_measmatrix` all sit
+at rho −0.022 to +0.041 with best case equal to the permuted floor, on 2,241–2,291 shared
+ids. So **the 16 EHR extracts are the odd delivery out** — two independent sources agree and
+they disagree with both.
+
+Corroborating structure: the registry occupies 86% of its id range, so an independent UCN id
+should land inside it 86% of the time; only 24–33% do, with 2,068 of `UCORBIOFORM`'s 2,708
+ids falling in the registry's 2,290 gaps. That is one enumeration of a larger population
+split between two extracts, not two independent runs.
+
+**It does not rescue the analysis**: ~640 registry patients at most appear in UCN (~87
+events) against the 828 training events required. The value is diagnostic.
+
 ---
 
 ## 7.0 T3-0 — the headroom check (no GPU, run this FIRST)

@@ -266,7 +266,9 @@ def main(a):
             continue
         u_ids = id_set(df, idc)
         say(f"  {name} (id={idc})")
-        overlap_vs_chance(u_ids, r_ids, say, "vs registry")
+        ov = overlap_vs_chance(u_ids, r_ids, say, "vs registry")
+        if ov:
+            verdict["r_overlap"] = max(verdict.get("r_overlap", 0), ov[0])
         if e_ids:
             overlap_vs_chance(u_ids, e_ids, say, "vs EHR ecg")
 
@@ -383,6 +385,26 @@ def main(a):
                          f"{rho:+.3f}" if rho is not None else "-", len(pr))
 
     # ---- which of the four scenarios are we in?
+    # A shared assignment over one source population leaves a telltale: the two id sets
+    # partition the range almost disjointly. Independent assignment would instead overlap
+    # at the density of the other set.
+    if r_ids and verdict.get("r_overlap"):
+        say(f"\n=== 4b. id-range structure " + "=" * 50)
+        lo, hi = min(r_ids), max(r_ids)
+        dens = len(r_ids) / (hi - lo + 1)
+        say(f"  the registry occupies {len(r_ids):,} of {hi-lo+1:,} id values "
+            f"({dens:.0%} dense), leaving {hi-lo+1-len(r_ids):,} gaps")
+        say(f"  a UCN id drawn independently should therefore land in the registry "
+            f"{dens:.0%} of the time; the observed share is far lower (see section 2)")
+        say("  UCN ids falling mostly in the registry's GAPS is what a single enumeration")
+        say("  of one larger source population looks like -- the registry took most of it,")
+        say("  UCN covers largely the remainder plus a modest overlap. Independent")
+        say("  assignment cannot produce that.")
+        emit("id-range structure: registry is {:.0%} dense over [{}, {}], so an independent "
+             "UCN id should hit it {:.0%} of the time; the observed share is far lower, "
+             "which indicates one shared enumeration of a larger source population",
+             dens, lo, hi, dens)
+
     say(f"\n=== 5. verdict " + "=" * 62)
     ue = verdict.get("ue")
     sex = verdict.get("ur_sex")
@@ -406,13 +428,31 @@ def main(a):
              "for the registry link, and the crosswalk request stands", ue_txt, ur_txt)
         say("  -> UCN sits in the EHR space only. No bridge; the crosswalk request stands.")
     elif ur_ok:
-        emit("** UCN SHARES THE REGISTRY ID SPACE ** ({}; EHR {}): UCN's own clinical "
-             "content -- echo, ECG, heart-team, biobank -- is therefore usable against the "
-             "registry, so the research question is answerable from UCN data even without "
-             "repairing the EHR link", ur_txt, ue_txt)
-        say("  ** UCN sits in the REGISTRY space. Its echo/ECG/heart-team/biobank content is")
-        say("     usable against the registry: the research question becomes answerable from")
-        say("     UCN data without waiting for the EHR crosswalk. **")
+        # Sharing the space is necessary but not sufficient: the overlap has to be big
+        # enough to analyse. An earlier version of this message claimed the research
+        # question was answerable from UCN data without checking that, which is wrong at
+        # low coverage -- a survival analysis needs events, not just patients.
+        n_ov = verdict.get("r_overlap", 0)
+        n_ev = int(n_ov * 0.136)          # the cohort's 15-year event rate at landmark 180
+        emit("** UCN SHARES THE REGISTRY ID SPACE ** ({}; EHR {}): so the EHR delivery is "
+             "the outlier -- two independent sources agree on an id space and it does not",
+             ur_txt, ue_txt)
+        say("  ** UCN sits in the REGISTRY space, and NOT in the EHR space. So the 16 EHR")
+        say("     extracts are the odd delivery out: two independent sources agree with")
+        say("     each other and disagree with them. **")
+        if n_ov >= 3000:
+            emit("UCN clinical content is usable against the registry on up to {} patients "
+                 "(~{} events): large enough to pursue while the EHR crosswalk is awaited",
+                 n_ov, n_ev)
+            say(f"     Usable cohort: up to {n_ov:,} patients (~{n_ev} events).")
+        else:
+            emit("BUT the usable cohort is only {} patients (~{} events), against the {} "
+                 "training events the withdrawn analysis required, so UCN does NOT rescue "
+                 "the research question -- its value here is diagnostic", n_ov, n_ev, 828)
+            say(f"     BUT only {n_ov:,} registry patients appear in UCN (~{n_ev} events)")
+            say("     against the 828 training events the analysis needed, so this does NOT")
+            say("     rescue the question. The value is diagnostic: it names the EHR")
+            say("     delivery as the broken one, which sharpens the crosswalk request.")
     else:
         emit("UCN matches neither space (EHR {}, registry {}): a third independent "
              "pseudonymisation, so it offers no bridge", ue_txt, ur_txt)
