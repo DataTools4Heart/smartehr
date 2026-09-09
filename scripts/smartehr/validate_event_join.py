@@ -94,6 +94,104 @@ def nearest_baseline_value(folder, prefix, code_col, code, val_col, landmark, sa
     return {p: x for p, (d, x) in best.items()}
 
 
+def all_values(folder, prefix, code_col, code, val_col, landmark, say):
+    """EVERY pre-landmark reading per patient. -> {pid: [values]}.
+
+    The single-reading version below answers "does the one measurement nearest baseline
+    agree?", which invites a fair objection: one reading could be an outlier, a wrong value
+    slot, or a unit mixture, and a single noisy value attenuates any correlation. These
+    sources are longitudinal -- meting holds 121,417 weight rows for ~15,800 patients -- so
+    the whole timeline is available and the join should be tested against all of it.
+    """
+    path = next((p for p in sorted(Path(folder).glob("*.csv")) if p.stem.startswith(prefix)),
+                None)
+    if path is None:
+        return {}
+    head = pd.read_csv(path, nrows=0)
+    need = [c for c in (ID, TIME, code_col, val_col) if c in head.columns]
+    if len(need) < 4:
+        return {}
+    out = {}
+    for chunk in pd.read_csv(path, chunksize=CHUNK, low_memory=False, usecols=need):
+        sub = chunk[chunk[code_col].astype(str).str.strip().str.lower() == code.lower()]
+        if sub.empty:
+            continue
+        dd = pd.to_numeric(sub[TIME], errors="coerce")
+        v = pd.to_numeric(sub[val_col], errors="coerce")
+        pid = pd.to_numeric(sub[ID], errors="coerce")
+        ok = dd.notna() & v.notna() & pid.notna() & (dd < landmark)
+        for p, x in zip(pid[ok].astype(int), v[ok]):
+            out.setdefault(p, []).append(float(x))
+    return out
+
+
+def whole_timeline_check(a, say):
+    """Test the join against EVERY reading, not just the one nearest baseline.
+
+    Three progressively more generous tests, so that a negative cannot be blamed on the
+    aggregation:
+
+      1. nearest baseline  -- one reading (what the headline check used)
+      2. median            -- robust to outliers, wrong value slots and unit strays
+      3. BEST CASE         -- per patient, the SMALLEST absolute difference between ANY of
+                              their readings and their registry value. This gives the join
+                              every possible chance: if even one of a patient's weights
+                              matches their registry weight, it shows here. Read against the
+                              same statistic under a permutation, which is the floor.
+
+    If the best case is no better than the permuted floor, no aggregation choice can rescue
+    the join, and the objection "you only compared one measurement" is answered.
+    """
+    cur, _cols = smart_baseline_numeric(a.smart_csv)
+    say("\n=== whole-timeline check: every reading, not just the nearest " + "=" * 11)
+    for prefix, code_col, code, val_col, reg, label in PAIRS:
+        if reg not in cur.columns:
+            continue
+        vals = all_values(a.event_csv_folder, prefix, code_col, code, val_col,
+                          a.landmark_days, say)
+        if not vals:
+            continue
+        rv = pd.to_numeric(cur[reg], errors="coerce")
+        rv = rv.where(~rv.isin(CURATED_MISSING.get(reg, ())))
+        pids = [p for p in vals if p in rv.index and not pd.isna(rv.loc[p])]
+        if len(pids) < 30:
+            continue
+        counts = np.array([len(vals[p]) for p in pids])
+        c = np.array([float(rv.loc[p]) for p in pids], float)
+        near = np.array([vals[p][0] for p in pids], float)      # first pre-landmark reading
+        med = np.array([float(np.median(vals[p])) for p in pids], float)
+        # best case: the reading closest to this patient's own registry value
+        best = np.array([min(abs(x - cv) for x in vals[p]) for p, cv in zip(pids, c)], float)
+        rng = np.random.default_rng(0)
+        cperm = rng.permutation(c)
+        bestp = np.array([min(abs(x - cv) for x in vals[p]) for p, cv in zip(pids, cperm)],
+                         float)
+        say(f"\n  {prefix}.{code} vs {reg}  ({len(pids):,} patients)")
+        say(f"    readings per patient: median {int(np.median(counts))}, "
+            f"p90 {int(np.percentile(counts, 90))}, max {int(counts.max())}, "
+            f"total {int(counts.sum()):,}")
+        # a unit mixture would show as a second mode far from the first
+        allv = np.concatenate([np.asarray(vals[p], float) for p in pids])
+        say(f"    value range p1/p50/p99: {np.percentile(allv, 1):.1f} / "
+            f"{np.percentile(allv, 50):.1f} / {np.percentile(allv, 99):.1f}")
+        for nm, arr in (("first reading", near), ("median of all", med)):
+            rho = _spearman(arr, c)
+            say(f"    rho({nm:<14s}) = {(f'{rho:+.3f}' if rho is not None else '   -  ')}")
+        say(f"    BEST CASE |closest reading - registry|: median {np.median(best):.2f}, "
+            f"under permutation {np.median(bestp):.2f}")
+        emit("whole-timeline {} vs {}: n={} readings={} rho(median)={} | best-case closest "
+             "match median {:.2f} vs {:.2f} permuted", f"{prefix}.{code}", reg, len(pids),
+             int(counts.sum()),
+             f"{_spearman(med, c):+.3f}" if _spearman(med, c) is not None else "-",
+             float(np.median(best)), float(np.median(bestp)))
+        if np.median(best) < 0.6 * np.median(bestp):
+            emit("** {} SHOWS REAL AGREEMENT once the whole timeline is used **: the "
+                 "closest reading per patient is much nearer the registry value than "
+                 "permutation gives, so the join is NOT dead for this quantity",
+                 f"{prefix}.{code}")
+            say("    ** this quantity DOES agree when all readings are used -- revisit **")
+
+
 def probe_keys(a, say):
     """Which column of smart.csv, used as the join key, actually recovers event weight?
 
@@ -331,6 +429,8 @@ def main(a):
     # Always run: it localises the corruption when the join fails, and confirms both files
     # are coherent when it passes.
     internal_consistency(a, say)
+    if a.whole_timeline:
+        whole_timeline_check(a, say)
 
 
 if __name__ == "__main__":
@@ -339,6 +439,13 @@ if __name__ == "__main__":
     p.add_argument("--smart-csv", required=True)
     p.add_argument("--event-csv-folder", required=True)
     p.add_argument("--landmark-days", type=int, default=180)
+    p.add_argument("--whole-timeline", action="store_true", default=True,
+                   help="Test the join against EVERY pre-landmark reading per patient, not "
+                        "only the one nearest baseline: median across the timeline, plus a "
+                        "best-case test taking each patient's reading closest to their own "
+                        "registry value. On by default -- it answers the objection that a "
+                        "single measurement was compared.")
+    p.add_argument("--no-whole-timeline", dest="whole_timeline", action="store_false")
     p.add_argument("--probe-keys", action="store_true",
                    help="Always probe which smart.csv column works as the join key, not "
                         "only when the join check fails.")

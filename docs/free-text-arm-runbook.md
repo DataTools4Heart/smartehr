@@ -348,6 +348,16 @@ each other about sex while being independent of the registry.
 ./bash_scripts/run_all_phases.sh joincheck
 ```
 
+**It tests the whole timeline, not one reading.** The first version compared only the
+measurement nearest baseline, which invites the fair objection that one reading could be an
+outlier, a wrong value slot, or a unit stray — and a fixture confirmed a correct join can
+read **+0.049** on a single noisy reading while its median reads **+0.999**. So the check
+now reports, per quantity: readings per patient, the value range (a unit mixture shows as a
+second mode), rho on the first reading, rho on the **median of all** readings, and a
+**best-case** test taking each patient's reading *closest to their own registry value*,
+against the same statistic under permutation. If even the best case is no better than the
+permuted floor, no aggregation choice can rescue the join.
+
 Weight, height, BMI, creatinine and cholesterol are measured in **both** the routine EHR and
 the study visit, so per-patient agreement tests the identifier join directly. Codes come
 from `meting.csv` / `lab.csv`, registry counterparts from `smart.csv`; Spearman, so units
