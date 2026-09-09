@@ -530,6 +530,41 @@ documented in these notes; automating its extraction is the entire point.
 
 ---
 
+## 6.5 UCN crosswalk test — can the unused delivery bridge the two id spaces?
+
+```bash
+UCN_FOLDER=/path/to/UCN_csvs ./bash_scripts/run_all_phases.sh ucn
+```
+
+The `UCN` delivery (20 files, never used here) is a **third** source with its own PseudoID —
+`data_dict.csv` states `UCN_ECG_TEST.csv` "contains the PSeudoID". Four outcomes, with very
+different consequences:
+
+| outcome | meaning |
+|---|---|
+| matches EHR **and** registry | **UCN is the crosswalk.** Rebuild every arm through it |
+| matches EHR only | shares the EHR space; no help, the crosswalk request stands |
+| matches **registry** only | UCN's own echo / ECG / heart-team / biobank content becomes usable against the registry — **the research question is answerable from UCN data without repairing the EHR link** |
+| matches neither | a third independent pseudonymisation; no bridge |
+
+**Value-level tests only.** Id-set overlap is reported but never treated as evidence — two
+independent assignments over one numbering range overlap at the chance rate, which is exactly
+what misled this project. Instead: `UCN_ECG_TEST` versus `ecg_measmatrix_20251208.csv` on
+shared ECG measurements (QRS duration, QT interval), and `UCN_PATIENT_DEMOGRAFISCH` sex and
+birth year against the registry's `geslacht` and `leeftijd`.
+
+`data_dict.csv` documents **no columns** for any UCN file, so the script reports each file's
+real schema first and pairs columns by name, then by distribution (labelling the latter as a
+guess). It also flags rows whose id is non-numeric: the delivery's own dictionary warns of
+embedded newlines, and with the python parser a broken line is *admitted* as a mostly-empty
+row rather than skipped — so no lines appear lost, and the detectable trace is a non-numeric
+id. That is the same field-shift signature found in the registry export.
+
+Verified on four fixtures, one per outcome, each with a deliberately malformed
+`UCN_ECG_TEST.csv`.
+
+---
+
 ## 7.0 T3-0 — the headroom check (no GPU, run this FIRST)
 
 Bounds what *any* text method could achieve, by asking what the curated variables reach when

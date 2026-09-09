@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 normdiag joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
+# Phases: p0 ucn normdiag joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -236,6 +236,22 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- ucn: can the unused UCN delivery bridge the two id spaces that do not match?
+#      UCN is a third source with its OWN PseudoID, so it may sit in the EHR space, the
+#      registry space, both, or neither -- and the four outcomes need different responses.
+#      Value-level tests only: id-set overlap alone is what misled this project before.
+#      Set UCN_FOLDER to wherever the UCN_*.csv delivery lives.
+if want ucn; then
+  UCN_FOLDER="${UCN_FOLDER:-data/ucn}"
+  if [ ! -d "$UCN_FOLDER" ]; then
+    echo "== ucn skipped: no such folder $UCN_FOLDER (set UCN_FOLDER=/path/to/UCN csvs)"
+  else
+    step "UCN crosswalk test" "-" \
+      "$PY" "$S/validate_ucn_crosswalk.py" --ucn-folder "$UCN_FOLDER" \
+        --smart-csv "$SMART" --event-csv-folder "$EVENTS" --results-file "$RESULTS"
+  fi
 fi
 
 # ---- normdiag: did the UTF-8 / id-normalisation step break the linkage? Compares the
