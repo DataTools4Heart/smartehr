@@ -4,7 +4,7 @@ Append-only, one block per run, newest last. The index below is regenerated on e
 
 No raw clinical text is ever written here.
 
-## Index (2 runs)
+## Index (3 runs)
 
 - **2026-09-09T11:41:04Z | join check: events vs registry**
   - RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
@@ -58,6 +58,41 @@ No raw clinical text is ever written here.
   - RESULT: demographics extract UCN_PATIENT_DEMOGRAFISCH.csv: id=M3LIFE_no sex=Geslacht birth=Geboortejaar
   - RESULT: demographics sex agreement with registry: 1.000 on 658 patients (chance is ~0.55 at this cohort's sex ratio)
   - RESULT: demographics birth-year vs registry age: rho=-0.891 on 658 patients (negative is correct: older patients were born earlier)
+- **2026-09-09T12:16:39Z | UCN crosswalk test**
+  - RESULT: UCN inventory UCN_ALG_1000008241_UCORBIOFORM.csv: 205 cols, id=M3LIFE_no, 4287 sampled rows
+  - RESULT: UCN inventory UCN_ALG_CS00005657_HEARTTEAM.csv: 102 cols, id=M3LIFE_no, 2212 sampled rows
+  - RESULT: UCN inventory UCN_CAR_1000010899_XPERIM.csv: 201 cols, id=M3LIFE_no, 2818 sampled rows
+  - RESULT: UCN UCN_CAR_1000011395_UCORBIOFU.csv: 16 of 6768 rows have a non-numeric id (malformed rows)
+  - RESULT: UCN inventory UCN_CAR_1000011395_UCORBIOFU.csv: 119 cols, id=M3LIFE_no, 6768 sampled rows
+  - RESULT: UCN UCN_ECG_DETAILS.csv: 21412 of 50000 rows have a non-numeric id (malformed rows)
+  - RESULT: UCN inventory UCN_ECG_DETAILS.csv: 56 cols, id=QRS_Area_ECG, 50000 sampled rows
+  - RESULT: UCN inventory UCN_ECG_TEST.csv: 34 cols, id=M3LIFE_no, 50000 sampled rows
+  - RESULT: UCN inventory UCN_ECG_TEST_EXAMINATION.csv: 24 cols, id=ECG_TestID, 50000 sampled rows
+  - RESULT: UCN inventory UCN_ECHO_FINDING.csv: 9 cols, id=M3LIFE_no, 50000 sampled rows
+  - RESULT: UCN inventory UCN_ECHO_GROUP.csv: 7 cols, id=M3LIFE_no, 4489 sampled rows
+  - RESULT: UCN inventory UCN_ECHO_MEASUREMENT.csv: 7 cols, id=M3LIFE_no, 50000 sampled rows
+  - RESULT: UCN inventory UCN_ECHO_STUDY.csv: 4 cols, id=M3LIFE_no, 7960 sampled rows
+  - RESULT: UCN inventory UCN_LAB_BEPALING_KLINCHEM.csv: 14 cols, id=M3LIFE_no, 50000 sampled rows
+  - RESULT: UCN inventory UCN_OKVCAR_1000009333_CAGOK.csv: 136 cols, id=M3LIFE_no, 250 sampled rows
+  - RESULT: UCN inventory UCN_OK_1000004189_OKNAZORG1.csv: 31 cols, id=M3LIFE_no, 1177 sampled rows
+  - RESULT: UCN UCN_OK_1000007347_PCI_DETAILS.csv: 1 of 4016 rows have a non-numeric id (malformed rows)
+  - RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS.csv: 260 cols, id=M3LIFE_no, 4016 sampled rows
+  - RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS_R.csv: 19 cols, id=M3LIFE_no, 50000 sampled rows
+  - RESULT: UCN inventory UCN_OK_1000007350_PCI_L_EN_P.csv: 142 cols, id=M3LIFE_no, 19481 sampled rows
+  - RESULT: UCN inventory UCN_OK_1000007371_OKNAZORG2.csv: 16 cols, id=M3LIFE_no, 15 sampled rows
+  - RESULT: UCN inventory UCN_OK_1000007373_OKNAZORG3.csv: 9 cols, id=M3LIFE_no, 643 sampled rows
+  - RESULT: UCN inventory UCN_PATIENT_DEMOGRAFISCH.csv: 6 cols, id=M3LIFE_no, 2948 sampled rows
+  - RESULT: UCN value check QRS_Duration_ECG vs ecg.QRS_Duration: n=2291 rho=-0.006 best-case 4.00 vs 4.00 permuted
+  - RESULT: UCN value check Q_TInterval_ECG vs ecg.QT_Interval: n=2291 rho=+0.041 best-case 5.00 vs 4.00 permuted
+  - RESULT: UCN value check POnset_ECG vs ecg.P_Onset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+  - RESULT: UCN value check POffset_ECG vs ecg.P_Offset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+  - RESULT: UCN value check T_Onset_ECG vs ecg.T_Onset: n=2291 rho=-0.006 best-case 3.00 vs 3.00 permuted
+  - RESULT: UCN value check T_Offset_ECG vs ecg.T_Offset: n=2291 rho=+0.020 best-case 3.00 vs 3.00 permuted
+  - RESULT: UCN value check QRS_Onset_ECG vs ecg.QRS_Onset: n=2291 rho=+0.010 best-case 2.00 vs 2.00 permuted
+  - RESULT: UCN value check QRS_Offset_ECG vs ecg.QRS_Offset: n=2291 rho=+0.008 best-case 2.00 vs 2.00 permuted
+  - RESULT: UCN demographics sex agreement with registry: 1.000 on 658 patients (chance 0.545)
+  - RESULT: UCN demographics birth-year vs registry age: rho=-0.891 on 658 patients (negative is correct)
+  - RESULT: ** UCN SHARES THE REGISTRY ID SPACE ** (sex 1.000 vs chance 0.545, birth-year vs age rho -0.891; EHR 0.041): UCN's own clinical content -- echo, ECG, heart-team, biobank -- is therefore usable against the registry, so the research question is answerable from UCN data even without repairing the EHR link
 
 ---
 
@@ -361,6 +396,259 @@ RESULT: demographics extract UCN_PATIENT_DEMOGRAFISCH.csv: id=M3LIFE_no sex=Gesl
 RESULT: demographics sex agreement with registry: 1.000 on 658 patients (chance is ~0.55 at this cohort's sex ratio)
   birth-year vs registry age: rho=-0.891 on 658 patients (a working join gives a strong NEGATIVE rho)
 RESULT: demographics birth-year vs registry age: rho=-0.891 on 658 patients (negative is correct: older patients were born earlier)
+```
+
+</details>
+
+---
+
+### RUN 2026-09-09T12:16:39Z | UCN crosswalk test
+
+- status: ok
+- context: ucn_folder=/home/lorenzo.pratesi@mydre.org/workspace/smartehr/data/ucn/
+- RESULT: UCN inventory UCN_ALG_1000008241_UCORBIOFORM.csv: 205 cols, id=M3LIFE_no, 4287 sampled rows
+- RESULT: UCN inventory UCN_ALG_CS00005657_HEARTTEAM.csv: 102 cols, id=M3LIFE_no, 2212 sampled rows
+- RESULT: UCN inventory UCN_CAR_1000010899_XPERIM.csv: 201 cols, id=M3LIFE_no, 2818 sampled rows
+- RESULT: UCN UCN_CAR_1000011395_UCORBIOFU.csv: 16 of 6768 rows have a non-numeric id (malformed rows)
+- RESULT: UCN inventory UCN_CAR_1000011395_UCORBIOFU.csv: 119 cols, id=M3LIFE_no, 6768 sampled rows
+- RESULT: UCN UCN_ECG_DETAILS.csv: 21412 of 50000 rows have a non-numeric id (malformed rows)
+- RESULT: UCN inventory UCN_ECG_DETAILS.csv: 56 cols, id=QRS_Area_ECG, 50000 sampled rows
+- RESULT: UCN inventory UCN_ECG_TEST.csv: 34 cols, id=M3LIFE_no, 50000 sampled rows
+- RESULT: UCN inventory UCN_ECG_TEST_EXAMINATION.csv: 24 cols, id=ECG_TestID, 50000 sampled rows
+- RESULT: UCN inventory UCN_ECHO_FINDING.csv: 9 cols, id=M3LIFE_no, 50000 sampled rows
+- RESULT: UCN inventory UCN_ECHO_GROUP.csv: 7 cols, id=M3LIFE_no, 4489 sampled rows
+- RESULT: UCN inventory UCN_ECHO_MEASUREMENT.csv: 7 cols, id=M3LIFE_no, 50000 sampled rows
+- RESULT: UCN inventory UCN_ECHO_STUDY.csv: 4 cols, id=M3LIFE_no, 7960 sampled rows
+- RESULT: UCN inventory UCN_LAB_BEPALING_KLINCHEM.csv: 14 cols, id=M3LIFE_no, 50000 sampled rows
+- RESULT: UCN inventory UCN_OKVCAR_1000009333_CAGOK.csv: 136 cols, id=M3LIFE_no, 250 sampled rows
+- RESULT: UCN inventory UCN_OK_1000004189_OKNAZORG1.csv: 31 cols, id=M3LIFE_no, 1177 sampled rows
+- RESULT: UCN UCN_OK_1000007347_PCI_DETAILS.csv: 1 of 4016 rows have a non-numeric id (malformed rows)
+- RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS.csv: 260 cols, id=M3LIFE_no, 4016 sampled rows
+- RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS_R.csv: 19 cols, id=M3LIFE_no, 50000 sampled rows
+- RESULT: UCN inventory UCN_OK_1000007350_PCI_L_EN_P.csv: 142 cols, id=M3LIFE_no, 19481 sampled rows
+- RESULT: UCN inventory UCN_OK_1000007371_OKNAZORG2.csv: 16 cols, id=M3LIFE_no, 15 sampled rows
+- RESULT: UCN inventory UCN_OK_1000007373_OKNAZORG3.csv: 9 cols, id=M3LIFE_no, 643 sampled rows
+- RESULT: UCN inventory UCN_PATIENT_DEMOGRAFISCH.csv: 6 cols, id=M3LIFE_no, 2948 sampled rows
+- RESULT: UCN value check QRS_Duration_ECG vs ecg.QRS_Duration: n=2291 rho=-0.006 best-case 4.00 vs 4.00 permuted
+- RESULT: UCN value check Q_TInterval_ECG vs ecg.QT_Interval: n=2291 rho=+0.041 best-case 5.00 vs 4.00 permuted
+- RESULT: UCN value check POnset_ECG vs ecg.P_Onset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+- RESULT: UCN value check POffset_ECG vs ecg.P_Offset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+- RESULT: UCN value check T_Onset_ECG vs ecg.T_Onset: n=2291 rho=-0.006 best-case 3.00 vs 3.00 permuted
+- RESULT: UCN value check T_Offset_ECG vs ecg.T_Offset: n=2291 rho=+0.020 best-case 3.00 vs 3.00 permuted
+- RESULT: UCN value check QRS_Onset_ECG vs ecg.QRS_Onset: n=2291 rho=+0.010 best-case 2.00 vs 2.00 permuted
+- RESULT: UCN value check QRS_Offset_ECG vs ecg.QRS_Offset: n=2291 rho=+0.008 best-case 2.00 vs 2.00 permuted
+- RESULT: UCN demographics sex agreement with registry: 1.000 on 658 patients (chance 0.545)
+- RESULT: UCN demographics birth-year vs registry age: rho=-0.891 on 658 patients (negative is correct)
+- RESULT: ** UCN SHARES THE REGISTRY ID SPACE ** (sex 1.000 vs chance 0.545, birth-year vs age rho -0.891; EHR 0.041): UCN's own clinical content -- echo, ECG, heart-team, biobank -- is therefore usable against the registry, so the research question is answerable from UCN data even without repairing the EHR link
+
+<details><summary>full output</summary>
+
+```
+=== 1. inventory of 20 files in /home/lorenzo.pratesi@mydre.org/workspace/smartehr/data/ucn/ ====================
+  UCN_ALG_1000008241_UCORBIOFORM.csv
+    encoding=cp1252 sep=';' rows(sampled)=4,287 cols=205
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00002', 'v00014', 'v00015', 'v00017', 'v00021', 'v00022', 'v00024', 'v00026', 'v00027', 'v00028', 'v00031', 'v00033', 'v00035', 'v00037', 'v00038', 'v00040', 'v00041'] ... (+185 more)
+    detected id column: 'M3LIFE_no' (2,708 distinct)
+RESULT: UCN inventory UCN_ALG_1000008241_UCORBIOFORM.csv: 205 cols, id=M3LIFE_no, 4287 sampled rows
+  UCN_ALG_CS00005657_HEARTTEAM.csv
+    encoding=cp1252 sep=';' rows(sampled)=2,212 cols=102
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00003', 'v00004', 'v00009', 'v00013', 'v00014', 'v00015', 'v00017', 'v00018', 'v00019', 'v00020', 'v00021', 'v00022', 'v00023', 'v00024', 'v00025', 'v00026', 'v00027'] ... (+82 more)
+    detected id column: 'M3LIFE_no' (1,610 distinct)
+RESULT: UCN inventory UCN_ALG_CS00005657_HEARTTEAM.csv: 102 cols, id=M3LIFE_no, 2212 sampled rows
+  UCN_CAR_1000010899_XPERIM.csv
+    encoding=cp1252 sep=';' rows(sampled)=2,818 cols=201
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00004', 'v00005', 'v00006', 'v00007', 'v00008', 'v00009', 'v00010', 'v00011', 'v00012', 'v00016', 'v00017', 'v00018', 'v00019', 'v00020', 'v00021', 'v00022', 'v00023'] ... (+181 more)
+    detected id column: 'M3LIFE_no' (869 distinct)
+RESULT: UCN inventory UCN_CAR_1000010899_XPERIM.csv: 201 cols, id=M3LIFE_no, 2818 sampled rows
+  UCN_CAR_1000011395_UCORBIOFU.csv
+    encoding=cp1252 sep=';' rows(sampled)=6,768 cols=119
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00007', 'v00008', 'v00009', 'v00010', 'v00013', 'v00015', 'v00018', 'v00020', 'v00023', 'v00025', 'v00026', 'v00027', 'v00028', 'v00029', 'v00030', 'v00031', 'v00032', 'v00033'] ... (+99 more)
+    detected id column: 'M3LIFE_no' (2,505 distinct)
+    UCN_CAR_1000011395_UCORBIOFU.csv: note 16 of 6,768 rows have a non-numeric id (fragment rows from embedded newlines); examples ['']
+RESULT: UCN UCN_CAR_1000011395_UCORBIOFU.csv: 16 of 6768 rows have a non-numeric id (malformed rows)
+RESULT: UCN inventory UCN_CAR_1000011395_UCORBIOFU.csv: 119 cols, id=M3LIFE_no, 6768 sampled rows
+  UCN_ECG_DETAILS.csv
+    encoding=utf-8 sep=';' rows(sampled)=50,000 cols=56
+    columns: ['ECG_TestID', 'LeadIDText_ECG', 'ECG_LeadID', 'P_OnsetAmpl_ECG', 'P_PeakAmpl_ECG', 'P_Duration_ECG', 'P_Area_ECG', 'P_PeakTime_ECG', 'PP_PeakAmpl_ECG', 'PP_Duration_ECG', 'PP_Area_ECG', 'PP_PeakTime_ECG', 'Q_PeakAmpl_ECG', 'Q_Duration_ECG', 'Q_Area_ECG', 'Q_PeakTime_ECG', 'R_PeakAmpl_ECG', 'R_Duration_ECG', 'R_Area_ECG', 'R_PeakTime_ECG'] ... (+36 more)
+    detected id column: 'QRS_Area_ECG' (10,010 distinct)
+    UCN_ECG_DETAILS.csv: WARNING 21,412 of 50,000 rows have a non-numeric id (fragment rows from embedded newlines); examples ['-5277', '-5505', '-2137']
+RESULT: UCN UCN_ECG_DETAILS.csv: 21412 of 50000 rows have a non-numeric id (malformed rows)
+RESULT: UCN inventory UCN_ECG_DETAILS.csv: 56 cols, id=QRS_Area_ECG, 50000 sampled rows
+  UCN_ECG_TEST.csv
+    encoding=cp1252 sep=';' rows(sampled)=50,000 cols=34
+    columns: ['M3LIFE_no', 'ECG_TestID', 'TestTypeCode_ECG', 'TestTypeOmschrijving_ECG', 'TestStatus_ECG', 'TestReason_ECG', 'SystolicBP_ECG', 'DiastolicBP_ECG', 'VentricularRate_ECG', 'AtrialRate_ECG', 'P_RInterval_ECG', 'QRS_Duration_ECG', 'Q_TInterval_ECG', 'QTCCalculation_ECG', 'PAxis_ECG', 'RAxis_ECG', 'TAxis_ECG', 'QRSCount_ECG', 'QOnset_ECG', 'QOffset_ECG'] ... (+14 more)
+    detected id column: 'M3LIFE_no' (1,995 distinct)
+RESULT: UCN inventory UCN_ECG_TEST.csv: 34 cols, id=M3LIFE_no, 50000 sampled rows
+  UCN_ECG_TEST_EXAMINATION.csv
+    encoding=cp1252 sep=';' rows(sampled)=50,000 cols=24
+    columns: ['ECG_TestID', 'NthOccur_ECG', 'UserEntered_ECG', 'StatementText_ECG', 'Acronym_ECG', 'FullText_ECG', 'InjuryClass_ECG', 'StatementsInjuryDegree_ECG', 'ECG_DiagnosisOrderID', 'DiagnosisOrderName_ECG', 'GroupName_ECG', 'EnumString_ECG', 'InjClsRepolarization_ECG', 'InjClsConduction_ECG', 'InjClsInfarction_ECG', 'InjClsHypertrophy_ECG', 'InjClsRhythm_ECG', 'InjClsWallMotion_ECG', 'InjClsValve_ECG', 'InjClsMass_ECG'] ... (+4 more)
+    detected id column: 'ECG_TestID' (43,881 distinct)
+RESULT: UCN inventory UCN_ECG_TEST_EXAMINATION.csv: 24 cols, id=ECG_TestID, 50000 sampled rows
+  UCN_ECHO_FINDING.csv
+    encoding=cp1252 sep=';' rows(sampled)=50,000 cols=9
+    columns: ['M3LIFE_no', 'ECHO_StudyID', 'ReportVersion_ECHO', 'GroupCode_ECHO', 'FindingCode_ECHO', 'FindingCodeText_ECHO', 'MenuText_ECHO', 'QualifierIDk_ECHO', 'AuxiliaryText_ECHO']
+    detected id column: 'M3LIFE_no' (1,480 distinct)
+RESULT: UCN inventory UCN_ECHO_FINDING.csv: 9 cols, id=M3LIFE_no, 50000 sampled rows
+  UCN_ECHO_GROUP.csv
+    encoding=cp1252 sep=';' rows(sampled)=4,489 cols=7
+    columns: ['M3LIFE_no', 'ECHO_StudyID', 'ReportVersion_ECHO', 'GroupCode_ECHO', 'GroupDescription_ECHO', 'ReportHeading_ECHO', 'Comment_ECHO']
+    detected id column: 'M3LIFE_no' (1,080 distinct)
+RESULT: UCN inventory UCN_ECHO_GROUP.csv: 7 cols, id=M3LIFE_no, 4489 sampled rows
+  UCN_ECHO_MEASUREMENT.csv
+    encoding=utf-8 sep=';' rows(sampled)=50,000 cols=7
+    columns: ['M3LIFE_no', 'ECHO_StudyID', 'ReportVersion_ECHO', 'MeasName_ECHO', 'MeasAbstractNumber_ECHO', 'Value_ECHO', 'UnitName_ECHO']
+    detected id column: 'M3LIFE_no' (283 distinct)
+RESULT: UCN inventory UCN_ECHO_MEASUREMENT.csv: 7 cols, id=M3LIFE_no, 50000 sampled rows
+  UCN_ECHO_STUDY.csv
+    encoding=cp1252 sep=';' rows(sampled)=7,960 cols=4
+    columns: ['M3LIFE_no', 'ECHO_StudyID', 'ReportVersion_ECHO', 'Conclusions_ECHO']
+    detected id column: 'M3LIFE_no' (1,860 distinct)
+RESULT: UCN inventory UCN_ECHO_STUDY.csv: 4 cols, id=M3LIFE_no, 7960 sampled rows
+  UCN_LAB_BEPALING_KLINCHEM.csv
+    encoding=cp1252 sep=';' rows(sampled)=50,000 cols=14
+    columns: ['M3LIFE_no', 'Broncode_LAB', 'LabgroepNaam_LAB', 'LabgroepCode_LAB', 'Bepaling_LAB', 'BepalingOmschrijving_LAB', 'BepalingMateriaal_LAB', 'UitslagWaarde_LAB', 'UitslagEenheid_LAB', 'UitslagGrenswaardeOnder_LAB', 'UitslagGrenswaardeBoven_LAB', 'UitslagGrenswaardeVlag_LAB', 'UitslagStatus_LAB', 'afname_datediff']
+    detected id column: 'M3LIFE_no' (86 distinct)
+RESULT: UCN inventory UCN_LAB_BEPALING_KLINCHEM.csv: 14 cols, id=M3LIFE_no, 50000 sampled rows
+  UCN_OKVCAR_1000009333_CAGOK.csv
+    encoding=cp1252 sep=';' rows(sampled)=250 cols=136
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00018', 'v00019', 'v00020', 'v00021', 'v00022', 'v00023', 'v00024', 'v00025', 'v00029', 'v00030', 'v00031', 'v00033', 'v00034', 'v00035', 'v00036', 'v00037', 'v00038', 'v00039'] ... (+116 more)
+    detected id column: 'M3LIFE_no' (96 distinct)
+RESULT: UCN inventory UCN_OKVCAR_1000009333_CAGOK.csv: 136 cols, id=M3LIFE_no, 250 sampled rows
+  UCN_OK_1000004189_OKNAZORG1.csv
+    encoding=cp1252 sep=';' rows(sampled)=1,177 cols=31
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00002', 'v00003', 'v00004', 'v00005', 'v00006', 'v00007', 'v00008', 'v00009', 'v00010', 'v00011', 'v00012', 'v00013', 'v00014', 'v00015', 'v00016', 'v00017', 'v00018'] ... (+11 more)
+    detected id column: 'M3LIFE_no' (720 distinct)
+RESULT: UCN inventory UCN_OK_1000004189_OKNAZORG1.csv: 31 cols, id=M3LIFE_no, 1177 sampled rows
+  UCN_OK_1000007347_PCI_DETAILS.csv
+    encoding=cp1252 sep=';' rows(sampled)=4,016 cols=260
+    columns: ['M3LIFE_no', 'groept', 'obs', 'v00001', 'v00004', 'v00005', 'v00006', 'v00007', 'v00008', 'v00010', 'v00012', 'v00013', 'v00014', 'v00015', 'v00016', 'v00017', 'v00018', 'v00019', 'v00022', 'v00024'] ... (+240 more)
+    detected id column: 'M3LIFE_no' (2,020 distinct)
+    UCN_OK_1000007347_PCI_DETAILS.csv: note 1 of 4,016 rows have a non-numeric id (fragment rows from embedded newlines); examples ['']
+RESULT: UCN UCN_OK_1000007347_PCI_DETAILS.csv: 1 of 4016 rows have a non-numeric id (malformed rows)
+RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS.csv: 260 cols, id=M3LIFE_no, 4016 sampled rows
+  UCN_OK_1000007347_PCI_DETAILS_R.csv
+    encoding=utf-8 sep=';' rows(sampled)=50,000 cols=19
+    columns: ['M3LIFE_no', 'Groep', 'Teller', 'Stelling', 'Antwoord', 'XAntwoord', 'XScore', 'Xext_code', 'Status', 'SublijstID', 'HoofdLijstID', 'Lijsten', 'VraagID', 'VraagType', 'OnzzAntw', 'L_Inactief', 'V_Inactief', 'Vervallen', 'Hierarchy']
+    detected id column: 'M3LIFE_no' (98 distinct)
+RESULT: UCN inventory UCN_OK_1000007347_PCI_DETAILS_R.csv: 19 cols, id=M3LIFE_no, 50000 sampled rows
+  UCN_OK_1000007350_PCI_L_EN_P.csv
+    encoding=cp1252 sep=';' rows(sampled)=19,481 cols=142
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00002', 'v00003', 'v00004', 'v00005', 'v00006', 'v00007', 'v00008', 'v00009', 'v00010', 'v00011', 'v00012', 'v00013', 'v00014', 'v00015', 'v00016', 'v00103', 'v00104'] ... (+122 more)
+    detected id column: 'M3LIFE_no' (2,033 distinct)
+RESULT: UCN inventory UCN_OK_1000007350_PCI_L_EN_P.csv: 142 cols, id=M3LIFE_no, 19481 sampled rows
+  UCN_OK_1000007371_OKNAZORG2.csv
+    encoding=utf-8 sep=';' rows(sampled)=15 cols=16
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00002', 'v00003', 'v00004', 'v00005', 'v00006', 'v00007', 'v00008', 'v00009', 'v00010', 'v00011', 'v00012', 'v00013', 'DEFINITIEF']
+    detected id column: 'M3LIFE_no' (15 distinct)
+RESULT: UCN inventory UCN_OK_1000007371_OKNAZORG2.csv: 16 cols, id=M3LIFE_no, 15 sampled rows
+  UCN_OK_1000007373_OKNAZORG3.csv
+    encoding=cp1252 sep=';' rows(sampled)=643 cols=9
+    columns: ['M3LIFE_no', 'GROEP_nr', 'v00001', 'v00002', 'v00003', 'v00004', 'v00005', 'v00006', 'DEFINITIEF']
+    detected id column: 'M3LIFE_no' (453 distinct)
+RESULT: UCN inventory UCN_OK_1000007373_OKNAZORG3.csv: 9 cols, id=M3LIFE_no, 643 sampled rows
+  UCN_PATIENT_DEMOGRAFISCH.csv
+    encoding=utf-8 sep=';' rows(sampled)=2,948 cols=6
+    columns: ['M3LIFE_no', 'Land', 'Geslacht', 'Geboortejaar', 'Overleden', 'Overledenjaar']
+    detected id column: 'M3LIFE_no' (2,948 distinct)
+RESULT: UCN inventory UCN_PATIENT_DEMOGRAFISCH.csv: 6 cols, id=M3LIFE_no, 2948 sampled rows
+
+=== 2. id-space overlap (reported, NOT evidence) ==========================
+  Two independent assignments over one range overlap at the chance rate, which is
+  exactly how this project was misled before. Value tests below are the evidence.
+  UCN_ALG_1000008241_UCORBIOFORM.csv (id=M3LIFE_no)
+    vs registry: 2,708 vs 13,806 ids, overlap 640; chance would give 2,323 (ratio 0.276)
+    vs EHR ecg: 2,708 vs 15,390 ids, overlap 2,589; chance would give 2,591 (ratio 0.999)
+  UCN_ALG_CS00005657_HEARTTEAM.csv (id=M3LIFE_no)
+    vs registry: 1,610 vs 13,806 ids, overlap 400; chance would give 1,381 (ratio 0.290)
+    vs EHR ecg: 1,610 vs 15,390 ids, overlap 1,535; chance would give 1,541 (ratio 0.996)
+  UCN_CAR_1000010899_XPERIM.csv (id=M3LIFE_no)
+    vs registry: 869 vs 13,806 ids, overlap 246; chance would give 745 (ratio 0.330)
+    vs EHR ecg: 869 vs 15,390 ids, overlap 835; chance would give 832 (ratio 1.004)
+  UCN_CAR_1000011395_UCORBIOFU.csv (id=M3LIFE_no)
+    vs registry: 2,505 vs 13,806 ids, overlap 609; chance would give 2,149 (ratio 0.283)
+    vs EHR ecg: 2,505 vs 15,390 ids, overlap 2,394; chance would give 2,397 (ratio 0.999)
+  UCN_ECG_DETAILS.csv (id=QRS_Area_ECG)
+    vs registry: 21,413 vs 13,806 ids, overlap 7,266; chance would give 4,511 (ratio 1.611)
+    vs EHR ecg: 21,413 vs 15,390 ids, overlap 8,230; chance would give 5,029 (ratio 1.637)
+  UCN_ECG_TEST.csv (id=M3LIFE_no)
+    vs registry: 2,402 vs 13,806 ids, overlap 640; chance would give 2,060 (ratio 0.311)
+    vs EHR ecg: 2,402 vs 15,390 ids, overlap 2,292; chance would give 2,299 (ratio 0.997)
+  UCN_ECG_TEST_EXAMINATION.csv (id=ECG_TestID)
+    vs registry: 58,817 vs 13,806 ids, overlap 239; chance would give 573 (ratio 0.417)
+    vs EHR ecg: 58,817 vs 15,390 ids, overlap 260; chance would give 639 (ratio 0.407)
+  UCN_ECHO_FINDING.csv (id=M3LIFE_no)
+    vs registry: 1,679 vs 13,806 ids, overlap 433; chance would give 1,440 (ratio 0.301)
+    vs EHR ecg: 1,679 vs 15,390 ids, overlap 1,599; chance would give 1,607 (ratio 0.995)
+  UCN_ECHO_GROUP.csv (id=M3LIFE_no)
+    vs registry: 1,080 vs 13,806 ids, overlap 274; chance would give 926 (ratio 0.296)
+    vs EHR ecg: 1,080 vs 15,390 ids, overlap 1,029; chance would give 1,034 (ratio 0.996)
+  UCN_ECHO_MEASUREMENT.csv (id=M3LIFE_no)
+    vs registry: 1,735 vs 13,806 ids, overlap 438; chance would give 1,488 (ratio 0.294)
+    vs EHR ecg: 1,735 vs 15,390 ids, overlap 1,651; chance would give 1,660 (ratio 0.994)
+  UCN_ECHO_STUDY.csv (id=M3LIFE_no)
+    vs registry: 1,860 vs 13,806 ids, overlap 464; chance would give 1,595 (ratio 0.291)
+    vs EHR ecg: 1,860 vs 15,390 ids, overlap 1,774; chance would give 1,780 (ratio 0.997)
+  UCN_LAB_BEPALING_KLINCHEM.csv (id=M3LIFE_no)
+    vs registry: 2,707 vs 13,806 ids, overlap 640; chance would give 2,322 (ratio 0.276)
+    vs EHR ecg: 2,707 vs 15,390 ids, overlap 2,588; chance would give 2,591 (ratio 0.999)
+  UCN_OKVCAR_1000009333_CAGOK.csv (id=M3LIFE_no)
+    vs registry: 96 vs 13,806 ids, overlap 25; chance would give 82 (ratio 0.304)
+    vs EHR ecg: 96 vs 15,390 ids, overlap 91; chance would give 92 (ratio 0.990)
+  UCN_OK_1000004189_OKNAZORG1.csv (id=M3LIFE_no)
+    vs registry: 720 vs 13,806 ids, overlap 167; chance would give 618 (ratio 0.270)
+    vs EHR ecg: 720 vs 15,390 ids, overlap 692; chance would give 689 (ratio 1.004)
+  UCN_OK_1000007347_PCI_DETAILS.csv (id=M3LIFE_no)
+    vs registry: 2,020 vs 13,806 ids, overlap 489; chance would give 1,733 (ratio 0.282)
+    vs EHR ecg: 2,020 vs 15,390 ids, overlap 1,930; chance would give 1,933 (ratio 0.998)
+  UCN_OK_1000007347_PCI_DETAILS_R.csv (id=M3LIFE_no)
+    vs registry: 1,310 vs 13,806 ids, overlap 355; chance would give 1,124 (ratio 0.316)
+    vs EHR ecg: 1,310 vs 15,390 ids, overlap 1,248; chance would give 1,254 (ratio 0.995)
+  UCN_OK_1000007350_PCI_L_EN_P.csv (id=M3LIFE_no)
+    vs registry: 2,033 vs 13,806 ids, overlap 493; chance would give 1,744 (ratio 0.283)
+    vs EHR ecg: 2,033 vs 15,390 ids, overlap 1,942; chance would give 1,946 (ratio 0.998)
+  UCN_OK_1000007371_OKNAZORG2.csv (id=M3LIFE_no)
+    vs registry: 15 vs 13,806 ids, overlap 2; chance would give 13 (ratio 0.155)
+    vs EHR ecg: 15 vs 15,390 ids, overlap 15; chance would give 15 (ratio 1.032)
+  UCN_OK_1000007373_OKNAZORG3.csv (id=M3LIFE_no)
+    vs registry: 453 vs 13,806 ids, overlap 123; chance would give 389 (ratio 0.317)
+    vs EHR ecg: 453 vs 15,390 ids, overlap 434; chance would give 434 (ratio 1.001)
+  UCN_PATIENT_DEMOGRAFISCH.csv (id=M3LIFE_no)
+    vs registry: 2,948 vs 13,806 ids, overlap 658; chance would give 2,529 (ratio 0.260)
+    vs EHR ecg: 2,948 vs 15,390 ids, overlap 2,816; chance would give 2,821 (ratio 0.998)
+
+=== 3. UCN <-> EHR at VALUE level (ECG measurements) =====================
+  10 column pair(s) to compare
+      QRS_Duration_ECG vs ecg.QRS_Duration: n=2,291 rho=-0.006  best-case |diff| 4.00 vs 4.00 permuted
+RESULT: UCN value check QRS_Duration_ECG vs ecg.QRS_Duration: n=2291 rho=-0.006 best-case 4.00 vs 4.00 permuted
+      Q_TInterval_ECG vs ecg.QT_Interval: n=2,291 rho=+0.041  best-case |diff| 5.00 vs 4.00 permuted
+RESULT: UCN value check Q_TInterval_ECG vs ecg.QT_Interval: n=2291 rho=+0.041 best-case 5.00 vs 4.00 permuted
+      POnset_ECG vs ecg.P_Onset: n=2,241 rho=-0.022  best-case |diff| 6.00 vs 6.00 permuted
+RESULT: UCN value check POnset_ECG vs ecg.P_Onset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+      POffset_ECG vs ecg.P_Offset: n=2,241 rho=-0.022  best-case |diff| 6.00 vs 6.00 permuted
+RESULT: UCN value check POffset_ECG vs ecg.P_Offset: n=2241 rho=-0.022 best-case 6.00 vs 6.00 permuted
+      T_Onset_ECG vs ecg.T_Onset: n=2,291 rho=-0.006  best-case |diff| 3.00 vs 3.00 permuted
+RESULT: UCN value check T_Onset_ECG vs ecg.T_Onset: n=2291 rho=-0.006 best-case 3.00 vs 3.00 permuted
+      T_Offset_ECG vs ecg.T_Offset: n=2,291 rho=+0.020  best-case |diff| 3.00 vs 3.00 permuted
+RESULT: UCN value check T_Offset_ECG vs ecg.T_Offset: n=2291 rho=+0.020 best-case 3.00 vs 3.00 permuted
+      QRS_Onset_ECG vs ecg.QRS_Onset: n=2,291 rho=+0.010  best-case |diff| 2.00 vs 2.00 permuted
+RESULT: UCN value check QRS_Onset_ECG vs ecg.QRS_Onset: n=2291 rho=+0.010 best-case 2.00 vs 2.00 permuted
+      QRS_Offset_ECG vs ecg.QRS_Offset: n=2,291 rho=+0.008  best-case |diff| 2.00 vs 2.00 permuted
+RESULT: UCN value check QRS_Offset_ECG vs ecg.QRS_Offset: n=2291 rho=+0.008 best-case 2.00 vs 2.00 permuted
+
+=== 4. UCN <-> registry at VALUE level (demographics) ====================
+  detected sex='Geslacht' birth-year-like='Geboortejaar'
+  sex agreement 1.000 on 658 patients (chance at this cohort's ratio is 0.545)
+RESULT: UCN demographics sex agreement with registry: 1.000 on 658 patients (chance 0.545)
+  birth-year vs registry age: rho=-0.891 on 658 (a working join gives a strong NEGATIVE rho)
+RESULT: UCN demographics birth-year vs registry age: rho=-0.891 on 658 patients (negative is correct)
+
+=== 5. verdict ==============================================================
+  UCN <-> EHR (value level): 0.041
+  UCN <-> registry: sex 1.000 vs chance 0.545, birth-year vs age rho -0.891
+RESULT: ** UCN SHARES THE REGISTRY ID SPACE ** (sex 1.000 vs chance 0.545, birth-year vs age rho -0.891; EHR 0.041): UCN's own clinical content -- echo, ECG, heart-team, biobank -- is therefore usable against the registry, so the research question is answerable from UCN data even without repairing the EHR link
+  ** UCN sits in the REGISTRY space. Its echo/ECG/heart-team/biobank content is
+     usable against the registry: the research question becomes answerable from
+     UCN data without waiting for the EHR crosswalk. **
 ```
 
 </details>
