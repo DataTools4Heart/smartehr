@@ -348,7 +348,13 @@ each other about sex while being independent of the registry.
 ./bash_scripts/run_all_phases.sh joincheck
 ```
 
-**It tests the whole timeline, not one reading.** The first version compared only the
+**It tests the whole timeline, not one reading — and the answer held (2026-09-09).** Over
+116,290 readings: weight rho(median of all) +0.011 on 39,249 readings, creatinine +0.001 on
+36,778, cholesterol −0.010 on 11,461, BMI −0.007. Best case — each patient's reading closest
+to their own registry value — is **identical to the permuted floor** (weight 13.00 vs 13.00
+kg, creatinine 11.00 vs 11.00, cholesterol 0.90 vs 0.90). No aggregation choice can rescue
+the join.
+ The first version compared only the
 measurement nearest baseline, which invites the fair objection that one reading could be an
 outlier, a wrong value slot, or a unit stray — and a fixture confirmed a correct join can
 read **+0.049** on a single noisy reading while its median reads **+0.999**. So the check

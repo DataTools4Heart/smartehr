@@ -14,6 +14,28 @@
 > | `lab_ezis.Creat-BL` | `labkrea` | 6,010 | +0.002 | −0.007 | 79 | 84 |
 > | `lab_ezis.Chol-BL` | `labchol` | 5,161 | −0.012 | +0.020 | 4.7 | 5.0 |
 >
+> **Tested against the whole timeline, not one reading.** The table above uses the
+> measurement nearest baseline; a fixture showed that a single noisy reading can make a
+> *correct* join read +0.049, so the check was repeated over every pre-landmark reading —
+> 116,290 of them. It changes nothing, and the best-case test is what closes the argument:
+> for each patient, the smallest absolute difference between **any** of their readings and
+> their own registry value, against the same statistic under permutation.
+>
+> | quantity | patients | readings | rho (first) | rho (median of all) | best case | permuted floor |
+> |---|---|---|---|---|---|---|
+> | `meting.Gewicht` | 10,923 | 39,249 | +0.014 | +0.011 | **13.00 kg** | 13.00 kg |
+> | `meting.BMI` | 2,776 | 4,623 | −0.009 | −0.007 | 3.68 | 3.64 |
+> | `lab_ezis.Creat-BL` | 6,010 | 36,778 | +0.001 | +0.001 | **11.00** | 11.00 |
+> | `lab_ezis.Chol-BL` | 5,161 | 11,461 | −0.018 | −0.010 | **0.90** | 0.90 |
+>
+> Taking each patient's *closest* reading to their own registry value is exactly as good as
+> taking a random patient's. No aggregation choice can rescue the join.
+>
+> Pooled value ranges confirm the readings are real and unmixed: weight p1/p50/p99 =
+> 47.4 / 81.0 / 126.1 kg, creatinine 43 / 84 / 655 µmol/l, cholesterol 2.5 / 4.7 / 8.8
+> mmol/l. (`meting.Lengte` is excluded from the table: it is in centimetres against a
+> registry column rounded to integer metres, so that pair is uninformative either way.)
+>
 > The medians show both sides hold real data for the same population; only the per-patient
 > correspondence is absent. A person's routine weight cannot be uncorrelated with their
 > study-visit weight, so this is not a null result — it is real data on the wrong rows.
