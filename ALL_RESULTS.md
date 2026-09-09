@@ -6,71 +6,136 @@ No raw clinical text is ever written here.
 
 ## Index (1 runs)
 
-- **2026-09-08T15:56:42Z | diagnose: did normalisation break the join?**
-  - RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-  - RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
-  - RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-  - RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
+- **2026-09-09T09:46:21Z | join check: events vs registry**
+  - RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
+  - RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
+  - RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
+  - RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
+  - RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
+  - RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
+  - RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
+  - RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
+  - RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
+  - RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949 vs 10954 expected under independence (ratio 0.9995)
+  - RESULT: ** THE TWO FILES DO NOT SHARE A KEY **: the overlap is what independent id assignments over the same numbering range would produce by arithmetic alone, so the 10949 'matching' patients match by coincidence. The extracts come from different pseudonymisation runs and a crosswalk is required
+  - RESULT: whole-timeline meting.Gewicht vs gewicht: n=10923 readings=39249 rho(median)=+0.011 | best-case closest match median 13.00 vs 13.00 permuted
+  - RESULT: whole-timeline meting.Lengte vs lengte: n=8202 readings=24179 rho(median)=-0.013 | best-case closest match median 171.00 vs 171.00 permuted
+  - RESULT: whole-timeline meting.BMI vs bm_indx: n=2776 readings=4623 rho(median)=-0.007 | best-case closest match median 3.68 vs 3.64 permuted
+  - RESULT: whole-timeline lab_ezis.Creat-BL vs labkrea: n=6010 readings=36778 rho(median)=+0.001 | best-case closest match median 11.00 vs 11.00 permuted
+  - RESULT: whole-timeline lab_ezis.Chol-BL vs labchol: n=5161 readings=11461 rho(median)=-0.010 | best-case closest match median 0.90 vs 0.90 permuted
 
 ---
 
-### RUN 2026-09-08T15:56:42Z | diagnose: did normalisation break the join?
+### RUN 2026-09-09T09:46:21Z | join check: events vs registry
 
 - status: ok
-- context: orig_smart=data/smart/smart_22nov2022.csv norm_smart=data/smart/smart_utf8.csv
-- RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-- RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
-- RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-- RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
+- context: landmark=180 probe_keys=False
+- RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
+- RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
+- RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
+- RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
+- RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
+- RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
+- RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
+- RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
+- RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
+- RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949 vs 10954 expected under independence (ratio 0.9995)
+- RESULT: ** THE TWO FILES DO NOT SHARE A KEY **: the overlap is what independent id assignments over the same numbering range would produce by arithmetic alone, so the 10949 'matching' patients match by coincidence. The extracts come from different pseudonymisation runs and a crosswalk is required
+- RESULT: whole-timeline meting.Gewicht vs gewicht: n=10923 readings=39249 rho(median)=+0.011 | best-case closest match median 13.00 vs 13.00 permuted
+- RESULT: whole-timeline meting.Lengte vs lengte: n=8202 readings=24179 rho(median)=-0.013 | best-case closest match median 171.00 vs 171.00 permuted
+- RESULT: whole-timeline meting.BMI vs bm_indx: n=2776 readings=4623 rho(median)=-0.007 | best-case closest match median 3.68 vs 3.64 permuted
+- RESULT: whole-timeline lab_ezis.Creat-BL vs labkrea: n=6010 readings=36778 rho(median)=+0.001 | best-case closest match median 11.00 vs 11.00 permuted
+- RESULT: whole-timeline lab_ezis.Chol-BL vs labchol: n=5161 readings=11461 rho(median)=-0.010 | best-case closest match median 0.90 vs 0.90 permuted
 
 <details><summary>full output</summary>
 
 ```
-=== 1. registry: original vs normalised ==================================
-  ORIGINAL registry
-    path      data/smart/smart_22nov2022.csv
-    parsed as encoding=cp1252 sep=;  rows=13,808 cols=261
-    id column 'M3LIFE_no'
-    ids       n=13,808 unique=13,807 purely_numeric=13,806 leading_zeros=8,573 whitespace=0
-    id lengths (chars) {5: 13806, 11: 2}
-    NON-NUMERIC id examples: ['Ao vene RDP', 'Ao vene RDP']
-  NORMALISED registry
-    path      data/smart/smart_utf8.csv
-    parsed as encoding=utf-8 sep=,  rows=13,806 cols=261
-    id column 'm3life_no'
-    ids       n=13,806 unique=13,806 purely_numeric=13,806 leading_zeros=0 whitespace=0
-    id lengths (chars) {1: 8, 2: 76, 3: 765, 4: 7724, 5: 5233}
-RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-  ** rows changed 13,808 -> 13,806: the re-encode altered how rows were split, which misaligns every column from its id **
+  registry: 13,806 patients
 
-  registry id sets: original 13,807 | normalised 13,806
-    identical as strings? False
-    identical as ints?    True
-    string overlap 5,233 | int overlap 13,806
-    id -> weight preserved across normalisation? n=5,223 rho=+1.000
-RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
+  event source                 registry      both     rho  shuffled  med(event)   med(reg)
+  meting.Gewicht               gewicht     10,923  +0.011    +0.021       81.00      80.00
+RESULT: join check meting.Gewicht vs gewicht: n=10923 rho=+0.011 (shuffled +0.021)
+  meting.Lengte                lengte       8,202  -0.017    +0.006      174.00       2.00
+RESULT: join check meting.Lengte vs lengte: n=8202 rho=-0.017 (shuffled +0.006)
+  meting.BMI                   bm_indx      2,776  -0.009    -0.029       26.30      26.00
+RESULT: join check meting.BMI vs bm_indx: n=2776 rho=-0.009 (shuffled -0.029)
+  lab_ezis.Creat-BL            labkrea      6,010  +0.002    -0.007       79.00      84.00
+RESULT: join check lab_ezis.Creat-BL vs labkrea: n=6010 rho=+0.002 (shuffled -0.007)
+  lab_ezis.Chol-BL             labchol      5,161  -0.012    +0.020        4.70       5.00
+RESULT: join check lab_ezis.Chol-BL vs labchol: n=5161 rho=-0.012 (shuffled +0.020)
+RESULT: ** EVENT JOIN IS BROKEN ** (best |rho|=0.017 across 5 pairs): quantities measured in BOTH the EHR and the study visit do not agree for the same patient id, so every event AND text result in this project measures plumbing and must be withdrawn
 
-=== 2. THE DECISIVE TEST: does the ORIGINAL pair join? ==================
-  ORIGINAL events:
-    meting_20251203.csv (encoding=cp1252, sep=;): weights for 12,771 ids
-  NORMALISED events:
-    no meting*.csv in data/smartehr-utf-8
-    ORIGINAL pair matched on string ids: n=10,923  rho=+0.011
-    ORIGINAL pair matched on int    ids: n=10,923  rho=+0.011
-    norm registry + orig events matched on string ids: n= 4,067  rho=-0.004
-    norm registry + orig events matched on int    ids: n=10,923  rho=+0.011
+  ** THE EVENT JOIN IS BROKEN. Weight, height and creatinine are measured in
+     both sources and cannot legitimately disagree for the same patient. Every
+     null in this project -- structured and text -- is uninterpretable until
+     the identifier join is fixed. **
 
-=== 3. were the ids assigned in the same ORDER? =========================
-  registry 13,776 ids | events 12,771 ids | pairing the 12,771 smallest of each by rank
-  rank-matched weight agreement: rho=+0.000
-RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-  -> no. The id orders are unrelated too, so the assignments are
-     independent in value AND in order.
-RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
+  --- which smart.csv column, used as the join key, recovers routine weight? ---
+  probe: 12,771 patients with a routine weight near baseline
+  candidate key              unique  matched      rho  note
+  m3life_no                  13,806   10,923   +0.011  
+RESULT: NO KEY IN smart.csv RECOVERS ROUTINE WEIGHT (best +0.011 (m3life_no)): the EHR-to-registry linkage cannot be repaired from the files we hold and must be re-derived by the data manager
 
-  -> The ORIGINAL files do not join either (original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011). The normalisation is
-     exonerated: the two extracts carry independent pseudonymisation runs, and
-     the crosswalk has to come from the data provider.
+  -> No column in smart.csv recovers weight (best +0.011 (m3life_no)). The linkage
+     cannot be fixed from these files: the EHR extracts and the registry need
+     to be re-linked at source. This is a question for the data manager.
+
+  --- is each file self-consistent? BMI = weight / height^2 within one row ---
+  REGISTRY  n=13,731  rho(implied BMI, stated BMI)=+0.798  median |diff|=6.25
+RESULT: registry self-consistency: BMI vs weight/height^2 rho=+0.798 on 13731 rows (median abs diff 6.25)
+  EVENTS    n=3,180  rho(implied BMI, stated BMI)=+0.941  median |diff|=0.31
+RESULT: event self-consistency: BMI vs weight/height^2 rho=+0.941 on 3180 patients (median abs diff 0.31)
+
+  identifier spaces: registry 13,806 ids in [1, 16,096] | events 12,771 ids in [2, 15,877] | overlap 10,949
+  expected overlap if the two id sets were INDEPENDENT draws from [1, 16,096] (N=16,096): 10,954
+  observed / expected = 0.9995
+RESULT: identifier spaces: registry 13806 ids [1, 16096], events 12771 ids [2, 15877], overlap 10949 vs 10954 expected under independence (ratio 0.9995)
+RESULT: ** THE TWO FILES DO NOT SHARE A KEY **: the overlap is what independent id assignments over the same numbering range would produce by arithmetic alone, so the 10949 'matching' patients match by coincidence. The extracts come from different pseudonymisation runs and a crosswalk is required
+  -> The overlap IS the chance value. These are independent id assignments
+     over one numbering range: the files share a range, not a key. Ask the
+     data manager for the crosswalk; no code change can recover this.
+
+=== whole-timeline check: every reading, not just the nearest ===========
+
+  meting.Gewicht vs gewicht  (10,923 patients)
+    readings per patient: median 2, p90 7, max 127, total 39,249
+    value range p1/p50/p99: 47.4 / 81.0 / 126.1
+    rho(first reading ) = +0.014
+    rho(median of all ) = +0.011
+    BEST CASE |closest reading - registry|: median 13.00, under permutation 13.00
+RESULT: whole-timeline meting.Gewicht vs gewicht: n=10923 readings=39249 rho(median)=+0.011 | best-case closest match median 13.00 vs 13.00 permuted
+
+  meting.Lengte vs lengte  (8,202 patients)
+    readings per patient: median 2, p90 6, max 50, total 24,179
+    value range p1/p50/p99: 0.0 / 175.0 / 196.0
+    rho(first reading ) = -0.009
+    rho(median of all ) = -0.013
+    BEST CASE |closest reading - registry|: median 171.00, under permutation 171.00
+RESULT: whole-timeline meting.Lengte vs lengte: n=8202 readings=24179 rho(median)=-0.013 | best-case closest match median 171.00 vs 171.00 permuted
+
+  meting.BMI vs bm_indx  (2,776 patients)
+    readings per patient: median 1, p90 3, max 20, total 4,623
+    value range p1/p50/p99: 18.2 / 26.1 / 44.0
+    rho(first reading ) = -0.009
+    rho(median of all ) = -0.007
+    BEST CASE |closest reading - registry|: median 3.68, under permutation 3.64
+RESULT: whole-timeline meting.BMI vs bm_indx: n=2776 readings=4623 rho(median)=-0.007 | best-case closest match median 3.68 vs 3.64 permuted
+
+  lab_ezis.Creat-BL vs labkrea  (6,010 patients)
+    readings per patient: median 3, p90 13, max 270, total 36,778
+    value range p1/p50/p99: 43.0 / 84.0 / 655.0
+    rho(first reading ) = +0.001
+    rho(median of all ) = +0.001
+    BEST CASE |closest reading - registry|: median 11.00, under permutation 11.00
+RESULT: whole-timeline lab_ezis.Creat-BL vs labkrea: n=6010 readings=36778 rho(median)=+0.001 | best-case closest match median 11.00 vs 11.00 permuted
+
+  lab_ezis.Chol-BL vs labchol  (5,161 patients)
+    readings per patient: median 2, p90 4, max 31, total 11,461
+    value range p1/p50/p99: 2.5 / 4.7 / 8.8
+    rho(first reading ) = -0.018
+    rho(median of all ) = -0.010
+    BEST CASE |closest reading - registry|: median 0.90, under permutation 0.90
+RESULT: whole-timeline lab_ezis.Chol-BL vs labchol: n=5161 readings=11461 rho(median)=-0.010 | best-case closest match median 0.90 vs 0.90 permuted
 ```
 
 </details>
