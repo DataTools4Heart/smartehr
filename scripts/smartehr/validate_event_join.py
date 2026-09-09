@@ -40,6 +40,7 @@ WHAT THE ANSWER MEANS
 """
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -49,6 +50,7 @@ import pandas as pd
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from eda_events_survival import ID, TIME
 from feature_matrix import smart_baseline_numeric
+from diagnose_normalization import find_id, read_any   # encoding/delimiter sniffing
 from graded_concepts import CURATED_MISSING, _spearman
 from results_log import add_results_arg, emit, results_block
 
@@ -190,6 +192,194 @@ def whole_timeline_check(a, say):
                  "permutation gives, so the join is NOT dead for this quantity",
                  f"{prefix}.{code}")
             say("    ** this quantity DOES agree when all readings are used -- revisit **")
+
+
+# Sex-specific lab tests, from data/smartehr/data_dicts/lab.csv. A CATEGORICAL join test:
+# it needs no units, no scale and no aggregation choice, which is what makes it the easiest
+# version of this evidence to state. Codes and row counts are the dictionary's own.
+SEX_TESTS = (
+    ("PSAtot-BL",       1, "Totaal PSA (5,312 rows)"),
+    ("PSAvrij-BL",      1, "Vrij PSA (367)"),
+    ("PSAratio-BL",     1, "PSA F/T-ratio (349)"),
+    ("PSAtot_plasma-BL", 1, "Totaal PSA plasma (80)"),
+    ("Zwanger-UP",      2, "Zwangerschapstest (52)"),
+    ("AMH-BL",          2, "Anti-Mullerian Hormoon (93)"),
+)
+SEX_LABEL = {1: "Man", 2: "Vrouw"}
+
+
+def sex_via_specific_tests(a, say):
+    """Do patients given a sex-specific test have that sex in the registry?
+
+    Answers "can the join be checked on gender?" -- yes, and more cleanly than on any
+    continuous quantity, because there is nothing to aggregate, no unit to reconcile and no
+    outlier to argue about. PSA is prostate-specific: a patient with a PSA result is male,
+    give or take a rare exception.
+
+    Under a CORRECT join the male fraction among PSA-tested patients should be ~0.98+.
+    Under a broken join it can only be the cohort base rate, because the tested set is then
+    an arbitrary sample of patients. The z-score below is against that base rate, so it
+    measures exactly the excess a working join would produce.
+    """
+    cur, _cols = smart_baseline_numeric(a.smart_csv)
+    if "geslacht" not in cur.columns:
+        say("  registry has no `geslacht`; cannot check sex")
+        return
+    g = pd.to_numeric(cur["geslacht"], errors="coerce")
+    g = g.where(~g.isin((9,)))                      # 9 -> Missend, per smart.csv
+    base_m = float((g == 1).mean(skipna=True))
+    say("\n=== sex check: do sex-specific lab tests land on that sex? " + "=" * 13)
+    say(f"  registry base rate: P(Man)={base_m:.3f} on {int(g.notna().sum()):,} patients")
+    say(f"  {'test':<20s} {'implies':<7s} {'patients':>9s} {'observed':>9s} "
+        f"{'expected':>9s} {'z':>7s}")
+    path = next((p for p in sorted(Path(a.event_csv_folder).glob("*.csv"))
+                 if p.stem.startswith("lab_ezis")), None)
+    if path is None:
+        say("  no lab_ezis*.csv found")
+        return
+    head = pd.read_csv(path, nrows=0)
+    code_col = next((c for c in head.columns if c.strip().lower() == "lab_testcode"), None)
+    if code_col is None or ID not in head.columns:
+        say(f"  {path.name}: need lab_testcode and {ID}")
+        return
+    wanted = {c.lower(): (sex, lab) for c, sex, lab in SEX_TESTS}
+    seen = {c: set() for c in wanted}
+    for chunk in pd.read_csv(path, chunksize=CHUNK, low_memory=False,
+                             usecols=[ID, code_col]):
+        codes = chunk[code_col].astype(str).str.strip().str.lower()
+        pid = pd.to_numeric(chunk[ID], errors="coerce")
+        for c in wanted:
+            hit = codes == c
+            if hit.any():
+                seen[c].update(int(x) for x in pid[hit].dropna())
+    rows = []
+    for c, (sex, lab) in wanted.items():
+        pats = [p for p in seen[c] if p in g.index and not pd.isna(g.loc[p])]
+        if len(pats) < 20:
+            say(f"  {lab[:20]:<20s} {SEX_LABEL[sex]:<7s} {len(pats):>9,}   too few")
+            continue
+        vals = np.array([float(g.loc[p]) for p in pats])
+        obs = float((vals == sex).mean())
+        exp = base_m if sex == 1 else 1 - base_m
+        se = math.sqrt(max(exp * (1 - exp), 1e-9) / len(pats))
+        z = (obs - exp) / se
+        say(f"  {lab[:20]:<20s} {SEX_LABEL[sex]:<7s} {len(pats):>9,} {obs:>9.3f} "
+            f"{exp:>9.3f} {z:>+7.1f}")
+        rows.append((c, sex, len(pats), obs, exp, z))
+        emit("sex check {} (implies {}): {} patients, observed {:.3f} vs base rate {:.3f} "
+             "(z={:+.1f})", c, SEX_LABEL[sex], len(pats), obs, exp, z)
+    if not rows:
+        say("  no sex-specific test had enough patients to check")
+        return
+    # PSA carries the weight: it is the only one with thousands of patients.
+    psa = [r for r in rows if r[0].startswith("psa")]
+    lead = max(psa, key=lambda r: r[2]) if psa else max(rows, key=lambda r: r[2])
+    if lead[3] >= 0.90 and lead[5] > 3:
+        emit("** SEX CHECK PASSES **: {:.1f}% of {} patients given {} are recorded {} "
+             "against a base rate of {:.1f}%, so the join carries real patient identity",
+             100 * lead[3], lead[2], lead[0], SEX_LABEL[lead[1]], 100 * lead[4])
+        say("\n  -> The sex check PASSES: the join carries real patient identity.")
+    else:
+        emit("** SEX CHECK FAILS **: only {:.1f}% of {} patients given {} are recorded {}, "
+             "against a base rate of {:.1f}% (z={:+.1f}) -- a prostate-specific test lands "
+             "on the cohort's sex ratio, which is what an arbitrary sample of patients "
+             "gives. Categorical confirmation of the broken join, with no units, no "
+             "aggregation and no outliers involved",
+             100 * lead[3], lead[2], lead[0], SEX_LABEL[lead[1]], 100 * lead[4], lead[5])
+        say("\n  ** The sex check FAILS: a prostate-specific test lands on the cohort's own")
+        say("     sex ratio. Categorical confirmation, with nothing to aggregate. **")
+
+
+def demographics_probe(a, say):
+    """Inspect a demographics extract, if one is reachable, and check sex/age against it.
+
+    Age cannot be checked from the 16 EHR event extracts: none of them carries an age or a
+    birth date (data_dict.csv documents only clinical columns plus the patient id). The one
+    candidate is the separate UCN delivery's `UCN_PATIENT_DEMOGRAFISCH.csv`, described there
+    as "Demographics data", which this project has never read.
+
+    Its schema is unknown here, so this function reports what the file holds before trying
+    anything: columns, and which of them look like an identifier, a sex and a birth year.
+    That report is useful on its own -- if the file carries a patient id and a sex, it gives
+    both a direct sex check and, via birth year, the age check that the event extracts
+    cannot support. It may also reveal WHICH id space it uses, which would be a bridge.
+    """
+    cands = []
+    if a.demographics_file:
+        cands.append(Path(a.demographics_file))
+    for base in (Path(a.event_csv_folder), Path(a.event_csv_folder).parent):
+        cands += sorted(base.glob("*DEMOGRAFISCH*.csv")) + sorted(base.glob("*demograf*.csv"))
+    path = next((p for p in cands if p.exists()), None)
+    say("\n=== demographics extract (the only route to an AGE check) " + "=" * 14)
+    if path is None:
+        say("  not found. Age cannot be checked from the 16 event extracts: none carries an")
+        say("  age or birth date. If UCN_PATIENT_DEMOGRAFISCH.csv can be made available,")
+        say("  pass it with --demographics-file and this will report what it holds.")
+        emit("demographics extract not found: age is not checkable from the event files, "
+             "which carry no age or birth date; UCN_PATIENT_DEMOGRAFISCH.csv is the only "
+             "candidate and was not reachable")
+        return
+    df, enc, sep = read_any(path, nrows=20000, say=say)
+    if df is None:
+        return
+    say(f"  {path.name}: encoding={enc} sep={sep} rows(sampled)={len(df):,} "
+        f"cols={df.shape[1]}")
+    say(f"  columns: {list(df.columns)[:24]}")
+    idc = find_id(df)
+    # a sex column holds two dominant values from a small known vocabulary
+    sexc = None
+    for c in df.columns:
+        v = df[c].astype(str).str.strip().str.lower()
+        vc = v[v != ""].value_counts()
+        if 2 <= len(vc) <= 3 and set(vc.index[:2]) <= {"1", "2", "m", "v", "f", "man",
+                                                       "vrouw", "male", "female"}:
+            sexc = c
+            break
+    # a birth column holds plausible years, or dates whose year is plausible
+    birthc = None
+    for c in df.columns:
+        yr = pd.to_numeric(df[c].astype(str).str.extract(r"(\d{4})", expand=False),
+                           errors="coerce")
+        if yr.notna().mean() > 0.8 and 1900 <= yr.median() <= 2010:
+            birthc = c
+            break
+    say(f"  detected: id={idc!r} sex={sexc!r} birth-year-like={birthc!r}")
+    emit("demographics extract {}: id={} sex={} birth={}", path.name, idc, sexc, birthc)
+    if idc is None or (sexc is None and birthc is None):
+        say("  -> not enough to run a check; report the columns above to the data manager.")
+        return
+    cur, _cols = smart_baseline_numeric(a.smart_csv)
+    ids = pd.to_numeric(df[idc], errors="coerce")
+    if sexc is not None and "geslacht" in cur.columns:
+        g = pd.to_numeric(cur["geslacht"], errors="coerce")
+        g = g.where(~g.isin((9,)))
+        m = {"1": 1, "m": 1, "man": 1, "male": 1,
+             "2": 2, "v": 2, "f": 2, "vrouw": 2, "female": 2}
+        dsex = df[sexc].astype(str).str.strip().str.lower().map(m)
+        pairs = [(int(i), s) for i, s in zip(ids, dsex)
+                 if not pd.isna(i) and not pd.isna(s) and int(i) in g.index
+                 and not pd.isna(g.loc[int(i)])]
+        if len(pairs) >= 30:
+            agree = float(np.mean([g.loc[i] == s for i, s in pairs]))
+            say(f"  sex agreement with the registry: {agree:.3f} on {len(pairs):,} patients")
+            emit("demographics sex agreement with registry: {:.3f} on {} patients "
+                 "(chance is ~0.55 at this cohort's sex ratio)", agree, len(pairs))
+    if birthc is not None and "leeftijd" in cur.columns:
+        age = pd.to_numeric(cur["leeftijd"], errors="coerce")
+        age = age.where(~age.isin((999,)))
+        yr = pd.to_numeric(df[birthc].astype(str).str.extract(r"(\d{4})", expand=False),
+                           errors="coerce")
+        pairs = [(int(i), float(y)) for i, y in zip(ids, yr)
+                 if not pd.isna(i) and not pd.isna(y) and int(i) in age.index
+                 and not pd.isna(age.loc[int(i)])]
+        if len(pairs) >= 30:
+            # birth year runs OPPOSITE to age, so a working join gives a NEGATIVE rho
+            rho = _spearman([y for _i, y in pairs], [float(age.loc[i]) for i, _y in pairs])
+            say(f"  birth-year vs registry age: rho={(f'{rho:+.3f}' if rho else '-')} on "
+                f"{len(pairs):,} patients (a working join gives a strong NEGATIVE rho)")
+            emit("demographics birth-year vs registry age: rho={} on {} patients "
+                 "(negative is correct: older patients were born earlier)",
+                 f"{rho:+.3f}" if rho is not None else "-", len(pairs))
 
 
 def probe_keys(a, say):
@@ -431,6 +621,8 @@ def main(a):
     internal_consistency(a, say)
     if a.whole_timeline:
         whole_timeline_check(a, say)
+    sex_via_specific_tests(a, say)
+    demographics_probe(a, say)
 
 
 if __name__ == "__main__":
@@ -446,6 +638,11 @@ if __name__ == "__main__":
                         "registry value. On by default -- it answers the objection that a "
                         "single measurement was compared.")
     p.add_argument("--no-whole-timeline", dest="whole_timeline", action="store_false")
+    p.add_argument("--demographics-file", default=None,
+                   help="Path to a demographics extract (e.g. the UCN delivery's "
+                        "UCN_PATIENT_DEMOGRAFISCH.csv). The 16 event extracts carry no age "
+                        "or birth date, so this is the only route to an AGE check. Its "
+                        "columns are reported before anything is attempted.")
     p.add_argument("--probe-keys", action="store_true",
                    help="Always probe which smart.csv column works as the join key, not "
                         "only when the join check fails.")

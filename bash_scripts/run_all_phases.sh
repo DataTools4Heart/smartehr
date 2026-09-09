@@ -260,9 +260,13 @@ fi
 #      the identifier join directly. Run this whenever a text or event arm reads null: it
 #      distinguishes "no signal" from "wrong patients", and it is seconds of CPU.
 if want joincheck; then
+  # DEMOG_FILE: the 16 event extracts carry no age or birth date, so a demographics
+  # extract is the only route to an age check. Point it at the UCN delivery's
+  # UCN_PATIENT_DEMOGRAFISCH.csv if it can be made available.
   step "join check: events vs registry" "-" \
     "$PY" "$S/validate_event_join.py" --smart-csv "$SMART" \
-      --event-csv-folder "$EVENTS" --landmark-days "$LANDMARK" --results-file "$RESULTS"
+      --event-csv-folder "$EVENTS" --landmark-days "$LANDMARK" \
+      ${DEMOG_FILE:+--demographics-file "$DEMOG_FILE"} --results-file "$RESULTS"
 fi
 
 # ---- graded: the response to the headroom check. T1/T2 encoded PRESENCE; the headroom

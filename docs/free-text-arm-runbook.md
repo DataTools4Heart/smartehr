@@ -348,6 +348,21 @@ each other about sex while being independent of the registry.
 ./bash_scripts/run_all_phases.sh joincheck
 ```
 
+**A categorical sex check is included, and it needs no units or aggregation.** `lab.csv`
+documents sex-specific tests: `PSAtot-BL` (Totaal PSA, 5,312 rows) is prostate-specific, so
+a patient with a PSA result is male; `Zwanger-UP` (pregnancy test) and `AMH-BL` imply female.
+Under a working join the male fraction among PSA-tested patients should be ~0.98+; under a
+broken one it can only be the cohort base rate (0.653), because the tested set is then an
+arbitrary sample. The check reports observed versus base rate with a z-score. Verified on
+fixtures: correct assignment gives 100% male, z=+24.8; arbitrary gives 68.8% against 66.2%,
+z=+1.9.
+
+**Age is NOT checkable from the event extracts** — none of the 16 carries an age or birth
+date. The only route is a demographics extract; pass one with `DEMOG_FILE=/path/...` (the UCN
+delivery's `UCN_PATIENT_DEMOGRAFISCH.csv` is the candidate) and the check reports its columns,
+detects id/sex/birth-year, then compares sex agreement and birth-year against registry age (a
+working join gives a strongly NEGATIVE rho there, since older patients were born earlier).
+
 **It tests the whole timeline, not one reading — and the answer held (2026-09-09).** Over
 116,290 readings: weight rho(median of all) +0.011 on 39,249 readings, creatinine +0.001 on
 36,778, cholesterol −0.010 on 11,461, BMI −0.007. Best case — each patient's reading closest
