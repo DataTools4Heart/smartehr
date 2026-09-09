@@ -348,7 +348,15 @@ each other about sex while being independent of the registry.
 ./bash_scripts/run_all_phases.sh joincheck
 ```
 
-**A categorical sex check is included, and it needs no units or aggregation.** `lab.csv`
+**The sex check ran on 2026-09-09 and it is the clearest evidence we have.** `PSAtot-BL` is
+prostate-specific: **1,047 patients have one, and 370 of them (35%) are recorded as women** —
+exactly the cohort's sex ratio (64.7% male observed against a 65.0% base rate, z = −0.2). All
+six sex-specific tests land on the base rate: `PSAvrij-BL` 0.658, `PSAratio-BL` 0.656,
+`PSAtot_plasma-BL` 0.683 against 0.650; `Zwanger-UP` 0.433 and `AMH-BL` 0.354 against 0.350.
+Knowing which test a patient was given carries no information about their recorded sex.
+Use this in any escalation ahead of the correlations — it needs no statistics to follow.
+
+**How it works, and why it needs no units or aggregation.** `lab.csv`
 documents sex-specific tests: `PSAtot-BL` (Totaal PSA, 5,312 rows) is prostate-specific, so
 a patient with a PSA result is male; `Zwanger-UP` (pregnancy test) and `AMH-BL` imply female.
 Under a working join the male fraction among PSA-tested patients should be ~0.98+; under a

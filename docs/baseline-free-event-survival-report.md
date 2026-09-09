@@ -3,8 +3,28 @@
 > ## ⚠ RESULTS UNDER REVIEW — 2026-09-08
 >
 > **The identifier join between the EHR event CSVs and the SMART registry does not work**,
-> so every result derived from event data is withdrawn pending a fix. Quantities measured in
-> *both* sources show zero per-patient agreement:
+> so every result derived from event data is withdrawn pending a fix.
+>
+> **The clearest single demonstration needs no statistics.** `PSAtot-BL` is a
+> prostate-specific antigen test. Joined on `m3life_no`, **1,047 patients have one, and 370
+> of them — 35% — are recorded in the registry as women.** That is the cohort's own sex
+> ratio: 64.7% of PSA-tested patients are male against a base rate of 65.0% (z = −0.2). Six
+> sex-specific tests all land on the base rate:
+>
+> | test (from `lab.csv`) | implies | patients | observed | base rate | z |
+> |---|---|---|---|---|---|
+> | `PSAtot-BL` | male | 1,047 | 0.647 | 0.650 | −0.2 |
+> | `PSAvrij-BL` | male | 193 | 0.658 | 0.650 | +0.2 |
+> | `PSAratio-BL` | male | 180 | 0.656 | 0.650 | +0.2 |
+> | `PSAtot_plasma-BL` | male | 63 | 0.683 | 0.650 | +0.5 |
+> | `Zwanger-UP` (pregnancy) | female | 30 | 0.433 | 0.350 | +1.0 |
+> | `AMH-BL` | female | 48 | 0.354 | 0.350 | +0.1 |
+>
+> Knowing which test a patient was given carries **no information** about their recorded
+> sex. Nothing here depends on a unit, an aggregation choice or an outlier.
+>
+> The continuous quantities say the same thing. Quantities measured in *both* sources show
+> zero per-patient agreement:
 >
 > | event source | registry | n | rho | shuffled floor | med(event) | med(registry) |
 > |---|---|---|---|---|---|---|
