@@ -158,11 +158,21 @@ def compare_registry(orig_path, corr_path, say):
             kept = sum(1 for k in both if mo[k] == mc[k])
             say(f"    of {len(both):,} ids present in both, {kept:,} ({kept/len(both):.1%}) "
                 "still carry the SAME row")
+            same_rows = sorted(so) == sorted(sc)
             emit("corrected registry: {} of {} shared ids keep the same row content "
-                 "({:.1%}) -- the rest were relabelled", kept, len(both), kept / len(both))
-            if kept / len(both) < 0.5:
-                say("    -> most ids now point at a DIFFERENT row: this is a relabelling,")
-                say("       which is exactly what a corrected linkage should look like")
+                 "({:.1%}); same multiset of rows={}", kept, len(both),
+                 kept / len(both), same_rows)
+            # The two causes look identical in the "kept" number and are NOT the same
+            # thing. Only a matching multiset means the rows were merely moved; if the
+            # multiset differs, the VALUES changed and "kept" issimply because every
+            # row's text differs. An earlier version called this a relabelling either way.
+            if kept / len(both) < 0.5 and same_rows:
+                say("    -> the same rows are present but attached to different ids: a")
+                say("       RELABELLING, which is what a corrected linkage looks like")
+            elif not same_rows:
+                say("    -> the row multiset differs, so the DATA itself changed. A low")
+                say("       'kept' share here does NOT indicate relabelling: comparing 260")
+                say("       columns as text, any reformatting makes every row differ.")
 
 
 def normalize_registry(src, dst, say):
@@ -247,6 +257,40 @@ def compare_ehr_content(inbox, current, say):
     return same_all
 
 
+PROBE_COLS = ("gewicht", "lengte", "bm_indx", "labchol", "labkrea", "leeftijd")
+
+
+def compare_values(orig_path, corr_path, current_smart, say):
+    """Median of a few known columns in all three files, to locate any value change.
+
+    Three copies exist: the original raw export, the corrected raw export, and the locally
+    normalised copy the analysis actually read. If a value differs between the raw original
+    and the local copy, the local conversion changed it; if it differs between the two raw
+    files, the correction changed it. Without this the two are indistinguishable.
+    """
+    say(f"\n=== 2b. where did any value change come from? " + "=" * 29)
+    frames = {}
+    for label, path in (("original raw", orig_path), ("corrected raw", corr_path),
+                        ("local normalised", current_smart)):
+        df, _e, _s = read_any(path, say=say)
+        if df is not None:
+            frames[label] = df
+    say(f"  {'column':<12s} " + " ".join(f"{k:>18s}" for k in frames))
+    for c in PROBE_COLS:
+        cells = []
+        for k, df in frames.items():
+            col = next((x for x in df.columns if str(x).strip().lower() == c), None)
+            if col is None:
+                cells.append(f"{'(absent)':>18s}")
+                continue
+            v = to_num(df[col]).dropna()
+            v = v[v < 900] if c in ("lengte", "labchol", "bm_indx") else v
+            cells.append(f"{v.median():18.2f}" if len(v) else f"{'(empty)':>18s}")
+        say(f"  {c:<12s} " + " ".join(cells))
+    emit("value triangulation across original raw / corrected raw / local normalised "
+         "written for {} columns", len(PROBE_COLS))
+
+
 def run_join(smart_csv, events, label, say, landmark=180):
     """The decisive check, reusing the audited join code unchanged."""
     say(f"\n--- {label}")
@@ -280,6 +324,7 @@ def main(a):
         return
     base = orig_in_inbox or Path(a.current_smart)
     compare_registry(base, corr, say)
+    compare_values(base, corr, a.current_smart, say)
 
     say(f"\n=== 3. THE TEST: does the corrected registry join to the EHR data? " + "=" * 8)
     say("  Value-level checks only. Id overlap is never the evidence here -- two")
