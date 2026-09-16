@@ -213,6 +213,107 @@ def join_rho(smart_df, idc, ev_weights, say, label):
     return out, len(reg)
 
 
+def verify_id_normalisation(orig_path, norm_path, say):
+    """Did every id keep its own row across the normalisation? ALL ids, not a subset.
+
+    WHY THIS EXISTS. The preservation check above keys on the id as a STRING, and the
+    original export zero-pads `M3LIFE_no` to five characters. So "01234" never matched the
+    normalised "1234", and it silently compared only the ids at or above 10000 -- on the
+    real data, 5,223 of 13,806 -- leaving the 8,573 zero-padded ids, precisely where a
+    leading-zero bug would live, unverified. It then reported rho +1.000, which reads as a
+    clean bill of health and is not one.
+
+    This version keys on the INTEGER id so it covers every id, and splits the result by
+    whether the original was zero-padded: a conversion that mishandles padding damages one
+    group and not the other, and the split makes that visible.
+
+    It also checks the conversion is injective. If two distinct original ids collapsed to
+    one integer, the normalisation would silently merge two patients.
+    """
+    say("\n=== id normalisation: did every id keep its own row? " + "=" * 21)
+    o, _oe, _os = read_any(orig_path, say=say)
+    n, _ne, _ns = read_any(norm_path, say=say)
+    if o is None or n is None:
+        return
+    oid, nid = find_id(o), find_id(n)
+    if oid is None or nid is None:
+        say("  no id column on one side")
+        return
+
+    o_raw = o[oid].astype(str).str.strip()
+    n_raw = n[nid].astype(str).str.strip()
+    o_int = pd.to_numeric(o_raw, errors="coerce")
+    n_int = pd.to_numeric(n_raw, errors="coerce")
+
+    ok_o = o_int.notna()
+    n_str, n_i = o_raw[ok_o].nunique(), o_int[ok_o].nunique()
+    say(f"  original: {n_str:,} distinct id strings -> {n_i:,} distinct integers")
+    if n_i < n_str:
+        emit("** ID NORMALISATION MERGES PATIENTS **: {} distinct original id strings "
+             "collapse to {} integers", n_str, n_i)
+        say("  ** stripping the padding merges distinct ids: two patients become one **")
+    else:
+        say("  the integer conversion is injective: no two original ids collapse into one")
+
+    padded = o_raw.str.len().gt(1) & o_raw.str.startswith("0")
+    say(f"  zero-padded original ids: {int(padded.sum()):,} of {len(o_raw):,} "
+        "(the subset the earlier check never compared)")
+
+    o_idx = {int(v): i for i, v in zip(o.index, o_int) if not pd.isna(v)}
+    n_idx = {int(v): i for i, v in zip(n.index, n_int) if not pd.isna(v)}
+    shared = sorted(set(o_idx) & set(n_idx))
+    say(f"  ids shared as integers: {len(shared):,} "
+        f"(original-only {len(set(o_idx)-set(n_idx)):,}, "
+        f"normalised-only {len(set(n_idx)-set(o_idx)):,})")
+    cols = [c for c in o.columns if c in set(n.columns) and c != oid and c != nid]
+    if not cols or not shared:
+        say("  nothing comparable")
+        return
+
+    was_padded = {int(v): bool(pz) for v, pz in zip(o_int, padded) if not pd.isna(v)}
+    orows = o.loc[[o_idx[i] for i in shared], cols].reset_index(drop=True)
+    nrows = n.loc[[n_idx[i] for i in shared], cols].reset_index(drop=True)
+    pad_mask = np.array([was_padded.get(i, False) for i in shared])
+
+    worst, mismatch_any = [], np.zeros(len(shared), dtype=bool)
+    for c in cols:
+        a, b = orows[c].astype(str).str.strip(), nrows[c].astype(str).str.strip()
+        an, bn = to_num(a), to_num(b)
+        both_num = (an.notna() & bn.notna()).to_numpy()
+        # numeric where both parse, so "1,74" and "1.74" agree; text otherwise
+        eq = np.where(both_num,
+                      np.isclose(an.fillna(0).to_numpy(), bn.fillna(0).to_numpy(),
+                                 rtol=1e-6, atol=1e-9),
+                      (a == b).to_numpy())
+        bad = ~eq
+        mismatch_any |= bad
+        if bad.any():
+            worst.append((int(bad.sum()), c))
+    worst.sort(reverse=True)
+    n_bad = int(mismatch_any.sum())
+    say(f"  rows whose content differs on ANY of {len(cols)} columns: {n_bad:,} of "
+        f"{len(shared):,} ({n_bad/len(shared):.2%})")
+    if pad_mask.any() and (~pad_mask).any():
+        bp, npad = int(mismatch_any[pad_mask].sum()), int(pad_mask.sum())
+        bu, nunp = int(mismatch_any[~pad_mask].sum()), int((~pad_mask).sum())
+        say(f"    zero-padded ids: {bp:,} of {npad:,} differ ({bp/max(npad,1):.2%})")
+        say(f"    non-padded ids:  {bu:,} of {nunp:,} differ ({bu/max(nunp,1):.2%})")
+        emit("id normalisation row check: {:.2%} of zero-padded ids differ vs {:.2%} of "
+             "non-padded -- a padding bug hits one group and not the other",
+             bp / max(npad, 1), bu / max(nunp, 1))
+    if worst:
+        say("  columns with the most differences: "
+            + ", ".join(f"{c} ({k:,})" for k, c in worst[:6]))
+    if n_bad == 0:
+        emit("** ID NORMALISATION IS CLEAN **: all {} ids keep their own row across every "
+             "one of {} shared columns, zero-padded and not alike", len(shared), len(cols))
+        say("  -> every id keeps its own row. The normalisation moved no data.")
+    else:
+        emit("id normalisation: {} of {} ids ({:.2%}) have differing row content; worst "
+             "columns {}", n_bad, len(shared), n_bad / len(shared),
+             ", ".join(c for _k, c in worst[:4]))
+
+
 def main(a):
     say = print
     say("=== 1. registry: original vs normalised " + "=" * 34)
@@ -249,6 +350,9 @@ def main(a):
                     f"rho={(f'{rho:+.3f}' if rho is not None else '-')}")
                 emit("registry id->weight preserved by normalisation: n={} rho={}",
                      len(common), f"{rho:+.3f}" if rho is not None else "-")
+
+    if o_sm is not None and n_sm is not None:
+        verify_id_normalisation(a.orig_smart, a.norm_smart, say)
 
     say("\n=== 2. THE DECISIVE TEST: does the ORIGINAL pair join? " + "=" * 18)
     say("  ORIGINAL events:")
