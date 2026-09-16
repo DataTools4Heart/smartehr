@@ -102,6 +102,21 @@
 > (`studienr`, the registry's own documented identifier, is absent from the file). **A
 > crosswalk between the two pseudonymisation runs is required from the data provider.**
 >
+> **Preprocessing ruled out completely (2026-09-16).** The local UTF-8 / id normalisation
+> was re-verified end to end after an earlier check proved insufficient — it had keyed on the
+> id as a *string*, and since the export zero-pads `M3LIFE_no` to five characters it had
+> silently compared only the 5,223 ids at or above 10000, leaving the 8,573 zero-padded ones
+> unchecked. Keyed on the integer id instead:
+>
+> - **registry**: 13,806 distinct id strings → 13,806 distinct integers (injective, so no two
+>   patients merge); **0 of 13,806 ids** have differing content across all 260 shared columns
+>   — 0.00% of the 8,573 zero-padded and 0.00% of the 5,233 non-padded alike;
+> - **all 16 EHR extracts**: identical id sets *and* identical per-id row counts against the
+>   inbox originals, with per-id values also identical wherever a numeric column exists.
+>
+> The padding strip `00001` → `1` is lossless: fixed width 5, the whole range [1, 16096] fits
+> in five digits, and both sides received the same treatment.
+>
 > **Preprocessing ruled out (2026-09-08).** Both sources were preprocessed locally — a
 > non-UTF-8 original converted to UTF-8, the `m3life_no` column name normalised across
 > files, and its dtype normalised (string in the registry, numeric elsewhere) — so that step

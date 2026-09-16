@@ -230,6 +230,8 @@ def compare_ehr_content(inbox, current, say):
     """
     say(f"\n=== 1b. EHR content: same data, or different data? " + "=" * 24)
     say("  'ids/rows/values' = id sets equal / per-id row counts equal / per-id values equal")
+    say("  a two-part entry means the file has no numeric value column to compare (text or")
+    say("  code-only sources); ids and row counts are still verified for it")
     say(f"  {'file':<34s} {'inbox rows':>11s} {'cur rows':>10s} {'inbox ids':>10s} "
         f"{'cur ids':>9s} {'ids/rows/values':>16s}")
     same_all = True
@@ -260,7 +262,12 @@ def compare_ehr_content(inbox, current, say):
             icnt = pd.to_numeric(idf[ii], errors="coerce").value_counts()
             ccnt = pd.to_numeric(cdf[ci], errors="coerce").value_counts()
             rows_eq = bool(icnt.sort_index().equals(ccnt.sort_index()))
-            vcol = next((c for c in ("data1", "lab_result", "hos_duur", "med_duur")
+            # Widen beyond the long-format value columns: echo and ECG carry their
+            # numbers elsewhere, and with the first list those two files -- which do have
+            # real numeric content -- were only checked on ids and row counts.
+            vcol = next((c for c in ("data1", "lab_result", "hos_duur", "med_duur",
+                                     "Value_ECHO", "QRS_Duration", "QT_Interval",
+                                     "VentRate")
                          if c in idf.columns and c in cdf.columns), None)
             if vcol is not None:
                 def per_id(df, idcol):
