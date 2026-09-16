@@ -17,7 +17,7 @@
 #     FORCE=1   ./bash_scripts/run_all_phases.sh      # redo arms that already exist
 #     RUN_T3=1  ./bash_scripts/run_all_phases.sh t3   # frozen-LLM arm (needs GPU + install)
 #
-# Phases: p0 ucn normdiag joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
+# Phases: p0 corrected ucn normdiag joincheck t0 t1 t2 incr sens graded t3headroom ctrl struct screens t3
 #
 # Every run appends to ONE results file ($RESULTS). Results cannot be copied off the
 # VM by hand, so run as many arms as you like and then make a SINGLE download request
@@ -236,6 +236,21 @@ if want sens; then
     "$PY" "$S/prepare_pivoted_event_features.py" "${COMMON[@]}" --auto-occurrence \
       --occurrence-pivot "med:med_ZIatc:4,dbc:Diagnose,diag:diag_omschrijving" \
       --add-baseline-cols "$DEMOG" --out-dir "$OUT/SENS_no_omschr"
+fi
+
+# ---- corrected: a corrected registry export turned up in an inbox folder. Does it fix
+#      the identifier join, and are the inbox's EHR copies the same bytes we analysed?
+#      Answers both in one run so the VM is touched once. Set INBOX to the folder.
+if want corrected; then
+  INBOX="${INBOX:-/mnt/data/inbox/SMART_EHRDATA}"
+  if [ ! -d "$INBOX" ]; then
+    echo "== corrected skipped: no such folder $INBOX (set INBOX=/path/to/inbox)"
+  else
+    step "corrected delivery check" "-" \
+      "$PY" "$S/check_corrected_delivery.py" --inbox "$INBOX" \
+        --current-events "$EVENTS" --current-smart "$SMART" \
+        --landmark-days "$LANDMARK" --results-file "$RESULTS"
+  fi
 fi
 
 # ---- ucn: can the unused UCN delivery bridge the two id spaces that do not match?

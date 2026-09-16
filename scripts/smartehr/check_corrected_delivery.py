@@ -1,0 +1,225 @@
+"""Is `smart_22nov2022_corrected.csv` the file that fixes the identifier join?
+
+CONTEXT. The 16 EHR extracts and the SMART registry export do not identify the same
+patients: 1,047 patients have a prostate-specific PSA test and 35% of them are recorded as
+women, weight agrees at rho +0.011 over 39,249 readings, and the UCN delivery sits in the
+registry's id space while the EHR extracts sit in neither. A corrected registry export has
+now surfaced in an inbox folder alongside a copy of the EHR data.
+
+Two questions, answered in one run so the VM is touched once:
+
+  1. Are the inbox EHR files the same bytes as the ones we have been using? The data manager
+     reports no discrepancies, so establishing exactly which files were analysed is the
+     first thing to settle -- and a sha1 per file is the answer to give them.
+  2. Does the corrected registry actually join to the EHR data? That is decided by the same
+     value-level checks as before, never by id overlap, which is what misled this project
+     once already.
+
+It also reports WHAT the correction did: whether only the id column changed, whether the
+clinical rows are the same data, and how many ids moved. A file that merely renumbers rows
+looks very different from one that reorders them.
+
+    python scripts/smartehr/check_corrected_delivery.py \
+      --inbox /mnt/data/inbox/SMART_EHRDATA \
+      --current-events data/smartehr --current-smart data/smart/smart_utf8.csv
+"""
+
+import argparse
+import hashlib
+import sys
+from argparse import Namespace
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import validate_event_join as vej
+from diagnose_normalization import find_id, read_any, to_num
+from results_log import add_results_arg, emit, results_block
+
+
+def sha1(path, chunk=1 << 20):
+    h = hashlib.sha1()
+    with open(path, "rb") as f:
+        while True:
+            b = f.read(chunk)
+            if not b:
+                break
+            h.update(b)
+    return h.hexdigest()
+
+
+def compare_hashes(inbox, current, say):
+    """sha1 every CSV on both sides. -> (identical?, per-file table).
+
+    The per-file table is what to send the data manager: it names exactly which bytes were
+    analysed, which is the question they actually asked.
+    """
+    # The inbox also holds the registry exports. Those are not EHR extracts and must not
+    # count toward "the two folders differ" -- an earlier version let them, which triggered
+    # a redundant second join run against an events folder that was byte-identical.
+    def is_registry(name):
+        return name.lower().startswith("smart")
+
+    inbox_all = {p.name: p for p in sorted(Path(inbox).glob("*.csv"))}
+    inbox_files = {n: p for n, p in inbox_all.items() if not is_registry(n)}
+    cur_files = {p.name: p for p in sorted(Path(current).glob("*.csv"))
+                 if not is_registry(p.name)}
+    names = sorted(set(inbox_files) | set(cur_files))
+    reg_files = {n: p for n, p in inbox_all.items() if is_registry(n)}
+    say(f"=== 1. EHR csv hashes: inbox vs currently used " + "=" * 28)
+    say(f"  inbox   {inbox} ({len(inbox_files)} csv)")
+    say(f"  current {current} ({len(cur_files)} csv)")
+    say(f"\n  {'file':<34s} {'status':<12s} {'sha1 (current)':<42s} {'MB':>7s}")
+    same = differ = only_in = 0
+    rows = []
+    for n in names:
+        ip, cp = inbox_files.get(n), cur_files.get(n)
+        if ip and cp:
+            hi, hc = sha1(ip), sha1(cp)
+            ok = hi == hc
+            same += ok
+            differ += (not ok)
+            status = "IDENTICAL" if ok else "** DIFFERS **"
+            say(f"  {n[:34]:<34s} {status:<12s} {hc:<42s} "
+                f"{cp.stat().st_size / 1e6:7.1f}")
+            if not ok:
+                say(f"  {'':34s} {'':12s} inbox: {hi}  ({ip.stat().st_size/1e6:.1f} MB)")
+            rows.append((n, status, hc, hi))
+        else:
+            only_in += 1
+            where = "inbox only" if ip else "current only"
+            p = ip or cp
+            say(f"  {n[:34]:<34s} {where:<12s} {sha1(p):<42s} {p.stat().st_size/1e6:7.1f}")
+            rows.append((n, where, sha1(p), None))
+    if reg_files:
+        say(f"\n  registry exports in the inbox (not EHR extracts, not counted above):")
+        for n, p in sorted(reg_files.items()):
+            say(f"  {n[:34]:<34s} {'':<12s} {sha1(p):<42s} {p.stat().st_size/1e6:7.1f}")
+    say(f"\n  EHR extracts: {same} identical, {differ} differing, {only_in} present on "
+        "one side only")
+    emit("EHR csv hashes: {} identical, {} differ, {} on one side only", same, differ,
+         only_in)
+    if differ:
+        emit("** {} EHR FILES DIFFER between the inbox and what was analysed **: the "
+             "analysis was not run on the inbox copies", differ)
+    return differ == 0 and only_in == 0, rows
+
+
+def compare_registry(orig_path, corr_path, say):
+    """What did the correction change: the ids, the data, or the row order?"""
+    say(f"\n=== 2. registry: original vs corrected " + "=" * 36)
+    o, oenc, osep = read_any(orig_path, say=say)
+    c, cenc, csep = read_any(corr_path, say=say)
+    if o is None or c is None:
+        return
+    oid, cid = find_id(o), find_id(c)
+    say(f"  original  {Path(orig_path).name}: enc={oenc} sep={osep} rows={len(o):,} "
+        f"cols={o.shape[1]} id={oid!r}")
+    say(f"  corrected {Path(corr_path).name}: enc={cenc} sep={csep} rows={len(c):,} "
+        f"cols={c.shape[1]} id={cid!r}")
+    if oid is None or cid is None:
+        say("  ** no id column found on one side **")
+        return
+    if list(o.columns) != list(c.columns):
+        onlyo = [x for x in o.columns if x not in set(c.columns)]
+        onlyc = [x for x in c.columns if x not in set(o.columns)]
+        say(f"  column sets differ: only-original {onlyo[:6]} | only-corrected {onlyc[:6]}")
+
+    def ints(df, col):
+        v = pd.to_numeric(df[col], errors="coerce").dropna()
+        return {int(x) for x in v}
+
+    oi, ci = ints(o, oid), ints(c, cid)
+    say(f"  ids: original {len(oi):,} distinct in [{min(oi):,}, {max(oi):,}]; "
+        f"corrected {len(ci):,} in [{min(ci):,}, {max(ci):,}]")
+    say(f"  identical id sets? {oi == ci}   |  shared {len(oi & ci):,}  "
+        f"only-original {len(oi - ci):,}  only-corrected {len(ci - oi):,}")
+    emit("corrected registry ids: {} distinct vs {} original; identical={}; shared {}",
+         len(ci), len(oi), oi == ci, len(oi & ci))
+
+    # Did the CLINICAL data move, or only the labels? A per-row signature over the
+    # non-id columns answers it: identical multisets mean the same rows are present and
+    # only their ids or order changed.
+    common = [x for x in o.columns if x in set(c.columns) and x != oid and x != cid]
+    if common:
+        def sigs(df):
+            return df[common].astype(str).agg("\x1f".join, axis=1).map(
+                lambda s: hashlib.sha1(s.encode("utf-8", "ignore")).hexdigest())
+        so, sc = sigs(o), sigs(c)
+        say(f"  row content over {len(common)} shared non-id columns:")
+        say(f"    same multiset of rows? {sorted(so) == sorted(sc)}")
+        # and did a given id keep its own row?
+        mo = dict(zip(pd.to_numeric(o[oid], errors="coerce"), so))
+        mc = dict(zip(pd.to_numeric(c[cid], errors="coerce"), sc))
+        both = [k for k in mo if k in mc and not pd.isna(k)]
+        if both:
+            kept = sum(1 for k in both if mo[k] == mc[k])
+            say(f"    of {len(both):,} ids present in both, {kept:,} ({kept/len(both):.1%}) "
+                "still carry the SAME row")
+            emit("corrected registry: {} of {} shared ids keep the same row content "
+                 "({:.1%}) -- the rest were relabelled", kept, len(both), kept / len(both))
+            if kept / len(both) < 0.5:
+                say("    -> most ids now point at a DIFFERENT row: this is a relabelling,")
+                say("       which is exactly what a corrected linkage should look like")
+
+
+def run_join(smart_csv, events, label, say, landmark=180):
+    """The decisive check, reusing the audited join code unchanged."""
+    say(f"\n--- {label}")
+    say(f"    registry: {smart_csv}")
+    say(f"    events:   {events}")
+    ns = Namespace(smart_csv=str(smart_csv), event_csv_folder=str(events),
+                   landmark_days=landmark, whole_timeline=False,
+                   demographics_file=None, probe_keys=False)
+    try:
+        vej.main(ns)
+    except SystemExit as e:
+        say(f"    join check exited: {e}")
+    except Exception as e:                                  # noqa: BLE001
+        say(f"    join check failed: {type(e).__name__}: {e}")
+
+
+def main(a):
+    say = print
+    identical, _rows = compare_hashes(a.inbox, a.current_events, say)
+
+    inbox = Path(a.inbox)
+    corr = next((p for p in inbox.glob("*corrected*.csv")), None)
+    orig_in_inbox = next((p for p in inbox.glob("smart_22nov2022.csv")), None)
+    if corr is None:
+        say("\n  no *corrected*.csv in the inbox; nothing further to test")
+        return
+    base = orig_in_inbox or Path(a.current_smart)
+    compare_registry(base, corr, say)
+
+    say(f"\n=== 3. THE TEST: does the corrected registry join to the EHR data? " + "=" * 8)
+    say("  Value-level checks only. Id overlap is never the evidence here -- two")
+    say("  independent assignments over one range overlap at the chance rate, which is how")
+    say("  this project was misled before.")
+    # The inbox holds its own EHR copies; use them when they differ from ours, since the
+    # corrected registry was presumably prepared against that copy.
+    ev_sets = [("current events", a.current_events)]
+    if not identical:
+        ev_sets.append(("inbox events", a.inbox))
+    for ev_label, ev in ev_sets:
+        run_join(corr, ev, f"CORRECTED registry + {ev_label}", say, a.landmark_days)
+    # control: the uncorrected file against the same events, so the comparison is like for
+    # like and a pass cannot be attributed to anything else that changed
+    run_join(a.current_smart, ev_sets[0][1],
+             f"control: UNCORRECTED registry + {ev_sets[0][0]}", say, a.landmark_days)
+
+
+if __name__ == "__main__":
+    p = argparse.ArgumentParser(description=__doc__,
+                                formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--inbox", required=True, help="Folder holding the corrected delivery.")
+    p.add_argument("--current-events", required=True, help="The event CSVs analysed so far.")
+    p.add_argument("--current-smart", required=True, help="The registry analysed so far.")
+    p.add_argument("--landmark-days", type=int, default=180)
+    add_results_arg(p)
+    args = p.parse_args()
+    with results_block(args.results_file, "corrected delivery check",
+                       {"inbox": args.inbox}):
+        main(args)
