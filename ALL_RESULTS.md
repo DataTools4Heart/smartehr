@@ -4,9 +4,9 @@ Append-only, one block per run, newest last. The index below is regenerated on e
 
 No raw clinical text is ever written here.
 
-## Index (2 runs)
+## Index (1 runs)
 
-- **2026-09-16T08:19:38Z | corrected delivery check**
+- **2026-09-16T08:31:27Z | corrected delivery check**
   - RESULT: EHR csv hashes: 0 identical, 16 differ, 0 on one side only
   - RESULT: ** 16 EHR FILES DIFFER between the inbox and what was analysed **: the analysis was not run on the inbox copies
   - RESULT: EHR content comparison: inbox and analysed copies agree on ids, per-id row counts and per-id values in every file: True
@@ -52,17 +52,10 @@ No raw clinical text is ever written here.
   - RESULT: sex check amh-bl (implies Vrouw): 48 patients, observed 0.354 vs base rate 0.350 (z=+0.1)
   - RESULT: ** SEX CHECK FAILS **: only 64.7% of 1047 patients given psatot-bl are recorded Man, against a base rate of 65.0% (z=-0.2) -- a prostate-specific test lands on the cohort's sex ratio, which is what an arbitrary sample of patients gives. Categorical confirmation of the broken join, with no units, no aggregation and no outliers involved
   - RESULT: demographics extract not found: age is not checkable from the event files, which carry no age or birth date; UCN_PATIENT_DEMOGRAFISCH.csv is the only candidate and was not reachable
-- **2026-09-16T08:27:05Z | diagnose: did normalisation break the join?**
-  - RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-  - RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
-  - RESULT: id normalisation row check: 0.00% of zero-padded ids differ vs 0.00% of non-padded -- a padding bug hits one group and not the other
-  - RESULT: ** ID NORMALISATION IS CLEAN **: all 13806 ids keep their own row across every one of 260 shared columns, zero-padded and not alike
-  - RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-  - RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
 
 ---
 
-### RUN 2026-09-16T08:19:38Z | corrected delivery check
+### RUN 2026-09-16T08:31:27Z | corrected delivery check
 
 - status: ok
 - context: inbox=/mnt/data/inbox/SMART_EHRDATA/
@@ -163,12 +156,14 @@ RESULT: ** 16 EHR FILES DIFFER between the inbox and what was analysed **: the a
 
 === 1b. EHR content: same data, or different data? ========================
   'ids/rows/values' = id sets equal / per-id row counts equal / per-id values equal
+  a two-part entry means the file has no numeric value column to compare (text or
+  code-only sources); ids and row counts are still verified for it
   file                                inbox rows   cur rows  inbox ids   cur ids  ids/rows/values
   consult_20251208.csv                   286,193    286,193      8,991     8,991        True/True
   dbc_20251203.csv                       187,827    187,827     12,532    12,532        True/True
   diag_20250626.csv                      127,741    127,741     14,354    14,354        True/True
-  ecg_measmatrix_20251208.csv            154,214    154,214     15,390    15,390        True/True
-  echo_20250626.csv                      671,168    671,168      4,768     4,768        True/True
+  ecg_measmatrix_20251208.csv            154,214    154,214     15,390    15,390   True/True/True
+  echo_20250626.csv                      671,168    671,168      4,768     4,768   True/True/True
   hos_20251209.csv                        43,553     43,553     12,227    12,227   True/True/True
   hos_mut_20251209.csv                   129,462    129,462     12,227    12,227   True/True/True
   lab_ezis_20250709.csv                3,322,765  3,322,765     11,298    11,298   True/True/True
@@ -361,83 +356,6 @@ RESULT: ** SEX CHECK FAILS **: only 64.7% of 1047 patients given psatot-bl are r
   age or birth date. If UCN_PATIENT_DEMOGRAFISCH.csv can be made available,
   pass it with --demographics-file and this will report what it holds.
 RESULT: demographics extract not found: age is not checkable from the event files, which carry no age or birth date; UCN_PATIENT_DEMOGRAFISCH.csv is the only candidate and was not reachable
-```
-
-</details>
-
----
-
-### RUN 2026-09-16T08:27:05Z | diagnose: did normalisation break the join?
-
-- status: ok
-- context: orig_smart=data/smart/smart_22nov2022.csv norm_smart=data/smart/smart_utf8.csv
-- RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-- RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
-- RESULT: id normalisation row check: 0.00% of zero-padded ids differ vs 0.00% of non-padded -- a padding bug hits one group and not the other
-- RESULT: ** ID NORMALISATION IS CLEAN **: all 13806 ids keep their own row across every one of 260 shared columns, zero-padded and not alike
-- RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-- RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
-
-<details><summary>full output</summary>
-
-```
-=== 1. registry: original vs normalised ==================================
-  ORIGINAL registry
-    path      data/smart/smart_22nov2022.csv
-    parsed as encoding=cp1252 sep=;  rows=13,808 cols=261
-    id column 'M3LIFE_no'
-    ids       n=13,808 unique=13,807 purely_numeric=13,806 leading_zeros=8,573 whitespace=0
-    id lengths (chars) {5: 13806, 11: 2}
-    NON-NUMERIC id examples: ['Ao vene RDP', 'Ao vene RDP']
-  NORMALISED registry
-    path      data/smart/smart_utf8.csv
-    parsed as encoding=utf-8 sep=,  rows=13,806 cols=261
-    id column 'm3life_no'
-    ids       n=13,806 unique=13,806 purely_numeric=13,806 leading_zeros=0 whitespace=0
-    id lengths (chars) {1: 8, 2: 76, 3: 765, 4: 7724, 5: 5233}
-RESULT: ** ROW COUNT CHANGED in the registry: 13808 -> 13806 **
-  ** rows changed 13,808 -> 13,806: the re-encode altered how rows were split, which misaligns every column from its id **
-
-  registry id sets: original 13,807 | normalised 13,806
-    identical as strings? False
-    identical as ints?    True
-    string overlap 5,233 | int overlap 13,806
-    id -> weight preserved across normalisation? n=5,223 rho=+1.000
-RESULT: registry id->weight preserved by normalisation: n=5223 rho=+1.000
-
-=== id normalisation: did every id keep its own row? =====================
-  original: 13,806 distinct id strings -> 13,806 distinct integers
-  the integer conversion is injective: no two original ids collapse into one
-  zero-padded original ids: 8,573 of 13,808 (the subset the earlier check never compared)
-  ids shared as integers: 13,806 (original-only 0, normalised-only 0)
-  rows whose content differs on ANY of 260 columns: 0 of 13,806 (0.00%)
-    zero-padded ids: 0 of 8,573 differ (0.00%)
-    non-padded ids:  0 of 5,233 differ (0.00%)
-RESULT: id normalisation row check: 0.00% of zero-padded ids differ vs 0.00% of non-padded -- a padding bug hits one group and not the other
-RESULT: ** ID NORMALISATION IS CLEAN **: all 13806 ids keep their own row across every one of 260 shared columns, zero-padded and not alike
-  -> every id keeps its own row. The normalisation moved no data.
-
-=== 2. THE DECISIVE TEST: does the ORIGINAL pair join? ==================
-  ORIGINAL events:
-    meting_20251203.csv (encoding=cp1252, sep=;): weights for 12,771 ids
-  NORMALISED events:
-    no meting*.csv in data/smartehr-utf-8
-    ORIGINAL pair matched on string ids: n=10,923  rho=+0.011
-    ORIGINAL pair matched on int    ids: n=10,923  rho=+0.011
-    norm registry + orig events matched on string ids: n= 4,067  rho=-0.004
-    norm registry + orig events matched on int    ids: n=10,923  rho=+0.011
-
-=== 3. were the ids assigned in the same ORDER? =========================
-  registry 13,776 ids | events 12,771 ids | pairing the 12,771 smallest of each by rank
-  rank-matched weight agreement: rho=+0.000
-RESULT: rank-matched (k-th smallest id to k-th smallest id) weight agreement: rho=+0.000 on 12771 pairs
-  -> no. The id orders are unrelated too, so the assignments are
-     independent in value AND in order.
-RESULT: normalisation is NOT the culprit (best agreement across all four pairings: original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011): the originals do not join either, so the two extracts genuinely carry independent pseudonymisation runs and a crosswalk is required
-
-  -> The ORIGINAL files do not join either (original/string=+0.011, original/int=+0.011, norm_reg_orig_ev/string=-0.004, norm_reg_orig_ev/int=+0.011). The normalisation is
-     exonerated: the two extracts carry independent pseudonymisation runs, and
-     the crosswalk has to come from the data provider.
 ```
 
 </details>
