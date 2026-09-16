@@ -530,6 +530,33 @@ documented in these notes; automating its extraction is the entire point.
 
 ---
 
+## 6.4 The corrected registry export — precision, not linkage
+
+`smart_22nov2022_corrected.csv` (in `/mnt/data/inbox/SMART_EHRDATA`) restores numeric
+precision that the original delivery had rounded away. It does **not** fix the identifier
+join: weight rho +0.011 and the PSA sex check at 64.7% against a 65.0% base rate, identical
+to the uncorrected file.
+
+Triangulated across original raw / corrected raw / locally normalised, the rounding came
+from the delivery, not from any local conversion: `lengte` 2.00 / **1.75** / 2.00,
+`bm_indx` 26.00 / **26.33** / 26.00, `labchol` 5.00 / **4.90** / 5.00, `leeftijd` 58.00 /
+**57.80** / 58.00.
+
+**Consequence for the results that still stand.** Every curated-only arm — baseline 0.7576,
+demographics 0.6883, and the §10.2b headroom check — used rounded values. The
+protocol-measured half (0.7196) is built from exactly the affected quantities, so it is
+likely understated; the chart-derivable half (0.7310) is mostly history and medication flags
+and is largely unaffected. Re-run those arms with
+`SMART=data/smart/smart_corrected_utf8.csv` before quoting them again; they do not depend on
+the broken join.
+
+```bash
+INBOX=/mnt/data/inbox/SMART_EHRDATA ./bash_scripts/run_all_phases.sh corrected
+SMART=data/smart/smart_corrected_utf8.csv FORCE=1 ./bash_scripts/run_all_phases.sh ctrl t3headroom screens
+```
+
+---
+
 ## 6.5 UCN crosswalk test — can the unused delivery bridge the two id spaces?
 
 ```bash

@@ -102,6 +102,34 @@
 > (`studienr`, the registry's own documented identifier, is absent from the file). **A
 > crosswalk between the two pseudonymisation runs is required from the data provider.**
 >
+> ### The curated results should be re-measured on the corrected export
+>
+> `smart_22nov2022_corrected.csv` does **not** fix the linkage — weight rho +0.011, PSA sex
+> check 64.7% male against a 65.0% base rate, identical to the uncorrected file. What it
+> corrects is **numeric precision**, and triangulating across all three copies shows the
+> rounding came from the original delivery rather than from any local conversion:
+>
+> | column | original raw | corrected raw | local normalised |
+> |---|---|---|---|
+> | `gewicht` | 81.00 | 81.00 | 81.00 |
+> | `lengte` | **2.00** | **1.75** | 2.00 |
+> | `bm_indx` | **26.00** | **26.33** | 26.00 |
+> | `labchol` | **5.00** | **4.90** | 5.00 |
+> | `leeftijd` | **58.00** | **57.80** | 58.00 |
+>
+> This matters for the one set of results that still stands. Every curated-only arm — the
+> baseline **0.7576**, demographics **0.6883**, and the whole §10.2b headroom check — was
+> computed on rounded values. `lengte` rounded to whole metres is destroyed outright, and
+> `bm_indx`, `labchol` and `leeftijd` each lost precision. The **protocol-measured** half of
+> the headroom check is the one built from those quantities, so its 0.7196 is likely an
+> **under**-estimate, while the chart-derivable half (0.7310) is mostly history and
+> medication flags and is far less affected. The gap between the two halves may therefore be
+> narrower than measured.
+>
+> **Re-run the curated arms against `data/smart/smart_corrected_utf8.csv`** (written by the
+> `corrected` phase) before quoting those numbers again. They do not depend on the broken
+> join, so this can be done now.
+>
 > **Preprocessing ruled out completely (2026-09-16).** The local UTF-8 / id normalisation
 > was re-verified end to end after an earlier check proved insufficient — it had keyed on the
 > id as a *string*, and since the export zero-pads `M3LIFE_no` to five characters it had
