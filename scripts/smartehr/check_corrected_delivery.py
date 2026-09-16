@@ -165,6 +165,88 @@ def compare_registry(orig_path, corr_path, say):
                 say("       which is exactly what a corrected linkage should look like")
 
 
+def normalize_registry(src, dst, say):
+    """Rewrite a raw export in the format the analysis code expects: utf-8, comma, dots.
+
+    Needed because the corrected export is the RAW delivery -- cp1252, semicolon-delimited,
+    European decimal commas -- while everything downstream expects the normalised form the
+    user already produced for the original. Feeding the raw file straight in fails with
+    "Expected 1 fields in line 30, saw 3": pandas reads the whole row as one column.
+
+    Decimal columns are converted only when the comma is demonstrably the decimal
+    separator, i.e. when substituting a dot turns a column that mostly does NOT parse as
+    numeric into one that mostly does. A column that already parses is left alone, so a
+    comma inside free text is never touched.
+    """
+    df, enc, sep = read_any(src, say=say)
+    if df is None:
+        return None
+    converted = []
+    for c in df.columns:
+        v = df[c].astype(str).str.strip()
+        nonempty = v[v != ""]
+        if len(nonempty) < 20:
+            continue
+        before = pd.to_numeric(nonempty, errors="coerce").notna().mean()
+        after = pd.to_numeric(nonempty.str.replace(",", ".", regex=False),
+                              errors="coerce").notna().mean()
+        if after > 0.9 and before < 0.9:
+            df[c] = v.str.replace(",", ".", regex=False)
+            converted.append(c)
+    idc = find_id(df)
+    if idc:
+        # the id must be a plain integer: the original export zero-pads it to 5 characters
+        df[idc] = pd.to_numeric(df[idc], errors="coerce").astype("Int64")
+        n_bad = int(df[idc].isna().sum())
+        if n_bad:
+            say(f"    {n_bad} rows have a non-numeric id and are dropped "
+                "(field-shifted rows, as in the original export)")
+            df = df[df[idc].notna()]
+        df = df.rename(columns={idc: "m3life_no"})
+    df.to_csv(dst, index=False, encoding="utf-8")
+    say(f"    normalised {Path(src).name}: {enc}/{sep!r} -> utf-8/',' | "
+        f"{len(converted)} decimal-comma column(s) converted | id -> 'm3life_no' | "
+        f"{len(df):,} rows -> {dst}")
+    emit("normalised the corrected export: {} decimal-comma columns converted, {} rows",
+         len(converted), len(df))
+    return dst
+
+
+def compare_ehr_content(inbox, current, say):
+    """Bytes differ by construction (raw vs normalised). Is it the same DATA?
+
+    The comparison that matters is rows and patient ids per file, not the sha1: the copies
+    we analysed were re-encoded locally, so identical content will never hash the same.
+    """
+    say(f"\n=== 1b. EHR content: same data, or different data? " + "=" * 24)
+    say(f"  {'file':<34s} {'inbox rows':>11s} {'cur rows':>10s} {'inbox ids':>10s} "
+        f"{'cur ids':>9s} {'ids equal':>10s}")
+    same_all = True
+    for cp in sorted(Path(current).glob("*.csv")):
+        if cp.name.lower().startswith("smart"):
+            continue
+        ip = Path(inbox) / cp.name
+        if not ip.exists():
+            say(f"  {cp.name[:34]:<34s} {'(absent from the inbox)':>50s}")
+            continue
+        idf, _e, _s = read_any(ip, say=say)
+        cdf, _e2, _s2 = read_any(cp, say=say)
+        if idf is None or cdf is None:
+            continue
+        ii, ci = find_id(idf), find_id(cdf)
+        iset = ({int(x) for x in pd.to_numeric(idf[ii], errors="coerce").dropna()}
+                if ii else set())
+        cset = ({int(x) for x in pd.to_numeric(cdf[ci], errors="coerce").dropna()}
+                if ci else set())
+        eq = iset == cset
+        same_all &= eq and len(idf) == len(cdf)
+        say(f"  {cp.name[:34]:<34s} {len(idf):>11,} {len(cdf):>10,} {len(iset):>10,} "
+            f"{len(cset):>9,} {str(eq):>10s}")
+    emit("EHR content comparison: inbox and analysed copies carry the same patient ids "
+         "in every file: {}", same_all)
+    return same_all
+
+
 def run_join(smart_csv, events, label, say, landmark=180):
     """The decisive check, reusing the audited join code unchanged."""
     say(f"\n--- {label}")
@@ -184,6 +266,11 @@ def run_join(smart_csv, events, label, say, landmark=180):
 def main(a):
     say = print
     identical, _rows = compare_hashes(a.inbox, a.current_events, say)
+    # Byte equality is the wrong test when one side was re-encoded locally, so compare the
+    # content too before concluding the inbox holds different data.
+    if not identical:
+        same_content = compare_ehr_content(a.inbox, a.current_events, say)
+        identical = identical or same_content
 
     inbox = Path(a.inbox)
     corr = next((p for p in inbox.glob("*corrected*.csv")), None)
@@ -203,8 +290,16 @@ def main(a):
     ev_sets = [("current events", a.current_events)]
     if not identical:
         ev_sets.append(("inbox events", a.inbox))
+    # The corrected export is the RAW delivery; normalise it the way the analysed copy was
+    # normalised, or the join code cannot read it at all.
+    scratch = Path(a.out_dir or ".")
+    scratch.mkdir(parents=True, exist_ok=True)
+    corr_norm = normalize_registry(corr, scratch / "smart_corrected_utf8.csv", say)
+    if corr_norm is None:
+        say("  could not normalise the corrected export; cannot test it")
+        return
     for ev_label, ev in ev_sets:
-        run_join(corr, ev, f"CORRECTED registry + {ev_label}", say, a.landmark_days)
+        run_join(corr_norm, ev, f"CORRECTED registry + {ev_label}", say, a.landmark_days)
     # control: the uncorrected file against the same events, so the comparison is like for
     # like and a pass cannot be attributed to anything else that changed
     run_join(a.current_smart, ev_sets[0][1],
@@ -218,6 +313,8 @@ if __name__ == "__main__":
     p.add_argument("--current-events", required=True, help="The event CSVs analysed so far.")
     p.add_argument("--current-smart", required=True, help="The registry analysed so far.")
     p.add_argument("--landmark-days", type=int, default=180)
+    p.add_argument("--out-dir", default="data/smart",
+                   help="Where to write the normalised copy of the corrected export.")
     add_results_arg(p)
     args = p.parse_args()
     with results_block(args.results_file, "corrected delivery check",
